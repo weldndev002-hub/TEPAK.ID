@@ -1,0 +1,10 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { CreatorAtelierEditor } from '../components/editor/CreatorAtelierEditor';
+---
+
+<BaseLayout title="Creator Atelier Editor | Tepak.id">
+  <main class="min-h-screen bg-slate-50">
+    <CreatorAtelierEditor client:load />
+  </main>
+</BaseLayout>

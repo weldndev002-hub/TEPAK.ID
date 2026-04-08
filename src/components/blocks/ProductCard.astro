@@ -1,0 +1,43 @@
+---
+interface Props {
+  title: string;
+  description: string;
+  price: string;
+  image_url: string;
+  badge?: string;
+}
+
+const { title, description, price, image_url, badge = "Best Seller" } = Astro.props;
+---
+
+<div class="max-w-md bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden group transition-all hover:shadow-2xl hover:border-primary/20">
+    <div class="relative h-48 overflow-hidden">
+        <img 
+            class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+            src={image_url} 
+            alt={title}
+        />
+        <div class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-black uppercase text-primary shadow-sm border border-primary/10">
+            {badge}
+        </div>
+    </div>
+    
+    <div class="p-6">
+        <h3 class="font-extrabold text-lg text-slate-900 leading-tight group-hover:text-primary transition-colors">
+            {title}
+        </h3>
+        <p class="text-slate-500 text-sm mt-3 line-clamp-2 leading-relaxed">
+            {description}
+        </p>
+        
+        <div class="mt-6 flex items-center justify-between border-t border-slate-50 pt-6">
+            <div>
+                <span class="block text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">Harga</span>
+                <span class="text-2xl font-black text-slate-900">{price}</span>
+            </div>
+            <button class="px-8 py-3 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 hover:bg-amber-500 hover:scale-105 active:scale-95 transition-all text-xs uppercase tracking-wider">
+                Beli Sekarang
+            </button>
+        </div>
+    </div>
+</div>

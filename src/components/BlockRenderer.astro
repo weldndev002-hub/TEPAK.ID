@@ -1,0 +1,34 @@
+---
+import Hero from './blocks/Hero.astro';
+import Features from './blocks/Features.astro';
+import { PageConfigSchema, type HeroBlock, type FeaturesBlock } from '../lib/blocks-schema';
+
+interface Props {
+  config: any; // Raw JSON from Supabase
+}
+
+const { config } = Astro.props;
+
+// Validate config with Zod
+const result = PageConfigSchema.safeParse(config);
+
+if (!result.success) {
+  console.error('[BlockRenderer] Invalid block config:', result.error.format());
+  return null; // or a fallback error component
+}
+
+const blocks = result.data;
+---
+
+<div class="flex flex-col w-full h-full">
+  {blocks.map((block) => {
+    switch (block.type) {
+      case 'hero':
+        return <Hero {...block} />;
+      case 'features':
+        return <Features {...block} />;
+      default:
+        return null;
+    }
+  })}
+</div>

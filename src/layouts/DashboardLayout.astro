@@ -1,0 +1,52 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Sidebar from '../components/layout/Sidebar';
+import Header from '../components/layout/Header';
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<BaseLayout title={title}>
+  <div class="flex">
+    <Sidebar client:load />
+    
+    <div class="flex-1 ml-72">
+      <Header client:load />
+      
+      <main class="p-8 mt-20 min-h-[calc(100vh-5rem)] bg-[#f8f9ff]">
+        <slot />
+      </main>
+
+      <!-- Floating Builder Toolbar (from mockup) -->
+      <div class="fixed bottom-8 left-1/2 -translate-x-[calc(50%-144px)] glass-panel border border-white/20 rounded-full px-6 py-3 shadow-2xl flex items-center space-x-6 z-50">
+        <button class="flex items-center space-x-2 text-on-surface hover:text-primary transition-colors">
+          <span class="material-symbols-outlined text-xl">add_box</span>
+          <span class="text-[10px] font-bold uppercase tracking-wider">Add Block</span>
+        </button>
+        <div class="h-6 w-px bg-slate-200"></div>
+        <button class="flex items-center space-x-2 text-on-surface hover:text-primary transition-colors">
+          <span class="material-symbols-outlined text-xl">palette</span>
+          <span class="text-[10px] font-bold uppercase tracking-wider">Theme</span>
+        </button>
+        <div class="h-6 w-px bg-slate-300"></div>
+        <button class="flex items-center space-x-2 text-on-surface hover:text-primary transition-colors">
+          <span class="material-symbols-outlined text-xl">visibility</span>
+          <span class="text-[10px] font-bold uppercase tracking-wider">Preview</span>
+        </button>
+        <button class="ml-4 bg-primary text-white px-6 py-2 rounded-full font-bold text-[10px] uppercase shadow-lg hover:shadow-primary/20 transform active:scale-95 transition-all">
+          Publish Changes
+        </button>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<style is:global>
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+</style>

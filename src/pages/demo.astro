@@ -1,0 +1,53 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import BlockRenderer from '../components/BlockRenderer.astro';
+
+// This would normally come from Supabase (prisma.page.findUnique)
+const demoConfig = [
+  {
+    type: 'hero',
+    title: 'Solusi Digital Masa Depan',
+    subtitle: 'Kami membangun platform yang membantu bisnis Anda tumbuh dengan teknologi edge computing terbaru.',
+    cta_text: 'Mulai Sekarang',
+    cta_link: 'https://tepak.id/start'
+  },
+  {
+    type: 'features',
+    title: 'Fitur Unggulan Kami',
+    items: [
+      {
+        icon: '🚀',
+        title: 'Performa Tinggi',
+        description: 'Dirender di tepi jaringan untuk kecepatan maksimal tanpa kompromi.'
+      },
+      {
+        icon: '🛡️',
+        title: 'Keamanan Ketat',
+        description: 'Validasi Zod end-to-end dan otentikasi Supabase yang aman.'
+      },
+      {
+        icon: '💎',
+        title: 'Desain Premium',
+        description: 'Antarmuka yang memukau dengan shadcn/ui dan animasi halus.'
+      }
+    ]
+  }
+];
+---
+
+<BaseLayout title="Demo No-code | Tepak.ID">
+	<main class="w-full">
+		<BlockRenderer config={demoConfig} />
+        
+        <div class="py-12 border-t bg-neutral-900/10">
+            <div class="container px-4 mx-auto text-center">
+                <p class="text-xs text-muted-foreground">
+                    Halaman ini dirender secara dinamis menggunakan mesin <span class="bg-neutral-800 px-1 py-0.5 rounded text-neutral-400">BlockRenderer</span> kami.
+                </p>
+                <div class="flex justify-center gap-4 mt-4">
+                    <a href="/" class="text-xs hover:text-primary underline underline-offset-4">Kembali ke Beranda</a>
+                </div>
+            </div>
+        </div>
+	</main>
+</BaseLayout>

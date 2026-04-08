@@ -1,0 +1,95 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { LightSidebar } from '../components/layout/LightSidebar';
+import { LightTopNavbar } from '../components/layout/LightTopNavbar';
+import { StatCard } from '../components/dashboard/StatCard';
+import { AnalyticsChart } from '../components/dashboard/AnalyticsChart';
+import { DeviceBreakdown } from '../components/dashboard/DeviceBreakdown';
+import { BrowserPerformance } from '../components/dashboard/BrowserPerformance';
+import { TopLinksTable } from '../components/dashboard/TopLinksTable';
+import { TrafficSourceAnalytics } from '../components/dashboard/TrafficSourceAnalytics';
+import { ConversionFunnel } from '../components/dashboard/ConversionFunnel';
+import { GeoAnalytics } from '../components/dashboard/GeoAnalytics';
+import Button from '../components/ui/Button';
+
+// Sample data from mockup
+const topMetrics = [
+  { title: "Total Impressions", value: "842.6k", icon: "visibility", trend: "12.5%", trendDirection: "up" as const, colorTheme: "tertiary" as const },
+  { title: "Click-through Rate", value: "4.12%", icon: "mouse", trend: "8.2%", trendDirection: "up" as const, colorTheme: "primary" as const },
+  { title: "Avg. Session Time", value: "2m 44s", icon: "timer", trend: "2.4%", trendDirection: "down" as const, colorTheme: "slate" as const },
+  { title: "Projected Revenue", value: "$4,290", icon: "monetization_on", trend: "18.9%", trendDirection: "up" as const, colorTheme: "tertiary" as const }
+];
+---
+
+<BaseLayout title="Atelier Dashboard — Real-time Pulse">
+    <div class="flex min-h-screen bg-white">
+        <!-- Sidebar B (Light) -->
+        <LightSidebar activePage="dashboard" client:load />
+
+        <div class="flex-1 flex flex-col">
+            <!-- Header B (Light) -->
+            <LightTopNavbar client:load />
+
+            <!-- MAIN WORKSPACE -->
+            <main class="p-8 overflow-y-auto w-full max-w-[1440px] ">
+                <!-- Page Header Section -->
+                <div class="flex items-end justify-between mb-10">
+                    <div>
+                        <span class="text-[10px] font-bold text-blue-600 uppercase tracking-[0.2em] mb-2 block">Performance Overview</span>
+                        <h3 class="text-3xl font-extrabold text-[#162138] tracking-tight">Real-time Pulse</h3>
+                    </div>
+                    <div class="flex gap-3">
+                        <Button variant="ghost" className="bg-slate-50 border-slate-100 flex items-center gap-2 font-bold text-sm">
+                            <span class="material-symbols-outlined text-sm">download</span> Export PDF
+                        </Button>
+                        <Button variant="primary" className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2 font-bold text-sm shadow-sm">
+                            <span class="material-symbols-outlined text-sm">share</span> Share Report
+                        </Button>
+                    </div>
+                </div>
+
+                <!-- Top Row: Metrics -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    {topMetrics.map((metric) => (
+                        <StatCard {...metric} client:load />
+                    ))}
+                </div>
+
+                <!-- Middle Section: Main Chart & Device Breakdown -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+                    <div class="lg:col-span-2">
+                        <AnalyticsChart client:visible />
+                    </div>
+                    <div>
+                        <DeviceBreakdown client:visible />
+                    </div>
+                </div>
+
+                <!-- NEW: Advanced Analytics (PRO) Section -->
+                <div class="mb-12">
+                    <div class="flex items-center gap-3 mb-8">
+                        <div class="h-px flex-1 bg-slate-100"></div>
+                        <div class="px-6 py-2 bg-blue-50 rounded-full border border-blue-100">
+                            <span class="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em]">Pro Performance Insights</span>
+                        </div>
+                        <div class="h-px flex-1 bg-slate-100"></div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <TrafficSourceAnalytics client:visible />
+                        <ConversionFunnel client:visible />
+                    </div>
+                    <div class="grid grid-cols-1 gap-6">
+                        <GeoAnalytics client:visible />
+                    </div>
+                </div>
+
+                <!-- Bottom Section: Detailed Stats -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-20">
+                    <BrowserPerformance client:visible />
+                    <TopLinksTable client:visible />
+                </div>
+            </main>
+        </div>
+    </div>
+</BaseLayout>

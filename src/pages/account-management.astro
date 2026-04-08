@@ -1,0 +1,23 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { LightSidebar } from '../components/layout/LightSidebar';
+import { LightTopNavbar } from '../components/layout/LightTopNavbar';
+import { AccountManagementDashboard } from '../components/profile/AccountManagementDashboard';
+---
+
+<BaseLayout title="Account Management | Tepak.id">
+    <div class="flex min-h-screen bg-slate-50">
+        <!-- Sidebar B (Light) -->
+        <LightSidebar activePage="settings" client:load />
+
+        <div class="flex-1 flex flex-col h-screen overflow-hidden">
+            <!-- Header B (Light) -->
+            <LightTopNavbar client:load />
+
+            <!-- MAIN WORKSPACE -->
+            <main class="flex-1 overflow-y-auto p-10 bg-slate-50">
+                <AccountManagementDashboard client:load />
+            </main>
+        </div>
+    </div>
+</BaseLayout>

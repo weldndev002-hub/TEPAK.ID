@@ -1,0 +1,42 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import OnboardingForm from '../components/onboarding/OnboardingForm';
+---
+
+<BaseLayout title="Onboarding - tepak.id Ecosystem">
+    
+    <div class="min-h-screen bg-slate-50 font-sans selection:bg-primary/20 selection:text-primary">
+        
+        {/* MINIMALIST HEADER */}
+        <header class="w-full py-12 px-12 flex justify-between items-center max-w-7xl mx-auto">
+            <a href="/" class="text-3xl font-black text-slate-900 tracking-tighter hover:text-primary transition-colors">
+                tepak.id
+            </a>
+            <div class="flex items-center gap-4 text-slate-400 group cursor-pointer hover:text-primary transition-colors">
+                <span class="text-[10px] font-black uppercase tracking-widest group-hover:underline underline-offset-8">Butuh Bantuan?</span>
+                <span class="material-symbols-outlined text-2xl">help_center</span>
+            </div>
+        </header>
+
+        {/* MAIN ONBOARDING AREA */}
+        <main class="pb-32 px-6">
+            <OnboardingForm client:load />
+        </main>
+
+        {/* COMPACT FOOTER */}
+        <footer class="w-full py-16 bg-white border-t border-slate-50">
+            <div class="flex flex-col items-center gap-8 text-center max-w-7xl mx-auto px-6">
+                <div class="flex flex-col items-center gap-3">
+                    <span class="text-[9px] font-black uppercase tracking-[0.4em] text-slate-200">The Creator Economy Standard</span>
+                    <p class="text-[10px] font-black text-slate-300 tracking-tight">© 2024 TEPAK.ID — THE DIGITAL ATELIER. PRECISION CRAFTED IN INDONESIA.</p>
+                </div>
+            </div>
+        </footer>
+
+        {/* DECORATIVE BACKGROUND BLURS */}
+        <div class="fixed top-1/4 -right-24 w-96 h-96 bg-primary/5 rounded-full blur-[100px] -z-10 animate-pulse duration-[10s]"></div>
+        <div class="fixed bottom-0 -left-24 w-80 h-80 bg-primary/5 rounded-full blur-[80px] -z-10 animate-pulse duration-[8s]"></div>
+
+    </div>
+
+</BaseLayout>

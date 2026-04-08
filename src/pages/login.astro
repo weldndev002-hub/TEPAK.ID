@@ -1,0 +1,73 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import LoginForm from '../components/auth/LoginForm';
+---
+
+<BaseLayout title="Masuk ke tepak.id - Precision Curator Dashboard">
+    
+    <div class="bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans">
+        
+        {/* BRAND LOGO TOP LEFT */}
+        <div class="fixed top-10 left-10 hidden lg:block">
+            <a href="/" class="text-primary font-black text-2xl tracking-tighter">tepak.id</a>
+        </div>
+
+        {/* MAIN AREA */}
+        <main class="flex-grow flex items-center justify-center p-6">
+            <div class="max-w-6xl w-full grid lg:grid-cols-2 gap-16 items-center">
+                
+                {/* LEFT SECTION: BRANDING */}
+                <div class="hidden lg:block space-y-12">
+                    <h1 class="text-7xl font-black tracking-tighter text-slate-900 leading-[0.95]">
+                        Kelola bisnis Anda dengan <span class="text-primary italic">Presisi Digital.</span>
+                    </h1>
+                    <p class="text-slate-500 text-xl max-w-sm leading-relaxed font-medium">
+                        Platform manajemen untuk kreator dan UMKM Indonesia dengan estetika editorial tingkat tinggi.
+                    </p>
+                    
+                    <div class="pt-8">
+                        <div class="inline-flex items-center gap-6 p-6 bg-white rounded-3xl border border-slate-100 shadow-sm group hover:shadow-xl transition-all duration-500">
+                            <div class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                                <span class="material-symbols-outlined text-4xl">analytics</span>
+                            </div>
+                            <div>
+                                <p class="font-black text-slate-900 text-lg tracking-tight">Insight Akurat</p>
+                                <p class="text-sm text-slate-500 font-medium">Data real-time untuk setiap langkah.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* RIGHT SECTION: LOGIN CARD */}
+                <div class="w-full max-w-md mx-auto">
+                    <div class="bg-white rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.08)] p-10 md:p-12 border border-white">
+                        <header class="mb-10">
+                            <h2 class="text-3xl font-black text-slate-900 tracking-tight mb-3">Masuk ke Akun</h2>
+                            <p class="text-slate-400 text-sm font-medium">Selamat datang kembali di ekosistem kreator.</p>
+                        </header>
+
+                        {/* INTERACTIVE FORM COMPONENT */}
+                        <LoginForm client:load />
+
+                        <div class="mt-12 pt-8 border-t border-slate-50 text-center">
+                            <p class="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em]">
+                                Belum punya akun? 
+                                <a href="/signup" class="text-primary hover:underline ml-2">Daftar Gratis</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        {/* FOOTER */}
+        <footer class="w-full py-12 px-8 text-center">
+            <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                © 2024 tepak.id - Precision Digital Ecosystem
+            </p>
+        </footer>
+
+    </div>
+
+</BaseLayout>

@@ -1,0 +1,767 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SideNavbar } from '../components/layout/SideNavbar';
+import { Sidebar as SidebarA } from '../components/layout/Sidebar';
+import { LightSidebar as SidebarB } from '../components/layout/LightSidebar';
+import { TopNavBar } from '../components/layout/TopNavbar';
+import { LightTopNavbar } from '../components/layout/LightTopNavbar';
+import { BottomNavbar } from '../components/layout/BottomNavbar';
+import { FloatingToolbar } from '../components/editor/FloatingToolbar';
+
+// Atoms & UI
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
+import Badge from '../components/ui/Badge';
+import Avatar from '../components/ui/Avatar';
+import Toggle from '../components/ui/Toggle';
+
+// Dashboard & Organisms
+import StatCard from '../components/dashboard/StatCard';
+
+// Batch 2 Imports
+import StepIndicator from '../components/onboarding/StepIndicator';
+import SubdomainCheck from '../components/onboarding/SubdomainCheck';
+import ThemePickerCard from '../components/onboarding/ThemePickerCard';
+import EditorShell from '../components/editor/EditorShell';
+import ProductCard from '../components/public/ProductCard';
+import EventCard from '../components/public/EventCard';
+import MobileFrame from '../components/public/MobileFrame';
+
+// Batch 3 Imports
+import CheckoutForm from '../components/commerce/CheckoutForm';
+import OrderStatus from '../components/commerce/OrderStatus';
+import AnalyticsChart from '../components/dashboard/AnalyticsChart';
+import DeviceBreakdown from '../components/dashboard/DeviceBreakdown';
+import EventStats from '../components/dashboard/EventStats';
+import PayoutForm from '../components/wallet/PayoutForm';
+import PayoutHistory from '../components/wallet/PayoutHistory';
+import CustomerTable from '../components/crm/CustomerTable';
+import DomainWizard from '../components/tools/DomainWizard';
+import { AvatarUpload } from '../components/ui/AvatarUpload';
+import { PaymentMethodCard } from '../components/checkout/PaymentMethodCard';
+import { ThemeCard } from '../components/ui/ThemeCard';
+import { Stepper } from '../components/ui/Stepper';
+---
+
+<BaseLayout title="Tepak.id Design System | The Digital Architect">
+    
+    <div class="bg-background text-on-background bg-[#f8f9ff]">
+    <SideNavbar />
+    <TopNavBar />
+
+    <!-- MAIN CONTENT -->
+    <main class="ml-72 p-8 pt-4 mb-20">
+
+        <!-- LAYOUT VARIATIONS SECTION -->
+        <section class="mb-12">
+            <div class="flex items-baseline space-x-4 mb-8">
+                <h2 class="text-3xl font-extrabold tracking-tight text-on-surface uppercase">Layout Variations</h2>
+                <div class="h-px flex-1 bg-surface-container"></div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <!-- Option A: Dark/Navy Modern -->
+                <div class="space-y-4">
+                    <span class="text-[10px] font-black text-primary uppercase tracking-widest block mb-1">Option A: Dark Modern (Digital Atelier)</span>
+                    <div class="h-[600px] border-4 border-slate-200 rounded-[2.5rem] overflow-hidden relative shadow-2xl scale-[0.85] origin-top-left -mb-[90px]">
+                         <div class="absolute inset-0">
+                            <SidebarA />
+                            <div class="ml-64 h-full bg-slate-50">
+                                <TopNavBar />
+                                <div class="p-8">
+                                    <div class="h-40 bg-white rounded-2xl border border-slate-100 p-6 shadow-sm flex flex-col items-center justify-center border-dashed">
+                                        <p class="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Workspace Area</p>
+                                    </div>
+                                </div>
+                            </div>
+                         </div>
+                    </div>
+                </div>
+
+                <!-- Option B: Light Clean -->
+                <div class="space-y-4">
+                    <span class="text-[10px] font-black text-blue-500 uppercase tracking-widest block mb-1">Option B: Light Clean (KreatorIndo)</span>
+                    <div class="h-[600px] border-4 border-slate-200 rounded-[2.5rem] overflow-hidden relative shadow-2xl scale-[0.85] origin-top-left -mb-[90px]">
+                         <div class="absolute inset-0">
+                            <SidebarB />
+                            <div class="ml-64 h-full bg-white">
+                                <LightTopNavbar />
+                                <div class="p-8">
+                                    <div class="h-40 bg-slate-50 rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col items-center justify-center border-dashed">
+                                        <p class="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Workspace Area</p>
+                                    </div>
+                                </div>
+                            </div>
+                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-20">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-6">Mobile Bottom Navigation</span>
+                <div class="max-w-md mx-auto h-[400px] border-4 border-slate-200 rounded-[3rem] overflow-hidden relative bg-slate-50 shadow-xl">
+                    <div class="absolute inset-0 flex flex-col">
+                        <div class="flex-1 p-8 flex items-center justify-center text-slate-300">
+                             <span class="material-symbols-outlined text-6xl">smartphone</span>
+                        </div>
+                        <BottomNavbar />
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- FOUNDATIONS SECTION -->
+        <section class="mb-12">
+            <div class="flex items-baseline space-x-4 mb-8">
+                <h2 class="text-3xl font-extrabold tracking-tight text-on-surface">FOUNDATIONS</h2>
+                <div class="h-px flex-1 bg-surface-container"></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Color Palette -->
+                <div class="bg-surface-container-lowest p-8 rounded-2xl shadow-sm border border-slate-100">
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">Tonal Architecture</h3>
+                    <div class="grid grid-cols-4 gap-4">
+                        <div class="space-y-2">
+                            <div class="h-16 rounded-xl bg-primary-container shadow-inner"></div>
+                            <p class="text-[10px] font-black text-center text-slate-500 uppercase tracking-tighter">Primary (Gold)</p>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="h-16 rounded-xl bg-[#1e2939] shadow-inner"></div>
+                            <p class="text-[10px] font-black text-center text-slate-500 uppercase tracking-tighter">Navy</p>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="h-16 rounded-xl bg-tertiary shadow-inner"></div>
+                            <p class="text-[10px] font-black text-center text-slate-500 uppercase tracking-tighter">Discovery</p>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="h-16 rounded-xl bg-error shadow-inner"></div>
+                            <p class="text-[10px] font-black text-center text-slate-500 uppercase tracking-tighter">Error</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Typography -->
+                <div class="bg-surface-container-lowest p-8 rounded-2xl shadow-sm border border-slate-100">
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">Typography Scale</h3>
+                    <div class="space-y-6">
+                        <div>
+                            <span class="text-[10px] font-black text-primary uppercase tracking-widest block mb-1">Display LG</span>
+                            <h1 class="text-5xl font-black tracking-tighter text-slate-900 leading-none">The Architect</h1>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Headline SM</span>
+                            <h3 class="text-2xl font-black text-slate-800 tracking-tight">Editorial Precision</h3>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Body MD</span>
+                            <p class="text-sm font-medium leading-relaxed text-slate-500">Filosofi desain yang mengutamakan struktur dan keindahan visual dalam setiap piksel.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-12">
+            <div class="flex items-baseline space-x-4 mb-8">
+                <h2 class="text-3xl font-extrabold tracking-tight text-on-surface">ATOMS</h2>
+                <div class="h-px flex-1 bg-surface-container"></div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                <!-- Buttons & Actions -->
+                <div class="bg-surface-container-lowest p-8 rounded-lg shadow-sm space-y-8">
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Button Set</h3>
+                    <div class="flex flex-wrap gap-4 items-end">
+                        <Button variant="primary" size="lg">Primary Large</Button>
+                        <Button variant="secondary" size="md">Secondary</Button>
+                        <Button variant="destructive" size="md">Destructive</Button>
+                        <Button variant="ghost" size="md">Ghost Action</Button>
+                    </div>
+                    <div class="flex flex-wrap gap-4 items-center">
+                        <Button disabled size="md" className="bg-slate-200 text-slate-400 hover:bg-slate-200 shadow-none">Disabled</Button>
+                        <Button variant="primary" isLoading size="md">Loading</Button>
+                    </div>
+
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 pt-4">Input Fields</h3>
+                    <div class="grid grid-cols-1 gap-4">
+                        <Input addonRight=".tepak.id" defaultValue="my-store" />
+                        <Input type="password" placeholder="password123..." />
+                    </div>
+                </div>
+
+                <!-- Chips, Badges & Avatars -->
+                <div class="bg-surface-container-lowest p-8 rounded-lg shadow-sm space-y-8">
+                    <div>
+                        <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Badges & Pills</h3>
+                        <div class="flex flex-wrap gap-2">
+                            <Badge variant="pro">PRO</Badge>
+                            <Badge variant="paid">Paid</Badge>
+                            <Badge variant="success">Standard</Badge>
+                            <Badge variant="pending">Pending</Badge>
+                            <Badge variant="failed">Failed</Badge>
+                            <Badge variant="failed">Sold Out</Badge>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Avatars</h3>
+                        <div class="flex items-end space-x-4">
+                            <Avatar size="lg" bordered src="https://lh3.googleusercontent.com/aida-public/AB6AXuD2jAgdBHaJqHHFpYA2RT9ZXuhZj37Brex7hhnLje4GjRGmB-TvVtvpTeukmV1TqOnyzjhZDf7DPWy4XfNVu_4GXe26TULKjQ4_rZaQZuAJG3HzvdKXWPvKWg5Snij8CvLnvpqBMA9t14XEoe_p-OymGai16YRQ0qcH3li83TUYRVNNAa-LlzOPs4hkWSGV9AltF56OYFFZMR8QKFZnpyKHwOKRbWGBJ-UJGg5q2Bq9Ahp1OSAEZShXdomCxXdomCxXgkD8Ytno6Mx3ST27-f" />
+                            <Avatar size="md" bordered src="https://lh3.googleusercontent.com/aida-public/AB6AXuC81uFnj0tyEOMJhSd1-EOvb_S_13fzRX7Y7Uxjm3CnxkDua6hxg0qnAQhUAGs9i70pob1f1Qr1K3EptwFXSvfmDCIA80TCdVaVyqSLM02tjBIAUfy1Eowoqx8k-AeQqs_ZFyeqtOOeEeGFLekJ7jt6N8tSdBPJT6AmMFkG992Vxk_NrFkJKNo-qlnkUt1Br79Q7rRweT9vImK-K9jO6FOfMIdMcobWchPmd8Ni85foeT8btGX-rM8nUveYCrICZ_WwM294Miq8o-gH" />
+                            <Avatar size="sm" fallback="JD" />
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Toggles</h3>
+                        <div class="flex items-center space-x-8">
+                            <Toggle defaultChecked />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MOLECULES SECTION -->
+        <section class="mb-12">
+            <div class="flex items-baseline space-x-4 mb-8">
+                <h2 class="text-3xl font-extrabold tracking-tight text-on-surface">MOLECULES</h2>
+                <div class="h-px flex-1 bg-surface-container"></div>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <StatCard title="Total Views" value="14,285" icon="visibility" trend="+12.5%" trendDirection="up" colorTheme="primary" />
+                <StatCard title="CTR Rate" value="8.42%" icon="ads_click" trend="+4.2%" trendDirection="up" colorTheme="tertiary" />
+                <StatCard title="Revenue" value="Rp 4.2M" icon="payments" trend="-1.2%" trendDirection="down" colorTheme="green" />
+                <StatCard title="Wallet Balance" value="Rp 825K" icon="wallet" trend="STABLE" trendDirection="neutral" colorTheme="slate" />
+            </div>
+
+            {/* SEO Preview & Notifications */}
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm transition-all hover:shadow-md">
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">SEO Preview Tool</h3>
+                    <div class="bg-white border border-slate-100 rounded-xl p-6 shadow-sm mb-6">
+                        <div class="text-[14px] text-[#1a0dab] mb-1 hover:underline cursor-pointer font-sans">Tepak.id | Premium Link-in-Bio Digital Architect</div>
+                        <div class="text-[12px] text-[#006621] mb-1 font-sans">https://tepak.id/username</div>
+                        <div class="text-[13px] text-[#4d5156] line-clamp-2 font-sans">Build your digital empire with Tepak.id. The only no-code platform that feels like an architectural masterpiece.</div>
+                    </div>
+                    <div class="space-y-4">
+                        <label class="text-[10px] font-bold uppercase text-slate-400 tracking-widest ml-1">Page Title</label>
+                        <Input defaultValue="Tepak.id | Premium Link-in-Bio" />
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">Toasts & Feedback</h3>
+                    <div class="bg-white p-4 rounded-xl shadow-lg border-l-4 border-green-500 flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <span class="material-symbols-outlined text-green-500" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                            <span class="text-sm font-bold text-slate-700">Domain linked successfully!</span>
+                        </div>
+                        <span class="material-symbols-outlined text-slate-300 cursor-pointer">close</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-lg border-l-4 border-error flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <span class="material-symbols-outlined text-error" style={{ fontVariationSettings: "'FILL' 1" }}>error</span>
+                            <span class="text-sm font-bold text-slate-700">Payment failed.</span>
+                        </div>
+                        <button class="text-xs font-black text-error uppercase tracking-widest">Retry</button>
+                    </div>
+                    <div class="bg-[#1e2939] text-white p-4 rounded-xl shadow-xl flex items-center space-x-4">
+                        <div class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+                        <span class="text-sm font-bold tracking-tight">Updating analytics in real-time...</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ORGANISMS SECTION -->
+        <section class="mb-12">
+            <div class="flex items-baseline space-x-4 mb-8">
+                <h2 class="text-3xl font-extrabold tracking-tight text-on-surface">ORGANISMS</h2>
+                <div class="h-px flex-1 bg-surface-container"></div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                {/* Data Table */}
+                <div class="xl:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div class="p-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                        <h3 class="font-black text-slate-900 tracking-tight">Recent Transactions</h3>
+                        <button class="text-sm font-bold text-primary flex items-center gap-1">View All <span class="material-symbols-outlined text-sm">arrow_forward</span></button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50/50 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                <tr>
+                                    <th class="px-6 py-4">Produk</th>
+                                    <th class="px-6 py-4">Email</th>
+                                    <th class="px-6 py-4">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-50">
+                                <tr class="hover:bg-slate-50/50 transition-colors">
+                                    <td class="px-6 py-4 text-sm font-bold text-slate-700">E-book Arch 101</td>
+                                    <td class="px-6 py-4 text-xs text-slate-400">andi.w@mail.com</td>
+                                    <td class="px-6 py-4"><Badge variant="success">SUCCESS</Badge></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* Wallet Card */}
+                <div class="bg-[#1e2939] text-white p-8 rounded-3xl shadow-xl relative overflow-hidden flex flex-col justify-between min-h-[300px]">
+                    <div class="relative z-10">
+                        <p class="text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Dompet Tepak</p>
+                        <h4 class="text-4xl font-black mb-1 tracking-tighter">Rp 12.850.000</h4>
+                        <p class="text-xs text-slate-400 italic font-medium opacity-80">Available for withdrawal</p>
+                    </div>
+                    <div class="relative z-10 space-y-4">
+                        <div class="p-4 bg-slate-800/50 rounded-xl text-[11px] text-slate-300 leading-relaxed font-medium">
+                            Dana ditarik akan masuk ke rekening terdaftar dalam 1-2 hari kerja.
+                        </div>
+                        <Button variant="primary" size="lg" className="w-full py-4 bg-white text-[#1e2939] hover:bg-amber-500 hover:text-white border-none shadow-none">Tarik Saldo</Button>
+                    </div>
+                    <span class="material-symbols-outlined absolute -right-8 -bottom-8 text-[12rem] text-slate-800/30 rotate-12" style={{ fontVariationSettings: "'FILL' 0" }}>account_balance_wallet</span>
+                </div>
+
+                {/* Pricing Card */}
+                <div class="bg-white p-8 rounded-3xl shadow-sm border-2 border-primary relative">
+                    <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-primary text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-lg">Most Popular</div>
+                    <h3 class="text-2xl font-black text-slate-900 mb-2">Pro Digitalist</h3>
+                    <p class="text-slate-500 text-sm mb-6 leading-relaxed font-medium">For serious creators building a brand ecosystem.</p>
+                    <div class="mb-8">
+                        <span class="text-4xl font-black text-slate-900">Rp 99k</span>
+                        <span class="text-slate-400 font-bold ml-1">/month</span>
+                    </div>
+                    <ul class="space-y-4 mb-8">
+                        <li class="flex items-center space-x-3 text-sm font-bold text-slate-600">
+                            <span class="material-symbols-outlined text-green-500 text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                            <span>Unlimited Dynamic Blocks</span>
+                        </li>
+                    </ul>
+                    <Button variant="primary" className="w-full py-3 rounded-xl">Select Pro</Button>
+                </div>
+
+                {/* Domain Status */}
+                <div class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm xl:col-span-2">
+                    <div class="flex justify-between items-start mb-8">
+                        <div>
+                            <h3 class="text-2xl font-black text-slate-900 tracking-tight">Custom Domain Setup</h3>
+                            <p class="text-sm text-slate-500 font-medium">Connect your own domain to your Tepak profile.</p>
+                        </div>
+                        <Badge variant="pending">AWAITING VERIFICATION</Badge>
+                    </div>
+                    <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                        <div class="grid grid-cols-3 gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
+                            <div>Type</div><div>Host</div><div>Value</div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4 text-sm font-bold items-center">
+                            <div class="bg-white px-3 py-1 rounded-lg w-fit border border-slate-200">CNAME</div>
+                            <div class="text-slate-400 font-mono">@</div>
+                            <div class="flex items-center space-x-2 text-primary font-mono group cursor-pointer hover:underline underline-offset-4">
+                                <span>cname.tepak.id</span>
+                                <span class="material-symbols-outlined text-sm">content_copy</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Analytics Chart Card */}
+            <div class="mt-12 bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden group">
+                <div class="flex justify-between items-end mb-12">
+                    <div>
+                        <h3 class="text-2xl font-black text-slate-900 tracking-tight mb-1">Engagement Analytics</h3>
+                        <p class="text-sm text-slate-400 font-medium tracking-wide italic leading-relaxed">Unique visitors over the last 30 days.</p>
+                    </div>
+                    <div class="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
+                        <button class="px-4 py-1.5 rounded-xl text-slate-500 font-black text-[10px] uppercase">Day</button>
+                        <button class="px-4 py-1.5 rounded-xl bg-white shadow-sm text-primary font-black text-[10px] uppercase">Week</button>
+                        <button class="px-4 py-1.5 rounded-xl text-slate-500 font-black text-[10px] uppercase">Month</button>
+                    </div>
+                </div>
+                {/* Mock Chart Area */}
+                <div class="h-80 w-full relative flex items-end justify-between px-6 pb-6 bg-slate-50/50 rounded-3xl border border-dashed border-slate-200 group-hover:border-primary/20 transition-colors duration-500 overflow-hidden">
+                    <div class="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundImage: "radial-gradient(#815500 1px, transparent 1px)", backgroundSize: "24px 24px" }}></div>
+                    <div class="w-[8%] bg-primary-container h-[40%] rounded-2xl relative group/bar hover:scale-x-110 transition-transform">
+                        <div class="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-black py-2 px-3 rounded-lg opacity-0 group-hover/bar:opacity-100 transition-all pointer-events-none whitespace-nowrap shadow-xl">1,284 Views</div>
+                    </div>
+                    <div class="w-[8%] bg-primary-container h-[65%] rounded-2xl relative group/bar"></div>
+                    <div class="w-[8%] bg-primary-container h-[55%] rounded-2xl relative group/bar"></div>
+                    <div class="w-[8%] bg-primary-container h-[85%] rounded-2xl relative group/bar"></div>
+                    <div class="w-[8%] bg-primary-container h-[45%] rounded-2xl relative group/bar"></div>
+                    <div class="w-[8%] bg-primary-container h-[95%] rounded-2xl relative group/bar"></div>
+                    <div class="w-[8%] bg-primary-container h-[75%] rounded-2xl relative group/bar"></div>
+                    <div class="w-[8%] bg-primary-container h-[80%] rounded-2xl relative group/bar"></div>
+                    <div class="w-[8%] bg-primary-container h-[60%] rounded-2xl relative group/bar"></div>
+                    <div class="w-[8%] bg-primary-container h-[50%] rounded-2xl relative group/bar"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- BATCH 2 SEPARATOR -->
+        <header class="w-full border-b border-slate-300 pb-8 mb-12 mt-32">
+            <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">tepak.id <span class="text-primary">Batch 2</span></h1>
+            <p class="text-slate-600 mt-2">Onboarding & Editor Component Library</p>
+        </header>
+
+        <!-- ONBOARDING SECTION -->
+        <section class="mb-12 space-y-12">
+            <div>
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">21. Onboarding — Step Indicator</h2>
+                <StepIndicator 
+                    steps={[
+                        { id: 1, label: 'Profil' },
+                        { id: 2, label: 'Subdomain' },
+                        { id: 3, label: 'Tema' }
+                    ]} 
+                    currentStepIndex={1} 
+                />
+            </div>
+
+            <div>
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">22. Onboarding — Subdomain Input</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <SubdomainCheck defaultValue="creatorsenja" />
+                    <SubdomainCheck defaultValue="kopi" />
+                </div>
+            </div>
+
+            <div>
+                 <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">23. Onboarding — Theme Picker</h2>
+                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <ThemePickerCard theme={{ id: 'minimal', name: 'Minimal', type: 'minimal' }} isSelected />
+                    <ThemePickerCard theme={{ id: 'bold', name: 'Bold', type: 'bold' }} />
+                    <ThemePickerCard theme={{ id: 'warm', name: 'Warm', type: 'warm' }} />
+                 </div>
+            </div>
+        </section>
+
+        <!-- EDITOR SECTION -->
+        <section class="mb-12">
+            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">24-26. Website Editor — Layout Shell & Blocks</h2>
+            <EditorShell client:load />
+        </section>
+
+        <!-- COMMERCE CARDS SECTION -->
+        <section class="mb-12 space-y-12">
+            <div>
+                 <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">27. Public Page — Full Preview Mockup</h2>
+                 <MobileFrame>
+                    {/* Simulated Mobile Content */}
+                    <div class="w-full h-40 bg-primary relative shrink-0">
+                        <div class="absolute -bottom-10 left-1/2 -translate-x-1/2 w-20 h-20 rounded-full border-4 border-white overflow-hidden bg-slate-200 shadow-lg">
+                            <img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1myVuGIgwq81XmvMT1KbIlWlKCLouKbWS5mVzO8vJvYbYWQiLc7lFoyWFrMLfnyhHlR_yBkJcxX1-A7TDTqS6jIIWe17hHFosbhLn-s5RV19qr6lSLm6lRTK0LBBYXq85kWoVzOEyIC1JH839PewJe9pD2mQG08x7bKTKppWKY4nXAf3W_pD_L8M3Q7vrloGre2PhijR7sCJt0jJ5_kV69u8-K0s_R-t1up3AwO3xxxAW3YsOgtRgYZoYX2lvgeb_6q_rKjGw1JlR" alt="Profile" />
+                        </div>
+                    </div>
+                    <div class="mt-12 text-center px-6">
+                        <h4 class="font-black text-xl text-slate-900">Creator Senja</h4>
+                        <p class="text-sm text-slate-500 mt-1">Capture moments, share stories.</p>
+                        
+                        <div class="mt-8 space-y-4 pb-12 text-left">
+                           <ProductCard 
+                               title="Camera Preset Pack" 
+                               description="Preset kustom terbaik" 
+                               price="Rp 120k" 
+                               ctaText="Beli"
+                               imageSrc="https://lh3.googleusercontent.com/aida-public/AB6AXuDYRDvqksgcTHs1sTOO4mKOcdfbg6S6pEFmESpdSmm0pYSkJdnOhhS_UZzhA2RdjSEkuekb0mFX_rTe5kDm-acsOYwV0yMzWwJ6aozejewSifttOmOhtM--jrJlSmtV9OE49au937TS2XHwVnp3rsKPqyO6q3A_vOlvDKRZn8JKieH-kSw5HZ8dOnY7p0MLAupf_EbHUEv7t4v9d1R7Hh5Y6RP69uYpENe3R1kqkMONkhq767gbztqB_uhrKYbQWAaOG41P0ScxnQCm" 
+                           />
+                        </div>
+                    </div>
+                 </MobileFrame>
+            </div>
+
+            <div>
+                 <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">28. Public Page — Product Card Standalone</h2>
+                 <ProductCard 
+                     title="Mastering Night Photography E-Book"
+                     description="Pelajari teknik rahasia memotret di malam hari dengan gear standar sekalipun."
+                     price="Rp 85.000"
+                     badge="Best Seller"
+                     imageSrc="https://lh3.googleusercontent.com/aida-public/AB6AXuALL4LxuX0s2ME4WJzy-PXOmRbqrSP4Q3aByIxpfu6AnzzaqhMDfD5DFh1uQ5tWNLZfjjY5CJFS4Df_9tZiRVh0XhjYypUxSFWURrGdOSVupstTM8egThq0VyZBMO4spttXFV0EAA-OOUYrlWXLISO7F3q9Vv2E19DqLewfi-Bmrnl687IrseDp3vce18GgNjSavslOHeVH0VYKePVGZVtvoCHi7fkgxk_3_3kALAUytuTNQMG_lYBKMQMFlPGqepJyTSs7AQlvK3RS"
+                 />
+            </div>
+
+            <div>
+                 <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">29. Public Page — Event Card</h2>
+                 <EventCard 
+                     title="Workshop Konten Kreator: Dari Hobi Jadi Profesi"
+                     date="Sabtu, 24 April 2024"
+                     time="13:00 - 17:00 WIB"
+                     location="Jakarta Selatan"
+                     type="Workshop"
+                     ticketsLeft={12}
+                     imageSrc="https://lh3.googleusercontent.com/aida-public/AB6AXuB1t9eSDG6RLPKcuGR_uwTS6IQYdm_mcePuM9AT8RKBo3dpLW4G5gpq56yiqYOJmOlpVIBegh6D2ZxU0B2tAscx0kTcLi8hkJPVichp7HGwrhESgsdrHyeFwqJPbAykhR-c1Gwn-wZQu1Ndz1GSyRu6PFo-8zOBlAC8lCxqC1QZ4O3vtYBg_bZuCThyR3MgGqFbWO0l5dXL-BG4nZFVKvpS8TdOMBfQ4spSw7FiLaFsxxY5BKnmVRUp7pr5X5UOvgsrxht5BmGAyehK"
+                 />
+            </div>
+        </section>
+
+        <!-- BATCH 3 SEPARATOR -->
+        <header class="w-full border-b border-slate-300 pb-8 mb-12 mt-20">
+            <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">tepak.id <span class="text-primary">Batch 3</span></h1>
+            <p class="text-slate-600 mt-2">Design system and UI blocks for creative digital commerce.</p>
+        </header>
+
+        <div class="space-y-16 pb-24">
+            
+            <section id="checkout-form">
+                <h2 class="text-xs font-bold uppercase tracking-widest text-primary mb-4">30. Checkout Form</h2>
+                <CheckoutForm client:load />
+            </section>
+
+            <section id="order-status">
+                <h2 class="text-xs font-bold uppercase tracking-widest text-primary mb-4">31. Order Status</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <OrderStatus status="success" />
+                    <OrderStatus status="pending" />
+                </div>
+            </section>
+
+            <section id="analytics-chart">
+                <h2 class="text-xs font-bold uppercase tracking-widest text-primary mb-4">33. Analytics Chart</h2>
+                <AnalyticsChart client:load />
+            </section>
+
+            <section id="device-breakdown">
+                <h2 class="text-xs font-bold uppercase tracking-widest text-primary mb-4">34. Device/Browser Breakdown</h2>
+                <DeviceBreakdown />
+            </section>
+
+            <section id="payout-form">
+                <h2 class="text-xs font-bold uppercase tracking-widest text-primary mb-4">36. Wallet Payout Form</h2>
+                <PayoutForm client:load />
+            </section>
+
+            <section id="payout-history">
+                <h2 class="text-xs font-bold uppercase tracking-widest text-primary mb-4">37. Payout History</h2>
+                <PayoutHistory />
+            </section>
+
+            <section id="customer-table">
+                <h2 class="text-xs font-bold uppercase tracking-widest text-primary mb-4">38. Customer Table</h2>
+                <CustomerTable />
+            </section>
+
+            <section id="event-stats">
+                <h2 class="text-xs font-bold uppercase tracking-widest text-primary mb-4">42. Event Stats</h2>
+                <EventStats />
+            </section>
+
+            <section id="domain-wizard">
+                <h2 class="text-xs font-bold uppercase tracking-widest text-primary mb-4">44. Custom Domain Wizard</h2>
+                <DomainWizard client:load />
+            </section>
+
+        </div>
+
+        <!-- BATCH 4: PAGES & TEMPLATES -->
+        <section class="mt-24 pb-32 border-t pt-20 border-slate-200">
+             <div class="flex items-center gap-4 mb-10">
+                <div class="w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center text-white">
+                    <span class="material-symbols-outlined text-2xl">auto_stories</span>
+                </div>
+                <div>
+                     <h1 class="text-4xl font-black text-slate-900 tracking-tighter">Full Pages & Templates</h1>
+                     <p class="text-slate-500 font-medium">Contoh rakitan utuh halaman Dashboard & Terkelola.</p>
+                </div>
+             </div>
+
+             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 font-sans">
+                 <div class="group bg-white p-8 rounded-3xl border-2 border-slate-50 hover:border-primary transition-all shadow-sm">
+                     <span class="text-[10px] font-black text-primary uppercase tracking-widest block mb-4">Template 01</span>
+                     <h3 class="text-xl font-black text-slate-900 mb-2">Curator Login Page</h3>
+                     <p class="text-xs text-slate-500 mb-8 leading-relaxed font-medium tracking-tight">Halaman masuk dengan branding split-screen (Logo kiri, Form kanan).</p>
+                     
+                     <a href="/login" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all">
+                         Buka Pratinjau Halaman
+                         <span class="material-symbols-outlined text-sm">open_in_new</span>
+                     </a>
+                 </div>
+
+                 <div class="group bg-white p-8 rounded-3xl border-2 border-slate-50 hover:border-primary transition-all shadow-sm">
+                     <span class="text-[10px] font-black text-primary uppercase tracking-widest block mb-4">Template 02</span>
+                     <h3 class="text-xl font-black text-slate-900 mb-2">Free Registration Page</h3>
+                     <p class="text-xs text-slate-500 mb-8 leading-relaxed font-medium tracking-tight">Halaman daftar dengan layout kartu terpusat dan elemen branding minimalis.</p>
+                     
+                     <a href="/signup" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all">
+                         Buka Pratinjau Halaman
+                         <span class="material-symbols-outlined text-sm">open_in_new</span>
+                     </a>
+                 </div>
+
+                 <div class="group bg-white p-8 rounded-3xl border-2 border-slate-50 hover:border-primary transition-all shadow-sm">
+                     <span class="text-[10px] font-black text-primary uppercase tracking-widest block mb-4">Template 03</span>
+                     <h3 class="text-xl font-black text-slate-900 mb-2">Verify Email Page</h3>
+                     <p class="text-xs text-slate-500 mb-8 leading-relaxed font-medium tracking-tight">Halaman transaksional verifikasi email dengan fokus aksi tunggal.</p>
+                     
+                     <a href="/verify-email" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all">
+                         Buka Pratinjau Halaman
+                         <span class="material-symbols-outlined text-sm">open_in_new</span>
+                     </a>
+                 </div>
+
+                 <div class="group bg-white p-8 rounded-3xl border-2 border-slate-50 hover:border-primary transition-all shadow-sm">
+                     <span class="text-[10px] font-black text-primary uppercase tracking-widest block mb-4">Template 04</span>
+                     <h3 class="text-xl font-black text-slate-900 mb-2">Forgot Password Page</h3>
+                     <p class="text-xs text-slate-500 mb-8 leading-relaxed font-medium tracking-tight">Halaman permintaan reset kata sandi dengan layout split-screen premium.</p>
+                     
+                     <a href="/forgot-password" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all">
+                         Buka Pratinjau Halaman
+                         <span class="material-symbols-outlined text-sm">open_in_new</span>
+                     </a>
+                 </div>
+
+                 <div class="group bg-white p-8 rounded-3xl border-2 border-slate-50 hover:border-primary transition-all shadow-sm">
+                     <span class="text-[10px] font-black text-primary uppercase tracking-widest block mb-4">Template 06</span>
+                     <h3 class="text-xl font-black text-slate-900 mb-2">Public Profile Page</h3>
+                     <p class="text-xs text-slate-500 mb-8 leading-relaxed font-medium tracking-tight">Halaman etalase publik (Link-in-Bio) premium untuk kreator.</p>
+                     
+                     <a href="/public" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all">
+                         Buka Pratinjau Halaman
+                         <span class="material-symbols-outlined text-sm">open_in_new</span>
+                     </a>
+                 </div>
+
+                 <div class="group bg-white p-8 rounded-3xl border-2 border-slate-50 hover:border-primary transition-all shadow-sm">
+                     <span class="text-[10px] font-black text-primary uppercase tracking-widest block mb-4">Template 07</span>
+                     <h3 class="text-xl font-black text-slate-900 mb-2">Checkout Page</h3>
+                     <p class="text-xs text-slate-500 mb-8 leading-relaxed font-medium tracking-tight">Halaman pembayaran bebas gangguan dengan rincian biaya transparan.</p>
+                     
+                     <a href="/checkout" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all">
+                         Buka Pratinjau Halaman
+                         <span class="material-symbols-outlined text-sm">open_in_new</span>
+                     </a>
+                 </div>
+
+                 <div class="group bg-white p-8 rounded-3xl border-2 border-slate-50 hover:border-primary transition-all shadow-sm">
+                     <span class="text-[10px] font-black text-primary uppercase tracking-widest block mb-4">Template 08</span>
+                     <h3 class="text-xl font-black text-slate-900 mb-2">Onboarding Flow</h3>
+                     <p class="text-xs text-slate-500 mb-8 leading-relaxed font-medium tracking-tight">Alur pendaftaran kreatif dengan klaim domain dan pemilihan tema instan.</p>
+                     
+                     <a href="/onboarding" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all">
+                         Buka Pratinjau Halaman
+                         <span class="material-symbols-outlined text-sm">open_in_new</span>
+                     </a>
+                 </div>
+
+                 <div class="group bg-white p-8 rounded-3xl border-2 border-slate-50 hover:border-primary transition-all shadow-sm">
+                     <span class="text-[10px] font-black text-primary uppercase tracking-widest block mb-4">Template 09</span>
+                     <h3 class="text-xl font-black text-slate-900 mb-2">Creator Dashboard</h3>
+                     <p class="text-xs text-slate-500 mb-8 leading-relaxed font-medium tracking-tight">Pusat kendali premium dengan statistik gaya bento, analitik, dan manajemen konten.</p>
+                     
+                     <a href="/dashboard" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all">
+                         Buka Pratinjau Halaman
+                         <span class="material-symbols-outlined text-sm">open_in_new</span>
+                     </a>
+                 </div>
+             </div>
+        </section>
+
+        {/* HIGH FIDELITY COMPONENTS COLLECTION */}
+        <section class="mb-32">
+            <header class="mb-12">
+                <h2 class="text-3xl font-black text-slate-900 tracking-tighter">High Fidelity Components</h2>
+                <p class="text-sm text-slate-500 font-medium tracking-tight">Koleksi komponen kompleks untuk fitur e-commerce, event, dan onboarding.</p>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 text-on-surface">
+                {/* 00: AVATAR UPLOAD */}
+                <div class="space-y-6">
+                    <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">00. Avatar Upload Card</span>
+                    <div class="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col items-center">
+                        <AvatarUpload client:load />
+                    </div>
+                </div>
+
+                {/* 01: PRODUCT CARD */}
+                <div class="space-y-6">
+                    <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">01. Product Card</span>
+                    <div class="max-w-md">
+                        <ProductCard 
+                            imageSrc="https://lh3.googleusercontent.com/aida-public/AB6AXuCjjyluzSxIJ5m-78CwTFr1titoEU8JGT-PqmwcEF-21PHJ6cqH04cc3__Q37EJcF_rDYTOGM8loDPhEI5dF3mUKBzumESfBpcChiPS50-YTG33SduZrSvcaCOUwzjQkC3G808320Q3u9LUzcgQCziaSC6it3Uyi5Gw24ZA67TP36T3gJasAxoblawtCJnAOAdNfh5PFa2P9gPHYimVHxiuuN-MNrEX86JMagD4hQ-at05QqRa29rEoSu8qcRVDTEpxUqdQOt4V6G-x"
+                            title="The Creator Blueprint"
+                            price="Rp 149.000"
+                            description="Panduan membangun brand digital dari nol."
+                        />
+                    </div>
+                </div>
+
+                {/* 02: EVENT CARD */}
+                <div class="space-y-6">
+                    <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">02. Event Card</span>
+                    <EventCard 
+                        imageSrc="https://lh3.googleusercontent.com/aida-public/AB6AXuDk5FqcnEfnb7yKy9LpRhxAWVJcAbnBhjeTT_7VeMKxfxP0SaM5arYjHlvzrKFkGrpmwaxrQ4_9vWh5tLzb-4BHY73TxphntxjNOICFYl1IZ8RoxtIkT2rgWpMcdLb3TsHeODjeZR0ZRuaxARQBATgzJgzF2ytUJmIrF93OfOrj_zwrSqhUOOoF0oHlcIN_EWxkdJWBbW7tur8Wnn2Nl4muuKm0xOgACHRzkSBMXj7JU0Ryvx6nHzpbhA7PCQEEWmIMDNQ8iHR91Dnv"
+                        title="Masterclass Strategi Konten"
+                        date="24 Okt, 2024"
+                        time="19:00 WIB"
+                        type="Webinar"
+                        ticketsLeft={5}
+                    />
+                </div>
+
+                {/* 03: PAYMENT METHOD CARD */}
+                <div class="space-y-6">
+                    <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">03. Selectable Payment Card</span>
+                    <div class="max-w-md space-y-4 bg-slate-50 p-6 rounded-3xl">
+                        <PaymentMethodCard 
+                            client:load
+                            id="demo-qris" 
+                            title="QRIS" 
+                            description="OVO, GoPay, Dana" 
+                            icon="qr_code_2" 
+                            isSelected={true} 
+                            onSelect={() => {}}
+                        />
+                        <PaymentMethodCard 
+                            client:load
+                            id="demo-va" 
+                            title="Virtual Account" 
+                            description="Transfer Bank Otomatis" 
+                            icon="account_balance" 
+                            isSelected={false} 
+                            onSelect={() => {}}
+                        />
+                    </div>
+                </div>
+
+                {/* 04: THEME PICKER CARD */}
+                <div class="space-y-6">
+                    <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">04. Selectable Theme Card</span>
+                    <div class="grid grid-cols-2 gap-6">
+                        <ThemeCard 
+                            client:load
+                            id="demo-dark" 
+                            name="Atelier Dark" 
+                            previewGradient="bg-slate-900" 
+                            isActive={true} 
+                            onSelect={() => {}}
+                        />
+                        <ThemeCard 
+                            client:load
+                            id="demo-sunrise" 
+                            name="Sunrise Glow" 
+                            previewGradient="bg-gradient-to-br from-amber-100 to-rose-200" 
+                            isActive={false} 
+                            onSelect={() => {}}
+                        />
+                    </div>
+                </div>
+
+                {/* 05: WORKFLOW STEPPER */}
+                <div class="space-y-6 lg:col-span-2">
+                    <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">05. Workflow Stepper</span>
+                    <div class="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm flex justify-center">
+                        <div class="max-w-2xl w-full">
+                            <Stepper 
+                                client:load
+                                steps={[{label: 'Profil'}, {label: 'Konten'}, {label: 'Selesai'}]}
+                                currentStep={1}
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    <FloatingToolbar />
+
+    </div>
+</BaseLayout>

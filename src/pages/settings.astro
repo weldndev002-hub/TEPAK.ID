@@ -1,0 +1,23 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { LightSidebar } from '../components/layout/LightSidebar';
+import { LightTopNavbar } from '../components/layout/LightTopNavbar';
+import { EditProfileForm } from '../components/profile/EditProfileForm';
+---
+
+<BaseLayout title="Edit Profile | Creator Studio">
+    <div class="flex min-h-screen bg-slate-50">
+        <!-- Sidebar B (Light) -->
+        <LightSidebar activePage="settings" client:load />
+
+        <div class="flex-1 flex flex-col h-screen overflow-hidden">
+            <!-- Header B (Light) -->
+            <LightTopNavbar client:load />
+
+            <!-- MAIN WORKSPACE -->
+            <main class="flex-1 overflow-y-auto p-10 bg-[#e8e9eb]">
+                <EditProfileForm client:load />
+            </main>
+        </div>
+    </div>
+</BaseLayout>

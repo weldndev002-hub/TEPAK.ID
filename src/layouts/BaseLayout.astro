@@ -1,0 +1,48 @@
+---
+import '../styles/globals.css';
+
+interface Props {
+	title: string;
+	description?: string;
+}
+
+const { title, description = "A modern website built with Astro, Hono, and Prisma." } = Astro.props;
+---
+
+<!doctype html>
+<html lang="id">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="description" content={description} />
+		<meta name="viewport" content="width=device-width" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="generator" content={Astro.generator} />
+		<title>{title}</title>
+		
+		<!-- Google Fonts & Material Symbols -->
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300..800&display=swap" rel="stylesheet">
+		<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+	</head>
+	<body class="min-h-screen font-sans antialiased">
+		<slot />
+	</body>
+</html>
+
+<style is:global>
+	/* Custom scrollbar or other micro-animations */
+	::-webkit-scrollbar {
+		width: 8px;
+	}
+	::-webkit-scrollbar-track {
+		background: hsl(var(--background));
+	}
+	::-webkit-scrollbar-thumb {
+		background: hsl(var(--muted));
+		border-radius: 4px;
+	}
+	::-webkit-scrollbar-thumb:hover {
+		background: hsl(var(--accent));
+	}
+</style>

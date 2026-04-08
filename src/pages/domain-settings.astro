@@ -1,0 +1,23 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { LightSidebar } from '../components/layout/LightSidebar';
+import { LightTopNavbar } from '../components/layout/LightTopNavbar';
+import { DomainSettingsDashboard } from '../components/settings/DomainSettings';
+---
+
+<BaseLayout title="Domain Settings | Creator Hub">
+    <div class="flex h-screen bg-[#F8FAFC]">
+        {/* Sidebar Desktop */}
+        <LightSidebar activePage="settings" client:load />
+
+        {/* Main Content Area */}
+        <div class="flex-1 flex flex-col h-screen overflow-hidden">
+            <LightTopNavbar client:load />
+            
+            {/* The Dashboard acts as the main scrollable area */}
+            <main class="flex-1 overflow-y-auto">
+                <DomainSettingsDashboard client:load />
+            </main>
+        </div>
+    </div>
+</BaseLayout>

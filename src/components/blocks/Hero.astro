@@ -1,0 +1,37 @@
+---
+interface Props {
+  title: string;
+  subtitle?: string;
+  cta_text?: string;
+  cta_link?: string;
+  image_url?: string;
+}
+
+const { title, subtitle, cta_text, cta_link, image_url } = Astro.props;
+---
+
+<section class="relative py-24 overflow-hidden border-b bg-background">
+  <div class="container relative px-4 mx-auto md:px-6">
+    <div class="flex flex-col items-center max-w-3xl gap-4 mx-auto text-center">
+      <h1 class="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl font-outfit">
+        {title}
+      </h1>
+      {subtitle && (
+        <p class="max-w-[700px] text-muted-foreground md:text-xl">
+          {subtitle}
+        </p>
+      )}
+      {cta_text && (
+        <a 
+          href={cta_link || "#"}
+          class="inline-flex items-center justify-center px-8 py-3 mt-4 text-sm font-medium transition-colors rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+        >
+          {cta_text}
+        </a>
+      )}
+    </div>
+  </div>
+  
+  <!-- Aesthetic decoration -->
+  <div class="absolute top-0 right-0 -z-10 w-[500px] h-[500px] bg-primary/5 blur-[120px] rounded-full translate-x-1/2 -translate-y-1/2"></div>
+</section>

@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Funnel Display", "Inter", "Roboto", sans-serif;
+  --font-headline: "Funnel Display", sans-serif;
+  
+  /* Precision Material 3 Tonal Palette (Restored from "The Digital Architect" Reference) */
+  --color-primary: #815500;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #f6af3b;
+  --color-on-primary-container: #694400;
+  --color-inverse-primary: #ffb94c;
+
+  --color-secondary: #545f71;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #d8e3f9;
+  --color-on-secondary-container: #5a6577;
+
+  --color-tertiary: #005ac2;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #9ebcff;
+  --color-on-tertiary-container: #00489e;
+
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  --color-background: #f8f9ff;
+  --color-on-background: #0b1c30;
+
+  --color-surface: #f8f9ff;
+  --color-on-surface: #0b1c30;
+  --color-surface-variant: #d3e4fe;
+  --color-on-surface-variant: #514535;
+  --color-surface-dim: #cbdbf5;
+  --color-surface-bright: #f8f9ff;
+  --color-inverse-surface: #213145;
+  --color-inverse-on-surface: #eaf1ff;
+
+  --color-outline: #837563;
+  --color-outline-variant: #d6c4af;
+
+  /* Surface Container Variations */
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #eff4ff;
+  --color-surface-container: #e5eeff;
+  --color-surface-container-high: #dce9ff;
+  --color-surface-container-highest: #d3e4fe;
+
+  /* Radius (Restored) */
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+  --radius-full: 9999px;
+}
+
+@layer base {
+  * {
+    @apply border-slate-200;
+  }
+  body {
+    @apply bg-background text-on-background;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: 'Funnel Display', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer utilities {
+  .amber-gradient {
+    background: linear-gradient(135deg, #815500 0%, #f6af3b 100%);
+  }
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+  }
+}

@@ -1,0 +1,8 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { BannedView } from '../components/auth/BannedView';
+---
+
+<BaseLayout title="Account Suspended | Tepak.id" description="Your account has been restricted access.">
+    <BannedView client:load />
+</BaseLayout>

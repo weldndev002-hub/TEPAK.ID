@@ -1,0 +1,55 @@
+---
+interface Props {
+  title: string;
+  category: string;
+  location: string;
+  date: string;
+  time: string;
+  remaining_tickets: number;
+  image_url: string;
+}
+
+const { title, category, location, date, time, remaining_tickets, image_url } = Astro.props;
+---
+
+<div class="max-w-2xl bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden flex flex-col md:flex-row group hover:shadow-2xl hover:border-primary/20 transition-all duration-300">
+    <div class="md:w-56 relative overflow-hidden">
+        <img 
+            class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+            src={image_url} 
+            alt={title}
+        />
+        <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent md:hidden"></div>
+    </div>
+    
+    <div class="flex-1 p-8">
+        <div class="flex items-center gap-3 mb-4">
+            <span class="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black rounded-lg uppercase tracking-widest">{category}</span>
+            <span class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">• {location}</span>
+        </div>
+        
+        <h3 class="font-black text-2xl text-slate-900 mb-6 leading-tight tracking-tighter group-hover:text-primary transition-colors">
+            {title}
+        </h3>
+        
+        <div class="space-y-4 mb-8">
+            <div class="flex items-center gap-4 text-slate-600 text-sm font-medium">
+                <span class="material-symbols-outlined text-primary text-xl">calendar_today</span>
+                <span>{date}</span>
+            </div>
+            <div class="flex items-center gap-4 text-slate-600 text-sm font-medium">
+                <span class="material-symbols-outlined text-primary text-xl">schedule</span>
+                <span>{time}</span>
+            </div>
+        </div>
+        
+        <div class="flex items-center justify-between border-t border-slate-50 pt-6">
+            <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                Sisa <span class="text-error font-black text-sm">{remaining_tickets} Tiket</span>
+            </div>
+            <button class="px-8 py-3 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all text-xs uppercase tracking-wider">
+                Beli Tiket
+            </button>
+        </div>
+    </div>
+</div>
