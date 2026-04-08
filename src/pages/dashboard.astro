@@ -10,6 +10,7 @@ import { TopLinksTable } from '../components/dashboard/TopLinksTable';
 import { TrafficSourceAnalytics } from '../components/dashboard/TrafficSourceAnalytics';
 import { ConversionFunnel } from '../components/dashboard/ConversionFunnel';
 import { GeoAnalytics } from '../components/dashboard/GeoAnalytics';
+import { BottomNavbar } from '../components/layout/BottomNavbar';
 import Button from '../components/ui/Button';
 import { 
   EyeIcon, 
@@ -25,7 +26,7 @@ const topMetrics = [
   { title: "Total Impressions", value: "842.6k", icon: EyeIcon, trend: "12.5%", trendDirection: "up" as const, colorTheme: "tertiary" as const },
   { title: "Click-through Rate", value: "4.12%", icon: CursorArrowRaysIcon, trend: "8.2%", trendDirection: "up" as const, colorTheme: "primary" as const },
   { title: "Avg. Session Time", value: "2m 44s", icon: ClockIcon, trend: "2.4%", trendDirection: "down" as const, colorTheme: "slate" as const },
-  { title: "Projected Revenue", value: "$4,290", icon: CurrencyDollarIcon, trend: "18.9%", trendDirection: "up" as const, colorTheme: "tertiary" as const }
+  { title: "Projected Revenue", value: "Rp 4.290.000", icon: CurrencyDollarIcon, trend: "18.9%", trendDirection: "up" as const, colorTheme: "tertiary" as const }
 ];
 ---
 
@@ -93,11 +94,14 @@ const topMetrics = [
                 </div>
 
                 <!-- Bottom Section: Detailed Stats -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-20">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-32">
                     <BrowserPerformance client:visible />
                     <TopLinksTable client:visible />
                 </div>
             </main>
+
+            <!-- Bottom Navigation Bar (Mobile only) -->
+            <BottomNavbar activePage="dashboard" client:load />
         </div>
     </div>
 </BaseLayout>

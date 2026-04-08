@@ -3,9 +3,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { LightSidebar } from '../components/layout/LightSidebar';
 import { LightTopNavbar } from '../components/layout/LightTopNavbar';
 import { CustomersDashboard } from '../components/customers/CustomersDashboard';
+import { BottomNavbar } from '../components/layout/BottomNavbar';
 ---
 
-<BaseLayout title="Customer Management - Tepak.id">
+<BaseLayout title="Customer Management - Orbit Site">
     <div class="flex h-screen bg-[#F8FAFC]">
         {/* Sidebar Desktop */}
         <LightSidebar activePage="customers" client:load />
@@ -14,9 +15,12 @@ import { CustomersDashboard } from '../components/customers/CustomersDashboard';
         <div class="flex-1 flex flex-col h-screen overflow-hidden">
             <LightTopNavbar client:load />
             {/* The Dashboard acts as the main scrollable area */}
-            <main class="flex-1 overflow-y-auto">
+            <main class="flex-1 overflow-y-auto pb-32">
                 <CustomersDashboard client:load />
             </main>
+
+            <!-- Bottom Navigation for Mobile -->
+            <BottomNavbar activePage="customers" client:load />
         </div>
     </div>
 </BaseLayout>

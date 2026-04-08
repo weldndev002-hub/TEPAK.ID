@@ -3,6 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { Header } from '../../components/layout/Header';
 import { TutorialManagementDashboard } from '../../components/admin/TutorialManagementDashboard';
+import { BottomNavbar } from '../../components/layout/BottomNavbar';
 ---
 
 <BaseLayout title="Tutorial Management | Orbit Site Admin">
@@ -15,9 +16,12 @@ import { TutorialManagementDashboard } from '../../components/admin/TutorialMana
             <Header client:load />
             
             {/* The Dashboard acts as the main scrollable area */}
-            <main class="flex-1 overflow-y-auto mt-20 p-8 ml-64">
+            <main class="flex-1 overflow-y-auto mt-20 p-8 md:ml-64 ml-0 pb-32">
                 <TutorialManagementDashboard client:load />
             </main>
+
+            {/* Bottom Navigation for Mobile */}
+            <BottomNavbar variant="admin" activePage="tutorials" client:load />
         </div>
     </div>
 </BaseLayout>

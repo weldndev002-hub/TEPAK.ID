@@ -3,6 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { LightSidebar } from '../components/layout/LightSidebar';
 import { LightTopNavbar } from '../components/layout/LightTopNavbar';
 import { EditProfileForm } from '../components/profile/EditProfileForm';
+import { BottomNavbar } from '../components/layout/BottomNavbar';
 ---
 
 <BaseLayout title="Edit Profile | Creator Studio">
@@ -15,9 +16,12 @@ import { EditProfileForm } from '../components/profile/EditProfileForm';
             <LightTopNavbar client:load />
 
             <!-- MAIN WORKSPACE -->
-            <main class="flex-1 overflow-y-auto p-10 bg-[#e8e9eb]">
+            <main class="flex-1 overflow-y-auto p-10 bg-[#e8e9eb] pb-32">
                 <EditProfileForm client:load />
             </main>
+
+            <!-- Bottom Navigation for Mobile -->
+            <BottomNavbar activePage="settings" client:load />
         </div>
     </div>
 </BaseLayout>

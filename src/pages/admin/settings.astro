@@ -3,9 +3,10 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { Header } from '../../components/layout/Header';
 import { AdminSettingsDashboard } from '../../components/admin/AdminSettingsDashboard';
+import { BottomNavbar } from '../../components/layout/BottomNavbar';
 ---
 
-<BaseLayout title="Transaction Fee Settings | Tepak.id Admin">
+<BaseLayout title="Transaction Fee Settings | Orbit Site Admin">
     <div class="flex h-screen bg-[#F8FAFC]">
         {/* Sidebar Desktop (Sidebar A - Dark) */}
         <Sidebar activePage="settings" client:load />
@@ -15,9 +16,12 @@ import { AdminSettingsDashboard } from '../../components/admin/AdminSettingsDash
             <Header client:load />
             
             {/* The Dashboard acts as the main scrollable area */}
-            <main class="flex-1 overflow-y-auto mt-20 p-8 ml-64">
+            <main class="flex-1 overflow-y-auto mt-20 p-8 md:ml-64 ml-0 pb-32">
                 <AdminSettingsDashboard client:load />
             </main>
+
+            {/* Bottom Navigation for Mobile */}
+            <BottomNavbar variant="admin" activePage="settings" client:load />
         </div>
     </div>
 </BaseLayout>

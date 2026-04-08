@@ -3,6 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { LightSidebar } from '../components/layout/LightSidebar';
 import { LightTopNavbar } from '../components/layout/LightTopNavbar';
 import { WalletDashboard } from '../components/wallet/WalletDashboard';
+import { BottomNavbar } from '../components/layout/BottomNavbar';
 ---
 
 <BaseLayout title="Earnings & Wallet | The Digital Atelier">
@@ -15,9 +16,12 @@ import { WalletDashboard } from '../components/wallet/WalletDashboard';
             <LightTopNavbar client:load />
 
             <!-- MAIN WORKSPACE -->
-            <main class="flex-1 overflow-y-auto p-10 bg-slate-50">
+            <main class="flex-1 overflow-y-auto p-10 bg-slate-50 pb-32">
                 <WalletDashboard client:load />
             </main>
+
+            <!-- Bottom Navigation for Mobile -->
+            <BottomNavbar activePage="wallet" client:load />
         </div>
     </div>
 </BaseLayout>

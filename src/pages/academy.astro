@@ -5,13 +5,14 @@ import { LightTopNavbar } from '../components/layout/LightTopNavbar';
 import { AcademyHero } from '../components/academy/AcademyHero';
 import { CategoryFilters } from '../components/academy/CategoryFilters';
 import { TutorialCard } from '../components/academy/TutorialCard';
+import { BottomNavbar } from '../components/layout/BottomNavbar';
 import Button from '../components/ui/Button';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
 
 // Sample data from mockup
 const tutorials = [
   {
-    title: "Cara Menghubungkan Custom Domain ke tepak.id",
+    title: "Cara Menghubungkan Custom Domain ke Orbit Site",
     thumbnail: "https://lh3.googleusercontent.com/aida-public/AB6AXuCIw4tEQ1URh0gDvDPoXdf0GoiXrScSQ-DcldzQXg3OnLaGujY7Edj7YXHEFgj9GxaUHNkbPifVNfNItrdJXCOkeqJgVRzp2wvi9rSDIYL8Qo-RkN7x9_bRewuV3xi7-BDOtnbcrvp00a_ctUkKvSSgHLhZlRQAfUxofdI2IBw07Os-ycRBwGTqzmZgYBcNuKIhQskW0JGDwZM_ECiEt4ElBTIkmOm-_OkbeMOG2YBUIrLE9A6rqHSnrWsOG1VDckEvRBEMA6I4Bbyh",
     duration: "12:45",
     category: "Domain",
@@ -56,7 +57,7 @@ const tutorials = [
     platform: "YouTube" as const
   },
   {
-    title: "Panduan SEO: Agar Halaman tepak.id Anda Muncul di Google",
+    title: "Panduan SEO: Agar Halaman Orbit Site Anda Muncul di Google",
     thumbnail: "https://lh3.googleusercontent.com/aida-public/AB6AXuB-A560_G4A8wEmJ4W7Hg8S71ycSO7-7js1XV5dQvWNVVQtbwL3P8APk-047I3edFPYGZqywlzRYPz0NK_JQbrBrTPAeGRMLTe8pSrIuokE6XIQHBokgf2Z60E6WM3P83KdVKVrs_GNk94ODWj9mPVxrx6F_qP-5dRZLn5-9ivdV_fWFsbxrooocR6uS0hmVqXtTvgwciY1bFYpbc1buWjLlSuPnrKJTTHfkDfmJbRr4LEhE9zT707ft4C85xJ3JPRihCjNRqvlVhNJ",
     duration: "11:55",
     category: "SEO",
@@ -113,7 +114,7 @@ const tutorials = [
                        </div>
                    </div>
                    <div class="mt-12 pt-8 border-t border-slate-100 flex justify-between items-center text-slate-400">
-                       <p class="text-[10px] font-bold uppercase tracking-widest">© 2024 tepak.id Creator Studio. All rights reserved.</p>
+                       <p class="text-[10px] font-bold uppercase tracking-widest">© 2024 Orbit Site Creator Studio. All rights reserved.</p>
                        <div class="flex gap-6">
                            <a href="#" class="text-[10px] font-bold hover:text-blue-500 transition-colors">PRIVACY</a>
                            <a href="#" class="text-[10px] font-bold hover:text-blue-500 transition-colors">TERMS</a>
@@ -122,6 +123,9 @@ const tutorials = [
                    </div>
                 </footer>
             </main>
+
+            <!-- Bottom Navigation Bar (Mobile only) -->
+            <BottomNavbar activePage="academy" client:load />
         </div>
     </div>
 </BaseLayout>

@@ -3,6 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { Header } from '../../components/layout/Header';
 import { PayoutsDashboard } from '../../components/admin/PayoutsDashboard';
+import { BottomNavbar } from '../../components/layout/BottomNavbar';
 ---
 
 <BaseLayout title="Payout Processing | Orbit Site Admin">
@@ -15,9 +16,12 @@ import { PayoutsDashboard } from '../../components/admin/PayoutsDashboard';
             <Header client:load />
             
             {/* The Dashboard acts as the main scrollable area */}
-            <main class="flex-1 overflow-y-auto mt-20 p-8 ml-64">
+            <main class="flex-1 overflow-y-auto mt-20 p-8 md:ml-64 ml-0 pb-32">
                 <PayoutsDashboard client:load />
             </main>
+
+            {/* Bottom Navigation for Mobile */}
+            <BottomNavbar variant="admin" activePage="payouts" client:load />
         </div>
     </div>
 </BaseLayout>
