@@ -1,6 +1,7 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
 import Button from '../ui/Button';
+import { CalendarIcon, ClockIcon } from '@heroicons/react/24/outline';
 
 export interface EventCardProps {
   title: string;
@@ -19,7 +20,7 @@ export const EventCard: React.FC<EventCardProps> = ({
   title, type = "Event", location, date, time, imageSrc, ticketsLeft, ctaText = "Beli Tiket", onBuy, className 
 }) => {
   return (
-    <div className={cn("w-full max-w-lg bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden flex flex-col md:flex-row transition-all hover:shadow-lg", className)}>
+    <div className={cn("w-full max-w-lg bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden flex flex-col md:flex-row transition-all hover:shadow-lg font-['Plus_Jakarta_Sans',sans-serif]", className)}>
       
       {/* Event Image Cover (Left on Desktop, Top on Mobile) */}
       <div className="md:w-40 h-48 md:h-auto relative shrink-0">
@@ -48,11 +49,11 @@ export const EventCard: React.FC<EventCardProps> = ({
         
         <div className="space-y-2 mb-6 flex-1">
           <div className="flex items-center gap-3 text-slate-600 text-sm">
-            <span className="material-symbols-outlined text-primary text-base" style={{ fontVariationSettings: "'FILL' 0" }}>calendar_today</span>
+            <CalendarIcon className="w-4 h-4 text-primary" />
             <span className="font-medium">{date}</span>
           </div>
           <div className="flex items-center gap-3 text-slate-600 text-sm">
-            <span className="material-symbols-outlined text-primary text-base" style={{ fontVariationSettings: "'FILL' 0" }}>schedule</span>
+            <ClockIcon className="w-4 h-4 text-primary" />
             <span className="font-medium">{time}</span>
           </div>
         </div>
@@ -69,7 +70,7 @@ export const EventCard: React.FC<EventCardProps> = ({
           <Button 
             onClick={onBuy}
             variant="primary" 
-            className="px-6 py-2 h-auto rounded-lg"
+            className="px-6 py-2 h-auto rounded-lg text-sm font-bold"
           >
             {ctaText}
           </Button>
@@ -81,3 +82,4 @@ export const EventCard: React.FC<EventCardProps> = ({
 };
 
 export default EventCard;
+

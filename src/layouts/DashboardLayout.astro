@@ -2,6 +2,7 @@
 import BaseLayout from './BaseLayout.astro';
 import Sidebar from '../components/layout/Sidebar';
 import Header from '../components/layout/Header';
+import { PlusCircleIcon, SwatchIcon, EyeIcon } from '@heroicons/react/24/outline';
 
 interface Props {
   title: string;
@@ -24,17 +25,17 @@ const { title } = Astro.props;
       <!-- Floating Builder Toolbar (from mockup) -->
       <div class="fixed bottom-8 left-1/2 -translate-x-[calc(50%-144px)] glass-panel border border-white/20 rounded-full px-6 py-3 shadow-2xl flex items-center space-x-6 z-50">
         <button class="flex items-center space-x-2 text-on-surface hover:text-primary transition-colors">
-          <span class="material-symbols-outlined text-xl">add_box</span>
+          <PlusCircleIcon className="w-5 h-5" />
           <span class="text-[10px] font-bold uppercase tracking-wider">Add Block</span>
         </button>
         <div class="h-6 w-px bg-slate-200"></div>
         <button class="flex items-center space-x-2 text-on-surface hover:text-primary transition-colors">
-          <span class="material-symbols-outlined text-xl">palette</span>
+          <SwatchIcon className="w-5 h-5" />
           <span class="text-[10px] font-bold uppercase tracking-wider">Theme</span>
         </button>
         <div class="h-6 w-px bg-slate-300"></div>
         <button class="flex items-center space-x-2 text-on-surface hover:text-primary transition-colors">
-          <span class="material-symbols-outlined text-xl">visibility</span>
+          <EyeIcon className="w-5 h-5" />
           <span class="text-[10px] font-bold uppercase tracking-wider">Preview</span>
         </button>
         <button class="ml-4 bg-primary text-white px-6 py-2 rounded-full font-bold text-[10px] uppercase shadow-lg hover:shadow-primary/20 transform active:scale-95 transition-all">

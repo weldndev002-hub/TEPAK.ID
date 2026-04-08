@@ -1,21 +1,22 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Button from '../components/ui/Button';
+import { EnvelopeOpenIcon, ArrowTopRightOnSquareIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 ---
 
 <BaseLayout title="Verifikasi Email - tepak.id">
     
-    <main class="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-slate-50/50 font-sans">
+    <main class="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-slate-50/50 font-['Plus_Jakarta_Sans',sans-serif]">
         
         {/* LOGO AREA */}
         <div class="mb-10">
-            <h1 class="text-4xl font-black tracking-tighter text-slate-900">
+            <h1 class="text-4xl font-black tracking-tighter text-slate-900 uppercase">
                 tepak.id
             </h1>
         </div>
 
         {/* VERIFICATION CARD */}
-        <div class="w-full max-w-[480px] bg-surface-container-lowest p-10 md:p-14 rounded-[2.5rem] shadow-[0px_32px_64px_-12px_rgba(0,0,0,0.06)] border border-slate-50 relative overflow-hidden">
+        <div class="w-full max-w-[480px] bg-white p-10 md:p-14 rounded-[2.5rem] shadow-[0px_32px_64px_-12px_rgba(0,0,0,0.06)] border border-slate-50 relative overflow-hidden">
             
             <div class="flex flex-col items-center text-center">
                 
@@ -23,14 +24,12 @@ import Button from '../components/ui/Button';
                 <div class="mb-10 relative">
                     <div class="absolute inset-0 bg-primary/10 blur-3xl rounded-full scale-150"></div>
                     <div class="relative w-28 h-28 bg-primary/5 rounded-full flex items-center justify-center">
-                        <span class="material-symbols-outlined text-primary text-6xl" style={{ fontVariationSettings: "'FILL' 1" }}>
-                            mark_email_read
-                        </span>
+                        <EnvelopeOpenIcon className="w-14 h-14 text-primary" />
                     </div>
                 </div>
 
                 {/* TEXT CONTENT */}
-                <h2 class="text-3xl font-black text-slate-900 mb-4 tracking-tight">
+                <h2 class="text-3xl font-black text-slate-900 mb-4 tracking-tight uppercase">
                     Cek Email Anda
                 </h2>
                 <p class="text-slate-500 font-medium leading-relaxed mb-12 text-[15px] max-w-xs">
@@ -41,7 +40,7 @@ import Button from '../components/ui/Button';
                 <div class="w-full space-y-8">
                     <Button variant="amber" size="lg" className="w-full shadow-none group">
                         <span>Buka Email Utama</span>
-                        <span class="material-symbols-outlined text-lg">open_in_new</span>
+                        <ArrowTopRightOnSquareIcon className="w-5 h-5" />
                     </Button>
 
                     <div class="flex flex-col items-center gap-4">
@@ -59,7 +58,7 @@ import Button from '../components/ui/Button';
         {/* FOOTER / BACK LINK */}
         <div class="mt-12">
             <a class="flex items-center gap-3 text-slate-400 font-black hover:text-primary transition-all group text-sm uppercase tracking-widest" href="/login">
-                <span class="material-symbols-outlined text-[18px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                <ArrowLeftIcon className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
                 <span>Kembali ke Login</span>
             </a>
         </div>
@@ -77,3 +76,4 @@ import Button from '../components/ui/Button';
     </main>
 
 </BaseLayout>
+

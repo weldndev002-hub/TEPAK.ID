@@ -1,10 +1,14 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
+import { 
+    ArrowTrendingUpIcon, 
+    ArrowTrendingDownIcon 
+} from '@heroicons/react/24/outline';
 
 export interface StatCardProps {
   title: string;
   value: string | number;
-  icon: string;
+  icon: React.ElementType;
   trend?: string; // e.g. "+12.5%" or "-1.2%"
   trendDirection?: 'up' | 'down' | 'neutral';
   colorTheme?: 'primary' | 'tertiary' | 'green' | 'slate';
@@ -12,11 +16,11 @@ export interface StatCardProps {
 }
 
 export const StatCard: React.FC<StatCardProps> = ({
-  title, value, icon, trend, trendDirection, colorTheme = 'primary', className
+  title, value, icon: Icon, trend, trendDirection, colorTheme = 'primary', className
 }) => {
   const iconThemeClasses = {
     primary: "bg-amber-50 text-primary",
-    tertiary: "bg-blue-50 text-tertiary",
+    tertiary: "bg-blue-50 text-blue-600",
     green: "bg-green-50 text-green-600",
     slate: "bg-slate-50 text-slate-600"
   };
@@ -39,28 +43,31 @@ export const StatCard: React.FC<StatCardProps> = ({
         isUp ? "text-green-500" : "text-red-500"
       )}>
         {trend}
-        <span className="material-symbols-outlined text-sm ml-1" style={{ fontVariationSettings: "'FILL' 0" }}>
-          {isUp ? 'trending_up' : 'trending_down'}
-        </span>
+        {isUp ? (
+            <ArrowTrendingUpIcon className="w-3.5 h-3.5 ml-1" />
+        ) : (
+            <ArrowTrendingDownIcon className="w-3.5 h-3.5 ml-1" />
+        )}
       </span>
     );
   };
 
   return (
     <div className={cn(
-      "bg-surface-container-lowest p-6 rounded-lg shadow-sm group hover:ring-2 hover:ring-primary-container/20 transition-all",
+      "bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group hover:ring-2 hover:ring-primary/10 transition-all font-['Plus_Jakarta_Sans',sans-serif]",
       className
     )}>
       <div className="flex justify-between items-start mb-4">
-        <div className={cn("p-2 rounded-lg", iconThemeClasses[colorTheme])}>
-          <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 0" }}>{icon}</span>
+        <div className={cn("p-2 rounded-xl", iconThemeClasses[colorTheme])}>
+          <Icon className="w-6 h-6" />
         </div>
         {trendRender()}
       </div>
-      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{title}</p>
-      <h4 className="text-2xl font-extrabold text-on-surface">{value}</h4>
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{title}</p>
+      <h4 className="text-2xl font-black text-slate-900 tracking-tighter">{value}</h4>
     </div>
   );
 };
 
 export default StatCard;
+

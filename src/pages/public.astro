@@ -1,12 +1,67 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Button from '../components/ui/Button';
-import Avatar from '../components/ui/Avatar';
-import Badge from '../components/ui/Badge';
 import ProductCard from '../components/ui/ProductCard';
+import { 
+    CheckBadgeIcon, 
+    ArrowRightIcon, 
+    VideoCameraIcon, 
+    AcademicCapIcon,
+    CameraIcon,
+    PlayCircleIcon,
+    EnvelopeIcon,
+    GlobeAltIcon
+} from '@heroicons/react/24/solid';
+
+/**
+ * MOCK JSONB DATA FROM SUPABASE
+ * (Simulating the 'page_config' and 'features_config' requirement)
+ */
+const page_config = {
+    profile: {
+        name: "Santi Nusantara",
+        bio: "Membantu kreator Indonesia membangun brand digital yang bermakna. Designer, Educator, & Digital Strategist.",
+        avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuAqV1zxjaeYU4PqjHJ3aHlRH0Cet90XlqjfaBq_QX8rbhfInOCt9lXOMBVY6Wh0QS_a3NuhaPLVkomBJtp7niS0RLZ3KzmwQn9B0CUz5lmx600R69GfqNvQuJ2OLVZgYSP-PAuQbg_vdZJXlRnEw9VT2YgjEz-hQnQdrm6MVyR_Q1MfIQFyZsjvJCfSs9v3DavHdHii5JdEsEsQFPvEIqu0DLN0XlkOPYdoTLopXeoKM_myV2p8wuR6koPzdDYrVjEkU_3UA27WyGEJ",
+        is_verified: true,
+        socials: [
+            { icon: CameraIcon, url: "#" },
+            { icon: PlayCircleIcon, url: "#" },
+            { icon: EnvelopeIcon, url: "#" },
+            { icon: GlobeAltIcon, url: "#" }
+        ]
+    },
+    action_links: [
+        { 
+            title: "Konsultasi Kreatif (1-on-1)", 
+            icon: VideoCameraIcon, 
+            url: "#",
+            theme: "bg-[#0873df]" 
+        },
+        { 
+            title: "Workshop Branding Intensif", 
+            icon: AcademicCapIcon, 
+            url: "#",
+            theme: "bg-[#0873df]" 
+        }
+    ],
+    products: [
+        {
+            title: "The Creator Blueprint (E-Book)",
+            price: "Rp 149rb",
+            description: "Panduan lengkap membangun personal brand dari nol hingga menghasilkan pendapatan konsisten.",
+            image: "https://lh3.googleusercontent.com/aida-public/AB6AXuCjjyluzSxIJ5m-78CwTFr1titoEU8JGT-PqmwcEF-21PHJ6cqH04cc3__Q37EJcF_rDYTOGM8loDPhEI5dF3mUKBzumESfBpcChiPS50-YTG33SduZrSvcaCOUwzjQkC3G808320Q3u9LUzcgQCziaSC6it3Uyi5Gw24ZA67TP36T3gJasAxoblawtCJnAOAdNfh5PFa2P9gPHYimVHxiuuN-MNrEX86JMagD4hQ-at05QqRa29rEoSu8qcRVDTEpxUqdQOt4V6G-x"
+        },
+        {
+            title: "Cinematic Urban Presets",
+            price: "Rp 89rb",
+            description: "12 preset Lightroom kustom untuk memberikan nuansa premium pada foto konten media sosial Anda.",
+            image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAr07NKIXEP2HaT46rcrRfslmZae_DeX5iXM36noVPM6sa3cSqe7EOf6qXgBXY7SUatW22NE0QJZn97uJ0CVU4rP-bxhKGm9nOfCwt_VqEDRCX93WcxM6TEYfmMQwlHocS6MUk-88gjjKUm96CjXjG9_70H2LAvwYtq47kCg2ahlBeH67N81JDi2M96RqXBwX0yoF4j7ua9QgOhJf2naT9YT-m5fW7BH01YotLgDs8Wt3BDEXouZB3DHQpjJEZrOi8oxSD7OvlkcJKNh"
+        }
+    ]
+};
 ---
 
-<BaseLayout title="Santi Nusantara | Creator Hub">
+<BaseLayout title={`${page_config.profile.name} | tepak.id Ecosystem`}>
     <div class="min-h-screen bg-[#F8F9FB] text-[#191C1E] font-['Plus_Jakarta_Sans',sans-serif] antialiased">
         
         <main class="pt-20 pb-20 max-w-4xl mx-auto px-6">
@@ -16,24 +71,26 @@ import ProductCard from '../components/ui/ProductCard';
                     <div class="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-white shadow-sm bg-white">
                         <img 
                             class="w-full h-full object-cover" 
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAqV1zxjaeYU4PqjHJ3aHlRH0Cet90XlqjfaBq_QX8rbhfInOCt9lXOMBVY6Wh0QS_a3NuhaPLVkomBJtp7niS0RLZ3KzmwQn9B0CUz5lmx600R69GfqNvQuJ2OLVZgYSP-PAuQbg_vdZJXlRnEw9VT2YgjEz-hQnQdrm6MVyR_Q1MfIQFyZsjvJCfSs9v3DavHdHii5JdEsEsQFPvEIqu0DLN0XlkOPYdoTLopXeoKM_myV2p8wuR6koPzdDYrVjEkU_3UA27WyGEJ" 
-                            alt="Santi Nusantara"
+                            src={page_config.profile.avatar} 
+                            alt={page_config.profile.name}
                         />
                     </div>
-                    <div class="absolute bottom-2 right-2 bg-[#465f89] text-white p-1.5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
-                        <span class="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
-                    </div>
+                    {page_config.profile.is_verified && (
+                        <div class="absolute bottom-2 right-2 bg-[#465f89] text-white p-1.5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                            <CheckBadgeIcon className="w-4 h-4" />
+                        </div>
+                    )}
                 </div>
-                <h1 class="text-4xl md:text-5xl font-extrabold tracking-tighter text-[#005ab4] mb-3">Santi Nusantara</h1>
+                <h1 class="text-4xl md:text-5xl font-extrabold tracking-tighter text-[#005ab4] mb-3">{page_config.profile.name}</h1>
                 <p class="text-[#414753] max-w-lg leading-relaxed text-lg mb-8">
-                    Membantu kreator Indonesia membangun brand digital yang bermakna. Designer, Educator, & Digital Strategist.
+                    {page_config.profile.bio}
                 </p>
 
                 {/* Social Links */}
                 <div class="flex gap-4 mb-12">
-                    {['camera', 'play_circle', 'mail', 'public'].map((icon) => (
-                        <a href="#" class="w-12 h-12 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-[#0873df] hover:text-white transition-all duration-300">
-                            <span class="material-symbols-outlined">{icon}</span>
+                    {page_config.profile.socials.map((social) => (
+                        <a href={social.url} class="w-12 h-12 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-[#0873df] hover:text-white transition-all duration-300">
+                            <social.icon className="w-6 h-6" />
                         </a>
                     ))}
                 </div>
@@ -41,24 +98,17 @@ import ProductCard from '../components/ui/ProductCard';
 
             {/* Main Action Links */}
             <section class="space-y-4 mb-20" id="portfolio">
-                <a href="#" class="flex items-center justify-between group w-full p-8 rounded-3xl bg-[#0873df] text-white hover:bg-[#005ab4] transition-all duration-300 shadow-lg shadow-blue-500/10">
-                    <div class="flex items-center gap-6">
-                        <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-md">
-                            <span class="material-symbols-outlined">video_chat</span>
+                {page_config.action_links.map((link) => (
+                    <a href={link.url} class={`flex items-center justify-between group w-full p-8 rounded-3xl ${link.theme} text-white hover:brightness-95 transition-all duration-300 shadow-lg shadow-blue-500/10`}>
+                        <div class="flex items-center gap-6">
+                            <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-md">
+                                <link.icon className="w-6 h-6" />
+                            </div>
+                            <span class="text-lg font-bold tracking-tight">{link.title}</span>
                         </div>
-                        <span class="text-lg font-bold tracking-tight">Konsultasi Kreatif (1-on-1)</span>
-                    </div>
-                    <span class="material-symbols-outlined transform group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                </a>
-                <a href="#" class="flex items-center justify-between group w-full p-8 rounded-3xl bg-[#0873df] text-white hover:bg-[#005ab4] transition-all duration-300 shadow-lg shadow-blue-500/10">
-                    <div class="flex items-center gap-6">
-                        <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-md">
-                            <span class="material-symbols-outlined">school</span>
-                        </div>
-                        <span class="text-lg font-bold tracking-tight">Workshop Branding Intensif</span>
-                    </div>
-                    <span class="material-symbols-outlined transform group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                </a>
+                        <ArrowRightIcon className="w-6 h-6 transform group-hover:translate-x-1 transition-transform" />
+                    </a>
+                ))}
             </section>
 
             {/* Digital Products Section */}
@@ -71,18 +121,14 @@ import ProductCard from '../components/ui/ProductCard';
                     <a class="text-[#465f89] font-bold text-sm hover:underline" href="#">Lihat Semua</a>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <ProductCard 
-                        image="https://lh3.googleusercontent.com/aida-public/AB6AXuCjjyluzSxIJ5m-78CwTFr1titoEU8JGT-PqmwcEF-21PHJ6cqH04cc3__Q37EJcF_rDYTOGM8loDPhEI5dF3mUKBzumESfBpcChiPS50-YTG33SduZrSvcaCOUwzjQkC3G808320Q3u9LUzcgQCziaSC6it3Uyi5Gw24ZA67TP36T3gJasAxoblawtCJnAOAdNfh5PFa2P9gPHYimVHxiuuN-MNrEX86JMagD4hQ-at05QqRa29rEoSu8qcRVDTEpxUqdQOt4V6G-x"
-                        title="The Creator Blueprint (E-Book)"
-                        price="Rp 149rb"
-                        description="Panduan lengkap membangun personal brand dari nol hingga menghasilkan pendapatan konsisten."
-                    />
-                    <ProductCard 
-                        image="https://lh3.googleusercontent.com/aida-public/AB6AXuAr07NKIXEP2HaT46rcrRfslmZae_DeX5iXM36noVPM6sa3cSqe7EOf6qXgBXY7SUatW22NE0QJZn97uJ0CVU4rP-bxhKGm9nOfCwt_VqEDRCX93WcxM6TEYfmMQwlHocS6MUk-88gjjKUm96CjXjG9_70H2LAvwYtq47kCg2ahlBeH67N81JDi2M96RqXBwX0yoF4j7uaQgOhJf2naT9YT-m5fW7BH01YotLgDs8Wt3BDEXouZB3DHQpjJEZrOi8oxSD7OvlkcJKNh"
-                        title="Cinematic Urban Presets"
-                        price="Rp 89rb"
-                        description="12 preset Lightroom kustom untuk memberikan nuansa premium pada foto konten media sosial Anda."
-                    />
+                    {page_config.products.map((product) => (
+                        <ProductCard 
+                            image={product.image}
+                            title={product.title}
+                            price={product.price}
+                            description={product.description}
+                        />
+                    ))}
                 </div>
             </section>
 

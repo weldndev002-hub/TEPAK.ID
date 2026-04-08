@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
+import { CheckCircleIcon } from '@heroicons/react/24/solid';
 
 interface ThemeOption {
   id: string;
@@ -17,38 +18,36 @@ interface ThemePickerProps {
 
 export const ThemePicker: React.FC<ThemePickerProps> = ({ options, selectedId, onSelect }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-5xl mx-auto font-['Plus_Jakarta_Sans',sans-serif]">
       {options.map((theme) => (
         <div 
           key={theme.id}
           onClick={() => onSelect(theme.id)}
           className={cn(
-            "group relative bg-white rounded-2xl overflow-hidden border-2 p-3 transition-all cursor-pointer transform hover:scale-[1.02] active:scale-95 hover:shadow-xl",
+            "group relative bg-white rounded-[2.5rem] overflow-hidden border p-4 transition-all cursor-pointer transform hover:scale-[1.02] active:scale-95",
             selectedId === theme.id 
-              ? "border-primary shadow-lg ring-4 ring-primary/5" 
-              : "border-slate-200 hover:border-primary/50"
+              ? "border-primary shadow-[0_20px_40px_-15px_rgba(var(--primary-rgb),0.15)] bg-slate-50/10" 
+              : "border-slate-100 hover:border-primary/30"
           )}
         >
           {/* Mock UI Thumbnail for Theme */}
-          <div className={cn("rounded-xl aspect-[4/5] p-6 flex flex-col items-center gap-3", theme.thumbnailClass)}>
-            <div className={cn("w-14 h-14 rounded-full mb-2", theme.accentColor)}></div>
-            <div className="w-3/4 h-3 bg-current opacity-20 rounded-full"></div>
-            <div className="w-1/2 h-3 bg-current opacity-10 rounded-full"></div>
-            <div className="w-full h-10 bg-white/10 backdrop-blur border border-white/20 rounded-xl mt-4"></div>
-            <div className="w-full h-10 bg-white/10 backdrop-blur border border-white/20 rounded-xl"></div>
+          <div className={cn("rounded-[2rem] aspect-[4/5] p-8 flex flex-col items-center gap-4 transition-all", theme.thumbnailClass)}>
+            <div className={cn("w-16 h-16 rounded-[1.25rem] mb-4 shadow-lg", theme.accentColor)}></div>
+            <div className="w-3/4 h-2 bg-current opacity-20 rounded-full"></div>
+            <div className="w-1/2 h-2 bg-current opacity-10 rounded-full"></div>
+            <div className="w-full h-12 bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl mt-6"></div>
+            <div className="w-full h-12 bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl"></div>
           </div>
           
-          <div className="mt-4 flex items-center justify-between px-3 pb-2">
+          <div className="mt-6 flex items-center justify-between px-4 pb-4">
             <span className={cn(
-              "font-bold text-slate-900 transition-colors",
-              selectedId === theme.id ? "text-primary" : "group-hover:text-primary"
+              "text-[10px] font-black uppercase tracking-[0.2em] transition-colors",
+              selectedId === theme.id ? "text-primary" : "text-slate-400 group-hover:text-slate-600"
             )}>
               {theme.name}
             </span>
             {selectedId === theme.id && (
-              <span className="material-symbols-outlined text-primary text-2xl animate-in zoom-in-50" style={{ fontVariationSettings: "'FILL' 1" }}>
-                check_circle
-              </span>
+              <CheckCircleIcon className="w-6 h-6 text-primary animate-in zoom-in-50 duration-300" />
             )}
           </div>
         </div>
@@ -58,3 +57,4 @@ export const ThemePicker: React.FC<ThemePickerProps> = ({ options, selectedId, o
 };
 
 export default ThemePicker;
+

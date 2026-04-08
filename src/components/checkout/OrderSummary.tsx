@@ -1,4 +1,5 @@
 import React from 'react';
+import { ArrowRightIcon, ShieldCheckIcon } from '@heroicons/react/24/solid';
 
 interface OrderSummaryProps {
     productTitle: string;
@@ -22,8 +23,8 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
     };
 
     return (
-        <section className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/10 sticky top-28">
-            <h2 className="text-xl font-bold font-headline mb-6 text-primary">Ringkasan Pesanan</h2>
+        <section className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/10 sticky top-28 font-['Plus_Jakarta_Sans',sans-serif]">
+            <h2 className="text-xl font-bold mb-6 text-primary tracking-tight">Ringkasan Pesanan</h2>
             
             {/* PRODUCT PREVIEW */}
             <div className="flex gap-4 mb-8">
@@ -60,13 +61,13 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
             {/* ACTION BUTTON */}
             <button className="w-full mt-8 bg-secondary-container text-white font-bold py-4 rounded-xl shadow-lg hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 group">
                 Bayar Sekarang
-                <span className="material-symbols-outlined text-xl group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
 
             {/* TRUST BADGES */}
             <div className="mt-6 flex flex-col gap-4">
                 <div className="flex items-center gap-3 bg-surface p-3 rounded-lg border border-outline-variant/10">
-                    <span className="material-symbols-outlined text-green-600 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>verified_user</span>
+                    <ShieldCheckIcon className="w-5 h-5 text-green-600" />
                     <span className="text-xs font-semibold text-on-surface-variant">Transaksi Aman & Terenkripsi</span>
                 </div>
                 <div className="flex items-center justify-between px-2">

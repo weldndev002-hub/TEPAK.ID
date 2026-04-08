@@ -41,6 +41,25 @@ import { AvatarUpload } from '../components/ui/AvatarUpload';
 import { PaymentMethodCard } from '../components/checkout/PaymentMethodCard';
 import { ThemeCard } from '../components/ui/ThemeCard';
 import { Stepper } from '../components/ui/Stepper';
+
+// HeroIcons for the Gallery
+import { 
+    EyeIcon, 
+    CursorArrowRaysIcon, 
+    BanknotesIcon, 
+    WalletIcon, 
+    CheckCircleIcon, 
+    XMarkIcon, 
+    ExclamationCircleIcon, 
+    ArrowRightIcon, 
+    DocumentDuplicateIcon, 
+    BookOpenIcon, 
+    ArrowTopRightOnSquareIcon, 
+    QrCodeIcon, 
+    BuildingLibraryIcon,
+    DevicePhoneMobileIcon
+} from '@heroicons/react/24/outline';
+
 ---
 
 <BaseLayout title="Tepak.id Design System | The Digital Architect">
@@ -102,7 +121,7 @@ import { Stepper } from '../components/ui/Stepper';
                 <div class="max-w-md mx-auto h-[400px] border-4 border-slate-200 rounded-[3rem] overflow-hidden relative bg-slate-50 shadow-xl">
                     <div class="absolute inset-0 flex flex-col">
                         <div class="flex-1 p-8 flex items-center justify-center text-slate-300">
-                             <span class="material-symbols-outlined text-6xl">smartphone</span>
+                             <DevicePhoneMobileIcon className="w-20 h-20" />
                         </div>
                         <BottomNavbar />
                     </div>
@@ -227,10 +246,10 @@ import { Stepper } from '../components/ui/Stepper';
             </div>
             
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <StatCard title="Total Views" value="14,285" icon="visibility" trend="+12.5%" trendDirection="up" colorTheme="primary" />
-                <StatCard title="CTR Rate" value="8.42%" icon="ads_click" trend="+4.2%" trendDirection="up" colorTheme="tertiary" />
-                <StatCard title="Revenue" value="Rp 4.2M" icon="payments" trend="-1.2%" trendDirection="down" colorTheme="green" />
-                <StatCard title="Wallet Balance" value="Rp 825K" icon="wallet" trend="STABLE" trendDirection="neutral" colorTheme="slate" />
+                <StatCard client:load title="Total Views" value="14,285" icon={EyeIcon} trend="+12.5%" trendDirection="up" colorTheme="primary" />
+                <StatCard client:load title="CTR Rate" value="8.42%" icon={CursorArrowRaysIcon} trend="+4.2%" trendDirection="up" colorTheme="tertiary" />
+                <StatCard client:load title="Revenue" value="Rp 4.2M" icon={BanknotesIcon} trend="-1.2%" trendDirection="down" colorTheme="green" />
+                <StatCard client:load title="Wallet Balance" value="Rp 825K" icon={WalletIcon} trend="STABLE" trendDirection="neutral" colorTheme="slate" />
             </div>
 
             {/* SEO Preview & Notifications */}
@@ -252,14 +271,14 @@ import { Stepper } from '../components/ui/Stepper';
                     <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">Toasts & Feedback</h3>
                     <div class="bg-white p-4 rounded-xl shadow-lg border-l-4 border-green-500 flex items-center justify-between">
                         <div class="flex items-center space-x-3">
-                            <span class="material-symbols-outlined text-green-500" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                            <CheckCircleIcon className="w-5 h-5 text-green-500" />
                             <span class="text-sm font-bold text-slate-700">Domain linked successfully!</span>
                         </div>
-                        <span class="material-symbols-outlined text-slate-300 cursor-pointer">close</span>
+                        <XMarkIcon className="w-5 h-5 text-slate-300 cursor-pointer" />
                     </div>
                     <div class="bg-white p-4 rounded-xl shadow-lg border-l-4 border-error flex items-center justify-between">
                         <div class="flex items-center space-x-3">
-                            <span class="material-symbols-outlined text-error" style={{ fontVariationSettings: "'FILL' 1" }}>error</span>
+                            <ExclamationCircleIcon className="w-5 h-5 text-error" />
                             <span class="text-sm font-bold text-slate-700">Payment failed.</span>
                         </div>
                         <button class="text-xs font-black text-error uppercase tracking-widest">Retry</button>
@@ -284,7 +303,7 @@ import { Stepper } from '../components/ui/Stepper';
                 <div class="xl:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                     <div class="p-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
                         <h3 class="font-black text-slate-900 tracking-tight">Recent Transactions</h3>
-                        <button class="text-sm font-bold text-primary flex items-center gap-1">View All <span class="material-symbols-outlined text-sm">arrow_forward</span></button>
+                        <button class="text-sm font-bold text-primary flex items-center gap-1">View All <ArrowRightIcon className="w-4 h-4" /></button>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">
@@ -319,7 +338,7 @@ import { Stepper } from '../components/ui/Stepper';
                         </div>
                         <Button variant="primary" size="lg" className="w-full py-4 bg-white text-[#1e2939] hover:bg-amber-500 hover:text-white border-none shadow-none">Tarik Saldo</Button>
                     </div>
-                    <span class="material-symbols-outlined absolute -right-8 -bottom-8 text-[12rem] text-slate-800/30 rotate-12" style={{ fontVariationSettings: "'FILL' 0" }}>account_balance_wallet</span>
+                    <WalletIcon className="absolute -right-8 -bottom-8 w-48 h-48 text-slate-800/30 rotate-12" />
                 </div>
 
                 {/* Pricing Card */}
@@ -333,7 +352,7 @@ import { Stepper } from '../components/ui/Stepper';
                     </div>
                     <ul class="space-y-4 mb-8">
                         <li class="flex items-center space-x-3 text-sm font-bold text-slate-600">
-                            <span class="material-symbols-outlined text-green-500 text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                            <CheckCircleIcon className="w-5 h-5 text-green-500" />
                             <span>Unlimited Dynamic Blocks</span>
                         </li>
                     </ul>
@@ -358,7 +377,7 @@ import { Stepper } from '../components/ui/Stepper';
                             <div class="text-slate-400 font-mono">@</div>
                             <div class="flex items-center space-x-2 text-primary font-mono group cursor-pointer hover:underline underline-offset-4">
                                 <span>cname.tepak.id</span>
-                                <span class="material-symbols-outlined text-sm">content_copy</span>
+                                <DocumentDuplicateIcon className="w-4 h-4" />
                             </div>
                         </div>
                     </div>
@@ -556,7 +575,7 @@ import { Stepper } from '../components/ui/Stepper';
         <section class="mt-24 pb-32 border-t pt-20 border-slate-200">
              <div class="flex items-center gap-4 mb-10">
                 <div class="w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center text-white">
-                    <span class="material-symbols-outlined text-2xl">auto_stories</span>
+                    <BookOpenIcon className="w-6 h-6" />
                 </div>
                 <div>
                      <h1 class="text-4xl font-black text-slate-900 tracking-tighter">Full Pages & Templates</h1>
@@ -570,9 +589,9 @@ import { Stepper } from '../components/ui/Stepper';
                      <h3 class="text-xl font-black text-slate-900 mb-2">Curator Login Page</h3>
                      <p class="text-xs text-slate-500 mb-8 leading-relaxed font-medium tracking-tight">Halaman masuk dengan branding split-screen (Logo kiri, Form kanan).</p>
                      
-                     <a href="/login" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all">
+                     <a href="/login" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all font-['Plus_Jakarta_Sans',sans-serif]">
                          Buka Pratinjau Halaman
-                         <span class="material-symbols-outlined text-sm">open_in_new</span>
+                         <ArrowTopRightOnSquareIcon className="w-4 h-4" />
                      </a>
                  </div>
 
@@ -581,9 +600,9 @@ import { Stepper } from '../components/ui/Stepper';
                      <h3 class="text-xl font-black text-slate-900 mb-2">Free Registration Page</h3>
                      <p class="text-xs text-slate-500 mb-8 leading-relaxed font-medium tracking-tight">Halaman daftar dengan layout kartu terpusat dan elemen branding minimalis.</p>
                      
-                     <a href="/signup" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all">
+                     <a href="/signup" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all font-['Plus_Jakarta_Sans',sans-serif]">
                          Buka Pratinjau Halaman
-                         <span class="material-symbols-outlined text-sm">open_in_new</span>
+                         <ArrowTopRightOnSquareIcon className="w-4 h-4" />
                      </a>
                  </div>
 
@@ -592,9 +611,9 @@ import { Stepper } from '../components/ui/Stepper';
                      <h3 class="text-xl font-black text-slate-900 mb-2">Verify Email Page</h3>
                      <p class="text-xs text-slate-500 mb-8 leading-relaxed font-medium tracking-tight">Halaman transaksional verifikasi email dengan fokus aksi tunggal.</p>
                      
-                     <a href="/verify-email" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all">
+                     <a href="/verify-email" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all font-['Plus_Jakarta_Sans',sans-serif]">
                          Buka Pratinjau Halaman
-                         <span class="material-symbols-outlined text-sm">open_in_new</span>
+                         <ArrowTopRightOnSquareIcon className="w-4 h-4" />
                      </a>
                  </div>
 
@@ -603,9 +622,9 @@ import { Stepper } from '../components/ui/Stepper';
                      <h3 class="text-xl font-black text-slate-900 mb-2">Forgot Password Page</h3>
                      <p class="text-xs text-slate-500 mb-8 leading-relaxed font-medium tracking-tight">Halaman permintaan reset kata sandi dengan layout split-screen premium.</p>
                      
-                     <a href="/forgot-password" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all">
+                     <a href="/forgot-password" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all font-['Plus_Jakarta_Sans',sans-serif]">
                          Buka Pratinjau Halaman
-                         <span class="material-symbols-outlined text-sm">open_in_new</span>
+                         <ArrowTopRightOnSquareIcon className="w-4 h-4" />
                      </a>
                  </div>
 
@@ -614,9 +633,9 @@ import { Stepper } from '../components/ui/Stepper';
                      <h3 class="text-xl font-black text-slate-900 mb-2">Public Profile Page</h3>
                      <p class="text-xs text-slate-500 mb-8 leading-relaxed font-medium tracking-tight">Halaman etalase publik (Link-in-Bio) premium untuk kreator.</p>
                      
-                     <a href="/public" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all">
+                     <a href="/public" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all font-['Plus_Jakarta_Sans',sans-serif]">
                          Buka Pratinjau Halaman
-                         <span class="material-symbols-outlined text-sm">open_in_new</span>
+                         <ArrowTopRightOnSquareIcon className="w-4 h-4" />
                      </a>
                  </div>
 
@@ -625,9 +644,9 @@ import { Stepper } from '../components/ui/Stepper';
                      <h3 class="text-xl font-black text-slate-900 mb-2">Checkout Page</h3>
                      <p class="text-xs text-slate-500 mb-8 leading-relaxed font-medium tracking-tight">Halaman pembayaran bebas gangguan dengan rincian biaya transparan.</p>
                      
-                     <a href="/checkout" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all">
+                     <a href="/checkout" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all font-['Plus_Jakarta_Sans',sans-serif]">
                          Buka Pratinjau Halaman
-                         <span class="material-symbols-outlined text-sm">open_in_new</span>
+                         <ArrowTopRightOnSquareIcon className="w-4 h-4" />
                      </a>
                  </div>
 
@@ -636,9 +655,9 @@ import { Stepper } from '../components/ui/Stepper';
                      <h3 class="text-xl font-black text-slate-900 mb-2">Onboarding Flow</h3>
                      <p class="text-xs text-slate-500 mb-8 leading-relaxed font-medium tracking-tight">Alur pendaftaran kreatif dengan klaim domain dan pemilihan tema instan.</p>
                      
-                     <a href="/onboarding" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all">
+                     <a href="/onboarding" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all font-['Plus_Jakarta_Sans',sans-serif]">
                          Buka Pratinjau Halaman
-                         <span class="material-symbols-outlined text-sm">open_in_new</span>
+                         <ArrowTopRightOnSquareIcon className="w-4 h-4" />
                      </a>
                  </div>
 
@@ -647,9 +666,9 @@ import { Stepper } from '../components/ui/Stepper';
                      <h3 class="text-xl font-black text-slate-900 mb-2">Creator Dashboard</h3>
                      <p class="text-xs text-slate-500 mb-8 leading-relaxed font-medium tracking-tight">Pusat kendali premium dengan statistik gaya bento, analitik, dan manajemen konten.</p>
                      
-                     <a href="/dashboard" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all">
+                     <a href="/dashboard" class="inline-flex items-center gap-3 bg-slate-100 px-6 py-3 rounded-xl text-[11px] font-black text-slate-900 group-hover:bg-primary group-hover:text-white transition-all font-['Plus_Jakarta_Sans',sans-serif]">
                          Buka Pratinjau Halaman
-                         <span class="material-symbols-outlined text-sm">open_in_new</span>
+                         <ArrowTopRightOnSquareIcon className="w-4 h-4" />
                      </a>
                  </div>
              </div>
@@ -706,7 +725,7 @@ import { Stepper } from '../components/ui/Stepper';
                             id="demo-qris" 
                             title="QRIS" 
                             description="OVO, GoPay, Dana" 
-                            icon="qr_code_2" 
+                            icon={QrCodeIcon} 
                             isSelected={true} 
                             onSelect={() => {}}
                         />
@@ -715,7 +734,7 @@ import { Stepper } from '../components/ui/Stepper';
                             id="demo-va" 
                             title="Virtual Account" 
                             description="Transfer Bank Otomatis" 
-                            icon="account_balance" 
+                            icon={BuildingLibraryIcon} 
                             isSelected={false} 
                             onSelect={() => {}}
                         />

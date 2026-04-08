@@ -4,23 +4,34 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/Table';
+import { 
+    ChevronRightIcon, 
+    LanguageIcon, 
+    CheckBadgeIcon, 
+    ServerStackIcon, 
+    CheckCircleIcon,
+    ShieldCheckIcon,
+    LockClosedIcon,
+    TrashIcon
+} from '@heroicons/react/24/outline';
 
 export const DomainSettingsDashboard = () => {
     return (
-        <div className="flex-1 p-8 min-h-screen bg-[#F8FAFC]">
+        <div className="flex-1 p-8 min-h-screen bg-slate-50 font-['Plus_Jakarta_Sans',sans-serif]">
             <div className="max-w-5xl mx-auto">
                 
-                {/* Breadcrumbs (Moved from TopNav to internal page header for consistency) */}
-                <div className="flex items-center gap-2 text-sm mb-6">
-                    <a href="/settings" className="text-slate-500 hover:text-slate-800 transition-colors">Settings</a>
-                    <span className="material-symbols-outlined text-sm text-slate-400">chevron_right</span>
-                    <span className="text-[#005ab4] font-bold">Custom Domain</span>
+                {/* Breadcrumbs */}
+                <div className="flex items-center gap-2 text-[10px] mb-8 font-black uppercase tracking-widest">
+                    <a href="/settings" className="text-slate-400 hover:text-primary transition-colors">Settings</a>
+                    <ChevronRightIcon className="w-3 h-3 text-slate-300" />
+                    <span className="text-primary">Custom Domain</span>
                 </div>
 
                 {/* Page Header */}
-                <div className="mb-10">
-                    <h2 className="text-3xl font-extrabold text-[#005ab4] tracking-tight mb-2">Custom Domain</h2>
-                    <p className="text-slate-500 max-w-2xl leading-relaxed font-medium">Manage your brand identity by connecting a custom domain. These settings help your audience find your work easier.</p>
+                <div className="mb-12">
+                    <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2 block">Brand Identity</span>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Custom Domain</h2>
+                    <p className="text-slate-500 max-w-2xl leading-relaxed font-medium mt-2">Manage your brand identity by connecting a custom domain. These settings help your audience find your work easier.</p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -29,28 +40,28 @@ export const DomainSettingsDashboard = () => {
                     <div className="lg:col-span-4 flex flex-col gap-8">
                         
                         {/* Subdomain Status Card */}
-                        <Card className="p-8 shadow-[0px_20px_40px_rgba(16,27,50,0.06)] border-none">
+                        <Card className="p-8 shadow-sm border-slate-100 rounded-3xl">
                             <div className="flex items-center gap-3 mb-6">
-                                <span className="material-symbols-outlined text-[#465f89]">language</span>
-                                <h3 className="font-bold text-slate-800 tracking-tight">Default Subdomain</h3>
+                                <LanguageIcon className="w-5 h-5 text-primary" />
+                                <h3 className="font-black text-slate-900 tracking-tight uppercase text-sm">Default Subdomain</h3>
                             </div>
-                            <div className="p-4 bg-slate-50 rounded-lg mb-6 border border-slate-100">
-                                <p className="text-sm font-bold text-[#005ab4] break-all">creatorname.tepak.id</p>
+                            <div className="p-4 bg-slate-50 rounded-2xl mb-6 border border-slate-100">
+                                <p className="text-[11px] font-black text-primary break-all uppercase tracking-tight">creatorname.tepak.id</p>
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-                                <span className="text-xs font-bold text-emerald-600 tracking-wide uppercase">Active</span>
+                                <span className="text-[10px] font-black text-emerald-500 tracking-widest uppercase">Active</span>
                             </div>
                         </Card>
 
                         {/* Decorative Branding Block */}
-                        <div className="bg-[#0873df] p-8 rounded-2xl relative overflow-hidden text-white shadow-lg shadow-blue-500/20">
+                        <div className="bg-slate-900 p-8 rounded-3xl relative overflow-hidden text-white shadow-sm">
                             <div className="relative z-10">
-                                <h4 className="text-lg font-bold mb-2">Elevate Your Branding</h4>
-                                <p className="text-sm text-blue-100 leading-relaxed font-medium">Use a custom domain to look more professional to clients and collaborators.</p>
+                                <h4 className="text-lg font-black mb-2 uppercase tracking-tight leading-tight">Elevate Your Branding</h4>
+                                <p className="text-xs text-slate-400 leading-relaxed font-medium">Use a custom domain to look more professional to clients and collaborators.</p>
                             </div>
                             <div className="absolute -right-8 -bottom-8 opacity-10 pointer-events-none">
-                                <span className="material-symbols-outlined text-[120px]">verified</span>
+                                <CheckBadgeIcon className="w-32 h-32" />
                             </div>
                         </div>
 
@@ -60,58 +71,58 @@ export const DomainSettingsDashboard = () => {
                     <div className="lg:col-span-8 flex flex-col gap-8">
                         
                         {/* Custom Domain Config Card */}
-                        <Card className="p-8 shadow-[0px_20px_40px_rgba(16,27,50,0.06)] border-none">
+                        <Card className="p-8 shadow-sm border-slate-100 rounded-3xl">
                             <div className="flex justify-between items-start mb-8">
                                 <div>
-                                    <h3 className="text-xl font-bold text-[#005ab4] tracking-tight mb-1">Connect New Domain</h3>
-                                    <p className="text-sm text-slate-500 font-medium">Follow the steps below to connect your domain.</p>
+                                    <h3 className="text-xl font-black text-slate-900 tracking-tight mb-1 uppercase">Connect New Domain</h3>
+                                    <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wider">Follow the steps below to connect your domain.</p>
                                 </div>
-                                <Badge className="bg-[#465f89]/10 text-[#465f89]">Configuration</Badge>
+                                <Badge variant="pro">Configuration</Badge>
                             </div>
                             
                             <div className="space-y-8">
                                 {/* Input Step */}
                                 <div className="space-y-3">
-                                    <label className="block text-sm font-bold text-slate-600">Domain Name</label>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Domain Name</label>
                                     <div className="flex gap-3">
                                         <div className="flex-1">
-                                            <Input type="text" placeholder="my-store.com" />
+                                            <Input type="text" placeholder="my-store.com" className="rounded-xl border-slate-100 uppercase text-xs font-black tracking-tight" />
                                         </div>
-                                        <Button className="bg-[#465f89] hover:bg-[#344d77] text-white px-6 font-bold shadow-sm rounded-xl">Save</Button>
+                                        <Button variant="primary" className="px-8 font-black text-[11px] uppercase tracking-widest shadow-xl shadow-primary/20 rounded-xl">Save</Button>
                                     </div>
                                 </div>
 
                                 {/* DNS Settings Instruction */}
-                                <div className="bg-slate-50 border border-slate-100 rounded-xl p-6">
-                                    <h4 className="text-sm font-bold text-[#005ab4] mb-4 flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-base">dns</span>
+                                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6">
+                                    <h4 className="text-[11px] font-black text-slate-900 mb-6 flex items-center gap-2 uppercase tracking-widest">
+                                        <ServerStackIcon className="w-4 h-4 text-primary" />
                                         DNS Settings
                                     </h4>
                                     
-                                    <div className="overflow-x-auto bg-white border border-slate-100 rounded-lg">
+                                    <div className="overflow-x-auto bg-white border border-slate-50 rounded-xl overflow-hidden">
                                         <Table>
                                             <TableHeader>
                                                 <TableRow className="bg-slate-50/50">
-                                                    <TableHead className="font-bold text-slate-500">Type</TableHead>
-                                                    <TableHead className="font-bold text-slate-500">Name/Host</TableHead>
-                                                    <TableHead className="font-bold text-slate-500">Value</TableHead>
+                                                    <TableHead className="font-black text-[10px] text-slate-400 uppercase tracking-widest px-6">Type</TableHead>
+                                                    <TableHead className="font-black text-[10px] text-slate-400 uppercase tracking-widest px-6">Name/Host</TableHead>
+                                                    <TableHead className="font-black text-[10px] text-slate-400 uppercase tracking-widest px-6">Value</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
                                                 <TableRow className="hover:bg-white bg-white">
-                                                    <TableCell className="font-bold text-slate-800">CNAME</TableCell>
-                                                    <TableCell className="font-medium text-slate-700">@ or www</TableCell>
-                                                    <TableCell className="font-mono text-[#465f89] font-bold">custom.tepak.id</TableCell>
+                                                    <TableCell className="font-black text-[11px] text-slate-900 px-6 uppercase tracking-tight">CNAME</TableCell>
+                                                    <TableCell className="font-black text-[11px] text-slate-900 px-6 uppercase tracking-tight">@ or www</TableCell>
+                                                    <TableCell className="font-black text-[11px] text-primary px-6 uppercase tracking-tight">custom.tepak.id</TableCell>
                                                 </TableRow>
                                             </TableBody>
                                         </Table>
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-100">
-                                    <p className="text-xs text-slate-500 italic font-medium">DNS propagation may take up to 24-48 hours.</p>
-                                    <Button variant="secondary" className="flex items-center gap-2 bg-[#465f89] hover:bg-[#344d77] text-white px-6 shadow-lg shadow-blue-900/20 active:scale-[0.98] transition-transform rounded-xl">
-                                        <span className="material-symbols-outlined text-lg">check_circle</span>
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pt-6 border-t border-slate-50">
+                                    <p className="text-[10px] text-slate-400 italic font-medium uppercase tracking-tight">DNS propagation may take up to 24-48 hours.</p>
+                                    <Button variant="outline" className="flex items-center gap-2 px-8 py-3 font-black text-[10px] uppercase tracking-widest rounded-xl transition-all border-slate-100">
+                                        <CheckCircleIcon className="w-4 h-4" />
                                         Check Verification
                                     </Button>
                                 </div>
@@ -119,29 +130,29 @@ export const DomainSettingsDashboard = () => {
                         </Card>
 
                         {/* Active Custom Domain Card */}
-                        <Card className="p-8 shadow-[0px_20px_40px_rgba(16,27,50,0.06)] border-none">
+                        <Card className="p-8 shadow-sm border-slate-100 rounded-3xl">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                                <div className="flex items-center gap-5">
-                                    <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center shrink-0">
-                                        <span className="material-symbols-outlined text-emerald-600 text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>verified_user</span>
+                                <div className="flex items-center gap-6">
+                                    <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center shrink-0 text-emerald-500">
+                                        <ShieldCheckIcon className="w-8 h-8" />
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-bold text-[#005ab4] tracking-tight">my-store.com</h3>
-                                        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                                            <span className="flex items-center gap-1 text-xs font-bold text-emerald-600">
-                                                <span className="w-1.5 h-1.5 bg-emerald-600 rounded-full animate-pulse"></span>
+                                        <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase">my-store.com</h3>
+                                        <div className="flex items-center gap-4 mt-2 flex-wrap">
+                                            <span className="flex items-center gap-2 text-[10px] font-black text-emerald-500 uppercase tracking-widest">
+                                                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
                                                 Active
                                             </span>
-                                            <span className="text-slate-300">•</span>
-                                            <span className="flex items-center gap-1 text-xs font-bold text-[#465f89]">
-                                                <span className="material-symbols-outlined text-[14px]">lock</span>
+                                            <span className="text-slate-100">•</span>
+                                            <span className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                <LockClosedIcon className="w-3.5 h-3.5" />
                                                 SSL Secured
                                             </span>
                                         </div>
                                     </div>
                                 </div>
-                                <Button variant="outline" className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-red-200 text-red-500 text-xs font-bold hover:bg-red-50 hover:border-red-300 transition-all shrink-0 active:scale-95">
-                                    <span className="material-symbols-outlined text-base">delete</span>
+                                <Button variant="ghost" className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-rose-100 text-rose-500 text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 transition-all shrink-0 active:scale-95">
+                                    <TrashIcon className="w-4 h-4" />
                                     Delete Domain
                                 </Button>
                             </div>
@@ -153,3 +164,4 @@ export const DomainSettingsDashboard = () => {
         </div>
     );
 };
+

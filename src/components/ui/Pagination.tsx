@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
 export interface PaginationProps {
     currentPage: number;
@@ -25,40 +26,42 @@ export const Pagination: React.FC<PaginationProps> = ({
     const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
 
     return (
-        <div className={cn("px-6 py-4 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-slate-100", className)}>
-            <p className="text-xs text-slate-500 font-medium">
-                Menampilkan <span className="font-bold text-[#005ab4]">{endIndex - startIndex + 1}</span> dari <span className="font-bold text-[#005ab4]">{totalItems}</span> data
+        <div className={cn("px-8 py-6 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-t border-slate-50 font-['Plus_Jakarta_Sans',sans-serif]", className)}>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                Showing <span className="text-primary">{startIndex}-{endIndex}</span> of <span className="text-slate-900">{totalItems}</span> Records
             </p>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
                 <button 
                     disabled={currentPage === 1}
                     onClick={() => onPageChange?.(currentPage - 1)}
-                    className="p-2 text-slate-400 hover:text-[#005ab4] disabled:opacity-30 disabled:hover:text-slate-400 flex items-center justify-center transition-colors"
+                    className="w-10 h-10 rounded-xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-primary hover:border-primary/20 disabled:opacity-20 disabled:hover:text-slate-400 disabled:hover:border-slate-100 transition-all active:scale-90"
                 >
-                    <span className="material-symbols-outlined">chevron_left</span>
+                    <ChevronLeftIcon className="w-5 h-5" />
                 </button>
                 
-                {pages.map(page => (
-                    <button 
-                        key={page}
-                        onClick={() => onPageChange?.(page)}
-                        className={cn(
-                            "w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-colors",
-                            currentPage === page 
-                                ? "bg-[#465f89] text-white" 
-                                : "text-slate-500 hover:bg-slate-200"
-                        )}
-                    >
-                        {page}
-                    </button>
-                ))}
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 rounded-2xl border border-slate-100/50">
+                    {pages.map(page => (
+                        <button 
+                            key={page}
+                            onClick={() => onPageChange?.(page)}
+                            className={cn(
+                                "w-8 h-8 rounded-xl flex items-center justify-center text-[10px] font-black transition-all uppercase tracking-tight",
+                                currentPage === page 
+                                    ? "bg-primary text-white shadow-lg shadow-primary/20 scale-110" 
+                                    : "text-slate-400 hover:bg-white hover:text-primary"
+                            )}
+                        >
+                            {page}
+                        </button>
+                    ))}
+                </div>
 
                 <button 
                     disabled={currentPage === totalPages}
                     onClick={() => onPageChange?.(currentPage + 1)}
-                    className="p-2 text-slate-400 hover:text-[#005ab4] disabled:opacity-30 disabled:hover:text-slate-400 flex items-center justify-center transition-colors"
+                    className="w-10 h-10 rounded-xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-primary hover:border-primary/20 disabled:opacity-20 disabled:hover:text-slate-400 disabled:hover:border-slate-100 transition-all active:scale-90"
                 >
-                    <span className="material-symbols-outlined">chevron_right</span>
+                    <ChevronRightIcon className="w-5 h-5" />
                 </button>
             </div>
         </div>
@@ -66,3 +69,4 @@ export const Pagination: React.FC<PaginationProps> = ({
 };
 
 export default Pagination;
+

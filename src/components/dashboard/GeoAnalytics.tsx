@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card } from '../ui/Card';
+import { GlobeAltIcon, MapIcon } from '@heroicons/react/24/outline';
 
 const locations = [
     { country: 'Indonesia', flag: '🇮🇩', sessions: '45.2k', share: 62, trend: '+12%' },
@@ -11,35 +12,35 @@ const locations = [
 
 export const GeoAnalytics = () => {
     return (
-        <Card className="p-8 border-slate-100 shadow-sm h-full">
-            <div className="flex items-center justify-between mb-8">
+        <Card className="p-10 border-slate-50 shadow-sm h-full rounded-[2.5rem] font-['Plus_Jakarta_Sans',sans-serif]">
+            <div className="flex items-center justify-between mb-10">
                 <div>
-                    <h3 className="text-xl font-extrabold text-[#162138] tracking-tight">Geographic Reach</h3>
-                    <p className="text-xs text-slate-500 mt-1 font-medium italic">Top performing territories</p>
+                    <h3 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">Geographic Reach</h3>
+                    <p className="text-[10px] text-slate-400 mt-2 font-black uppercase tracking-widest italic leading-none">Top performing territories</p>
                 </div>
-                <div className="p-3 bg-slate-50 rounded-xl">
-                    <span className="material-symbols-outlined text-slate-400">public</span>
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100/50">
+                    <GlobeAltIcon className="w-6 h-6 text-slate-400" />
                 </div>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-8">
                 {locations.map((loc, idx) => (
-                    <div key={idx} className="space-y-2">
+                    <div key={idx} className="space-y-3">
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <span className="text-lg">{loc.flag}</span>
-                                <span className="text-sm font-black text-slate-800">{loc.country}</span>
+                            <div className="flex items-center gap-3">
+                                <span className="text-xl filter drop-shadow-sm">{loc.flag}</span>
+                                <span className="text-xs font-black text-slate-700 uppercase tracking-tight">{loc.country}</span>
                             </div>
-                            <div className="text-right flex items-center gap-3">
-                                <span className={`text-[10px] font-black ${loc.trend.startsWith('+') ? 'text-emerald-500' : 'text-rose-500'}`}>
+                            <div className="text-right flex items-center gap-4">
+                                <span className={`text-[10px] font-black uppercase tracking-widest ${loc.trend.startsWith('+') ? 'text-emerald-500' : 'text-rose-500'}`}>
                                     {loc.trend}
                                 </span>
-                                <span className="text-xs font-black text-slate-900">{loc.sessions}</span>
+                                <span className="text-xs font-black text-slate-900 tracking-tighter">{loc.sessions}</span>
                             </div>
                         </div>
-                        <div className="w-full h-1.5 bg-slate-50 rounded-full overflow-hidden">
+                        <div className="w-full h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100/30">
                             <div 
-                                className="bg-blue-600 h-full rounded-full transition-all duration-1000"
+                                className="bg-primary h-full rounded-full transition-all duration-1000 ease-out"
                                 style={{ width: `${loc.share}%` }}
                             />
                         </div>
@@ -47,16 +48,18 @@ export const GeoAnalytics = () => {
                 ))}
             </div>
 
-            <div className="mt-10 p-6 bg-slate-900 rounded-3xl relative overflow-hidden group">
+            <div className="mt-12 p-8 bg-slate-900 rounded-[2rem] relative overflow-hidden group">
                 <div className="relative z-10">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">PRO Insights</p>
-                    <h4 className="text-white font-bold leading-tight">Your highest conversion is coming from <span className="text-blue-400 underline underline-offset-4 decoration-blue-400/30">Jakarta, ID</span>.</h4>
+                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-2">PRO Insights</p>
+                    <h4 className="text-white text-sm font-bold leading-relaxed tracking-tight">Your highest conversion is coming from <span className="text-primary italic underline underline-offset-8 decoration-primary/30">Jakarta, ID</span>.</h4>
                 </div>
                 {/* Decorative Map mesh or pattern could go here */}
-                <div className="absolute right-[-20px] bottom-[-20px] opacity-10 group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-[100px] text-white">map</span>
+                <div className="absolute right-[-20px] bottom-[-20px] opacity-[0.05] group-hover:opacity-[0.1] group-hover:scale-110 transition-all duration-1000 grayscale">
+                    <MapIcon className="w-48 h-48 text-white" />
                 </div>
             </div>
         </Card>
     );
 };
+
+export default GeoAnalytics;

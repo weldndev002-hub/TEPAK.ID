@@ -10,7 +10,10 @@ export default defineConfig({
   integrations: [react()],
 
   vite: {
-    plugins: [tailwindcss()]
+    plugins: [tailwindcss()],
+    ssr: {
+      noExternal: ['@heroicons/react', 'lucide-react', '@supabase/supabase-js']
+    }
   },
 
   output: 'server',

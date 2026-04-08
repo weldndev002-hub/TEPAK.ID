@@ -1,16 +1,21 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
+import { 
+  MagnifyingGlassIcon, 
+  BellIcon, 
+  QuestionMarkCircleIcon 
+} from '@heroicons/react/24/outline';
 
 export const LightTopNavbar: React.FC = () => {
   return (
-    <nav className="sticky top-0 z-50 flex justify-between items-center px-6 h-16 w-full bg-white border-b border-slate-200 shadow-sm font-sans antialiased">
+    <nav className="sticky top-0 z-50 flex justify-between items-center px-6 h-16 w-full bg-white border-b border-slate-200 shadow-sm font-['Plus_Jakarta_Sans',sans-serif] antialiased">
       <div className="flex items-center gap-4">
-        <span className="text-xl font-bold text-blue-600">KreatorIndo</span>
-        <div className="hidden md:flex items-center bg-slate-100 rounded-lg px-3 py-1.5 gap-2 group transition-all focus-within:ring-2 focus-within:ring-blue-100">
-          <span className="material-symbols-outlined text-slate-400 text-sm">search</span>
+        <span className="text-xl font-bold text-primary tracking-tighter">tepak.id</span>
+        <div className="hidden md:flex items-center bg-slate-100 rounded-lg px-3 py-1.5 gap-2 group transition-all focus-within:ring-2 focus-within:ring-primary/10">
+          <MagnifyingGlassIcon className="w-4 h-4 text-slate-400" />
           <input 
-            className="bg-transparent border-none focus:ring-0 text-sm w-64 outline-none text-slate-600 placeholder:text-slate-400" 
-            placeholder="Search..." 
+            className="bg-transparent border-none focus:ring-0 text-sm w-64 outline-none text-slate-600 placeholder:text-slate-400 font-medium" 
+            placeholder="Search assets, orders..." 
             type="text"
           />
         </div>
@@ -18,11 +23,16 @@ export const LightTopNavbar: React.FC = () => {
       
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1">
-          <span className="material-symbols-outlined text-slate-500 cursor-pointer hover:bg-slate-50 p-2 rounded-full transition-colors">notifications</span>
-          <span className="material-symbols-outlined text-slate-500 cursor-pointer hover:bg-slate-50 p-2 rounded-full transition-colors">help_outline</span>
+          <button className="text-slate-500 hover:text-primary hover:bg-slate-50 p-2 rounded-full transition-colors relative">
+            <BellIcon className="w-5 h-5" />
+            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+          </button>
+          <button className="text-slate-500 hover:text-primary hover:bg-slate-50 p-2 rounded-full transition-colors">
+            <QuestionMarkCircleIcon className="w-5 h-5" />
+          </button>
         </div>
         
-        <div className="w-9 h-9 rounded-full bg-blue-50 border border-blue-100 overflow-hidden shadow-sm flex items-center justify-center">
+        <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 overflow-hidden shadow-sm flex items-center justify-center">
           <img 
             alt="User profile" 
             className="w-full h-full object-cover"
@@ -35,3 +45,4 @@ export const LightTopNavbar: React.FC = () => {
 };
 
 export default LightTopNavbar;
+

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { cn } from '../../lib/utils';
 import Input from '../ui/Input';
+import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid';
 
 export interface SubdomainCheckProps {
     domainSuffix?: string;
@@ -20,28 +21,30 @@ export const SubdomainCheck: React.FC<SubdomainCheckProps> = ({
     const isEmpty = value.trim() === "";
     
     return (
-        <div className={cn("bg-surface-container-lowest p-8 rounded-xl shadow-sm border border-slate-200", className)}>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Pilih URL Anda</label>
+        <div className={cn("bg-white p-8 rounded-[2rem] border border-slate-100 font-['Plus_Jakarta_Sans',sans-serif]", className)}>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3 ml-1">Claim Your URL</label>
             
             <Input 
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 addonRight={domainSuffix}
                 hasError={isTaken}
-                placeholder="namamu"
-                className="py-3"
+                placeholder="yourname"
+                className="py-4 font-black uppercase tracking-tight rounded-2xl bg-slate-50 border-slate-100"
             />
             
             {!isEmpty && (
                 <div className={cn(
-                    "mt-3 flex items-center gap-1.5",
-                    isTaken ? "text-error" : "text-emerald-600"
+                    "mt-4 flex items-center gap-2 px-1",
+                    isTaken ? "text-rose-600" : "text-emerald-600"
                 )}>
-                    <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
-                        {isTaken ? "cancel" : "check_circle"}
-                    </span>
-                    <span className="text-xs font-medium">
-                        {isTaken ? "Sudah digunakan" : "Tersedia"}
+                    {isTaken ? (
+                        <XCircleIcon className="w-5 h-5" />
+                    ) : (
+                        <CheckCircleIcon className="w-5 h-5" />
+                    )}
+                    <span className="text-[10px] font-black uppercase tracking-widest">
+                        {isTaken ? "Already Taken" : "Available"}
                     </span>
                 </div>
             )}
@@ -50,3 +53,4 @@ export const SubdomainCheck: React.FC<SubdomainCheckProps> = ({
 };
 
 export default SubdomainCheck;
+

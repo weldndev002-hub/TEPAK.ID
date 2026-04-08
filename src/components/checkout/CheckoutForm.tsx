@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
 import PaymentMethodCard from './PaymentMethodCard';
 import OrderSummary from './OrderSummary';
+import { 
+    UserCircleIcon, 
+    CreditCardIcon, 
+    QrCodeIcon, 
+    BuildingLibraryIcon, 
+    WalletIcon 
+} from '@heroicons/react/24/outline';
 
 export const CheckoutForm: React.FC = () => {
     const [buyerName, setBuyerName] = useState('');
@@ -9,9 +16,9 @@ export const CheckoutForm: React.FC = () => {
     const [selectedMethod, setSelectedMethod] = useState('qris');
 
     const paymentMethods = [
-        { id: 'qris', title: 'QRIS', description: 'OVO, GoPay, Dana, LinkAja, ShopeePay', icon: 'qr_code_2' },
-        { id: 'va', title: 'Virtual Account', description: 'BCA, Mandiri, BNI, BRI', icon: 'account_balance' },
-        { id: 'wallet', title: 'E-Wallet Direct', description: 'ShopeePay, OVO (One-Click)', icon: 'account_balance_wallet' },
+        { id: 'qris', title: 'QRIS', description: 'OVO, GoPay, Dana, LinkAja, ShopeePay', icon: QrCodeIcon },
+        { id: 'va', title: 'Virtual Account', description: 'BCA, Mandiri, BNI, BRI', icon: BuildingLibraryIcon },
+        { id: 'wallet', title: 'E-Wallet Direct', description: 'ShopeePay, OVO (One-Click)', icon: WalletIcon },
     ];
 
     const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -20,15 +27,15 @@ export const CheckoutForm: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col lg:flex-row gap-8 max-w-screen-2xl mx-auto w-full px-8 py-12">
+        <div className="flex flex-col lg:flex-row gap-8 max-w-screen-2xl mx-auto w-full px-8 py-12 font-['Plus_Jakarta_Sans',sans-serif]">
             
             {/* LEFT COLUMN: MAIN FORM CONTENT */}
             <div className="flex-grow lg:w-2/3 space-y-8">
                 
                 {/* BUYER INFO SECTION */}
                 <section className="bg-surface-container-lowest p-8 rounded-xl shadow-sm">
-                    <h2 className="text-2xl font-bold font-headline mb-6 text-primary flex items-center gap-2">
-                        <span className="material-symbols-outlined text-secondary">account_circle</span>
+                    <h2 className="text-2xl font-bold mb-6 text-primary flex items-center gap-2 tracking-tight">
+                        <UserCircleIcon className="w-7 h-7 text-secondary" />
                         Informasi Pembeli
                     </h2>
                     
@@ -71,8 +78,8 @@ export const CheckoutForm: React.FC = () => {
 
                 {/* PAYMENT METHOD SECTION */}
                 <section className="bg-surface-container-lowest p-8 rounded-xl shadow-sm">
-                    <h2 className="text-2xl font-bold font-headline mb-6 text-primary flex items-center gap-2">
-                        <span className="material-symbols-outlined text-secondary">payments</span>
+                    <h2 className="text-2xl font-bold mb-6 text-primary flex items-center gap-2 tracking-tight">
+                        <CreditCardIcon className="w-7 h-7 text-secondary" />
                         Metode Pembayaran
                     </h2>
                     <div className="space-y-4">

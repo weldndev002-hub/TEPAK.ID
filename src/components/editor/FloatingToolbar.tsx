@@ -1,6 +1,11 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
 import Button from '../ui/Button';
+import { 
+    PlusCircleIcon, 
+    SwatchIcon, 
+    EyeIcon 
+} from '@heroicons/react/24/outline';
 
 interface FloatingToolbarProps {
   className?: string;
@@ -8,30 +13,32 @@ interface FloatingToolbarProps {
 
 export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({ className }) => {
   const actions = [
-    { label: "Add Block", icon: "add_box" },
-    { label: "Theme", icon: "palette" },
-    { label: "Preview", icon: "visibility" }
+    { label: "Add Block", icon: PlusCircleIcon },
+    { label: "Theme", icon: SwatchIcon },
+    { label: "Preview", icon: EyeIcon }
   ];
 
   return (
     <div className={cn(
-      "fixed bottom-8 left-1/2 -translate-x-1/2 glass-panel border border-white/20 rounded-full px-6 py-3 shadow-2xl flex items-center space-x-6 z-50",
+      "fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur-2xl border border-white/10 rounded-[2rem] px-8 py-4 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] flex items-center gap-8 z-50 font-['Plus_Jakarta_Sans',sans-serif]",
       className
     )}>
       {actions.map((action, index) => (
         <React.Fragment key={action.label}>
-          <button className="flex items-center space-x-2 text-on-surface hover:text-primary transition-colors">
-            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 0" }}>{action.icon}</span>
-            <span className="text-sm font-bold uppercase tracking-wider">{action.label}</span>
+          <button className="flex items-center gap-3 text-white/70 hover:text-primary transition-all group active:scale-95">
+            <action.icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em]">{action.label}</span>
           </button>
           
           {index < actions.length - 1 && (
-            <div className="h-6 w-px bg-slate-300"></div>
+            <div className="h-4 w-px bg-white/10"></div>
           )}
         </React.Fragment>
       ))}
 
-      <Button variant="primary" className="ml-4 px-6 py-2 rounded-full shadow-lg">
+      <div className="w-px h-8 bg-white/10 mx-2"></div>
+
+      <Button variant="primary" className="px-8 py-3 rounded-2xl shadow-2xl shadow-primary/20 text-[10px] font-black uppercase tracking-[0.2em]">
         Publish Changes
       </Button>
     </div>

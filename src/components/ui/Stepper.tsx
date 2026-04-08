@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
+import { CheckIcon } from '@heroicons/react/24/outline';
 
 interface Step {
     label: string;
@@ -14,13 +15,13 @@ interface StepperProps {
 
 export const Stepper: React.FC<StepperProps> = ({ steps, currentStep, className }) => {
     return (
-        <div className={cn("flex items-center justify-center gap-2 py-10 mb-6 px-4", className)}>
+        <div className={cn("flex flex-wrap items-center justify-center gap-6 py-12 mb-8 px-6 font-['Plus_Jakarta_Sans',sans-serif]", className)}>
             {steps.map((step, index) => (
                 <React.Fragment key={index}>
                     {/* STEP CIRCLE & LABEL */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
                         <div className={cn(
-                            "w-10 h-10 rounded-full flex items-center justify-center font-black text-xs transition-all duration-500 shadow-sm border-2",
+                            "w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xs transition-all duration-500 shadow-sm border-2",
                             index === currentStep 
                                 ? "bg-primary border-primary text-white scale-110 shadow-xl shadow-primary/20" 
                                 : index < currentStep 
@@ -28,23 +29,30 @@ export const Stepper: React.FC<StepperProps> = ({ steps, currentStep, className 
                                     : "bg-white border-slate-100 text-slate-300"
                         )}>
                             {index < currentStep ? (
-                                <span className="material-symbols-outlined text-lg">check</span>
+                                <CheckIcon className="w-6 h-6 stroke-[3]" />
                             ) : (
                                 index + 1
                             )}
                         </div>
-                        <span className={cn(
-                            "text-[10px] font-black uppercase tracking-[0.2em] transition-colors whitespace-nowrap",
-                            index === currentStep ? "text-slate-900" : "text-slate-300"
-                        )}>
-                            {step.label}
-                        </span>
+                        <div className="flex flex-col">
+                            <span className={cn(
+                                "text-[10px] font-black uppercase tracking-[0.2em] transition-colors whitespace-nowrap",
+                                index === currentStep ? "text-slate-900" : "text-slate-300"
+                            )}>
+                                {step.label}
+                            </span>
+                            {step.description && index === currentStep && (
+                                <span className="text-[9px] font-medium text-slate-400 uppercase tracking-tighter mt-0.5">
+                                    Current Status
+                                </span>
+                            )}
+                        </div>
                     </div>
 
                     {/* CONNECTOR LINE */}
                     {index < steps.length - 1 && (
                         <div className={cn(
-                            "w-16 h-0.5 mx-4 flex-shrink-0 rounded-full transition-all duration-500",
+                            "hidden md:block w-12 h-[2px] mx-2 flex-shrink-0 rounded-full transition-all duration-700",
                             index < currentStep ? "bg-primary" : "bg-slate-100"
                         )} />
                     )}
@@ -55,3 +63,4 @@ export const Stepper: React.FC<StepperProps> = ({ steps, currentStep, className 
 };
 
 export default Stepper;
+

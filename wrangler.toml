@@ -1,0 +1,19 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "tepak-id"
+main = "./dist/_worker.js/index.js"
+compatibility_date = "2024-04-03"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# SUPABASE_URL = "your-supabase-url"
+# SUPABASE_ANON_KEY = "your-anon-key"
+
+[[kv_namespaces]]
+# binding = "MY_KV_NAMESPACE"
+# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# [site]
+# bucket = "./dist"
+
+[observability]
+enabled = true

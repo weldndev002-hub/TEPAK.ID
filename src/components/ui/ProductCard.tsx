@@ -1,6 +1,7 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
 import Button from './Button';
+import { ShoppingCartIcon } from '@heroicons/react/24/outline';
 
 interface ProductCardProps {
     image: string;
@@ -46,7 +47,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 <a href="/checkout">
                     <Button variant="amber" size="lg" className="w-full shadow-none py-4 text-xs font-black uppercase tracking-widest">
                         <span>Beli Sekarang</span>
-                        <span className="material-symbols-outlined text-lg">shopping_cart</span>
+                        <ShoppingCartIcon className="w-5 h-5" />
                     </Button>
                 </a>
             </div>
@@ -55,3 +56,4 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 };
 
 export default ProductCard;
+

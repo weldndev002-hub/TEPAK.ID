@@ -2,10 +2,20 @@ import React from 'react';
 import { Card } from '../ui/Card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/Table';
 import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
 import { Badge } from '../ui/Badge';
 import { FilterTabs } from '../ui/FilterTabs';
 import { Pagination } from '../ui/Pagination';
+import { 
+    PlusIcon, 
+    ArrowTrendingUpIcon, 
+    ArchiveBoxIcon, 
+    BanknotesIcon, 
+    UsersIcon, 
+    EyeIcon, 
+    ShoppingBagIcon, 
+    PencilSquareIcon, 
+    TrashIcon 
+} from '@heroicons/react/24/outline';
 
 export const ProductsDashboard = () => {
     const filterTabsData = [
@@ -15,7 +25,7 @@ export const ProductsDashboard = () => {
         { label: 'Sold Out', value: 'sold_out' },
     ];
     return (
-        <div className="flex-1 flex flex-col min-h-screen bg-[#f8f9fb] font-sans">
+        <div className="flex-1 flex flex-col min-h-screen bg-[#f8f9fb] font-['Plus_Jakarta_Sans',sans-serif]">
             {/* Main Content */}
             <div className="px-8 mt-8 pb-12 overflow-y-auto">
                 <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -24,7 +34,7 @@ export const ProductsDashboard = () => {
                         <p className="text-slate-500 mt-1 font-medium">Manage all your digital assets and courses from one place.</p>
                     </div>
                     <Button variant="secondary" className="px-5 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20 active:scale-95 transition-transform bg-[#465f89] hover:bg-[#344d77] text-white">
-                        <span className="material-symbols-outlined text-lg">add</span>
+                        <PlusIcon className="w-5 h-5" />
                         Add Product
                     </Button>
                 </div>
@@ -36,11 +46,11 @@ export const ProductsDashboard = () => {
                             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Total Products</p>
                             <h3 className="text-4xl font-extrabold text-[#005ab4] leading-tight">12</h3>
                             <p className="text-xs text-green-600 font-bold mt-2 flex items-center">
-                                <span className="material-symbols-outlined text-sm mr-1">trending_up</span> +2 this month
+                                <ArrowTrendingUpIcon className="w-4 h-4 mr-1" /> +2 this month
                             </p>
                         </div>
                         <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
-                            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>inventory_2</span>
+                            <ArchiveBoxIcon className="w-6 h-6" />
                         </div>
                     </Card>
 
@@ -49,11 +59,11 @@ export const ProductsDashboard = () => {
                             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Total Sold</p>
                             <h3 className="text-4xl font-extrabold text-[#005ab4] leading-tight">$4.2k</h3>
                             <p className="text-xs text-green-600 font-bold mt-2 flex items-center">
-                                <span className="material-symbols-outlined text-sm mr-1">trending_up</span> +15% from last week
+                                <ArrowTrendingUpIcon className="w-4 h-4 mr-1" /> +15% from last week
                             </p>
                         </div>
                         <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-green-600">
-                            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>payments</span>
+                            <BanknotesIcon className="w-6 h-6" />
                         </div>
                     </Card>
 
@@ -64,7 +74,7 @@ export const ProductsDashboard = () => {
                             <p className="text-xs text-slate-500 font-bold mt-2">Verified customers</p>
                         </div>
                         <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600">
-                            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>group</span>
+                            <UsersIcon className="w-6 h-6" />
                         </div>
                     </Card>
                 </div>
@@ -102,10 +112,10 @@ export const ProductsDashboard = () => {
                                 <TableCell>
                                     <div className="flex flex-col gap-1">
                                         <div className="flex items-center text-xs font-medium text-slate-600">
-                                            <span className="material-symbols-outlined text-sm mr-1.5 opacity-60">visibility</span> 1,240 views
+                                            <EyeIcon className="w-4 h-4 mr-1.5 opacity-60" /> 1,240 views
                                         </div>
                                         <div className="flex items-center text-xs font-medium text-slate-600">
-                                            <span className="material-symbols-outlined text-sm mr-1.5 opacity-60">shopping_bag</span> 45 sold
+                                            <ShoppingBagIcon className="w-4 h-4 mr-1.5 opacity-60" /> 45 sold
                                         </div>
                                     </div>
                                 </TableCell>
@@ -118,10 +128,10 @@ export const ProductsDashboard = () => {
                                 <TableCell className="text-right">
                                     <div className="flex items-center justify-end gap-2">
                                         <a href="/edit-product" className="p-2 inline-block text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
-                                            <span className="material-symbols-outlined text-xl">edit</span>
+                                            <PencilSquareIcon className="w-5 h-5" />
                                         </a>
                                         <button className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                                            <span className="material-symbols-outlined text-xl">delete</span>
+                                            <TrashIcon className="w-5 h-5" />
                                         </button>
                                     </div>
                                 </TableCell>
@@ -142,10 +152,10 @@ export const ProductsDashboard = () => {
                                 <TableCell>
                                     <div className="flex flex-col gap-1">
                                         <div className="flex items-center text-xs font-medium text-slate-600">
-                                            <span className="material-symbols-outlined text-sm mr-1.5 opacity-60">visibility</span> 892 views
+                                            <EyeIcon className="w-4 h-4 mr-1.5 opacity-60" /> 892 views
                                         </div>
                                         <div className="flex items-center text-xs font-medium text-slate-600">
-                                            <span className="material-symbols-outlined text-sm mr-1.5 opacity-60">shopping_bag</span> 12 sold
+                                            <ShoppingBagIcon className="w-4 h-4 mr-1.5 opacity-60" /> 12 sold
                                         </div>
                                     </div>
                                 </TableCell>
@@ -158,10 +168,10 @@ export const ProductsDashboard = () => {
                                 <TableCell className="text-right">
                                     <div className="flex items-center justify-end gap-2">
                                         <a href="/edit-product" className="p-2 inline-block text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
-                                            <span className="material-symbols-outlined text-xl">edit</span>
+                                            <PencilSquareIcon className="w-5 h-5" />
                                         </a>
                                         <button className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                                            <span className="material-symbols-outlined text-xl">delete</span>
+                                            <TrashIcon className="w-5 h-5" />
                                         </button>
                                     </div>
                                 </TableCell>
@@ -182,10 +192,10 @@ export const ProductsDashboard = () => {
                                 <TableCell>
                                     <div className="flex flex-col gap-1">
                                         <div className="flex items-center text-xs font-medium text-slate-600">
-                                            <span className="material-symbols-outlined text-sm mr-1.5 opacity-60">visibility</span> 3,450 views
+                                            <EyeIcon className="w-4 h-4 mr-1.5 opacity-60" /> 3,450 views
                                         </div>
                                         <div className="flex items-center text-xs font-medium text-slate-600">
-                                            <span className="material-symbols-outlined text-sm mr-1.5 opacity-60">shopping_bag</span> 132 sold
+                                            <ShoppingBagIcon className="w-4 h-4 mr-1.5 opacity-60" /> 132 sold
                                         </div>
                                     </div>
                                 </TableCell>
@@ -198,10 +208,10 @@ export const ProductsDashboard = () => {
                                 <TableCell className="text-right">
                                     <div className="flex items-center justify-end gap-2">
                                         <a href="/edit-product" className="p-2 inline-block text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
-                                            <span className="material-symbols-outlined text-xl">edit</span>
+                                            <PencilSquareIcon className="w-5 h-5" />
                                         </a>
                                         <button className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                                            <span className="material-symbols-outlined text-xl">delete</span>
+                                            <TrashIcon className="w-5 h-5" />
                                         </button>
                                     </div>
                                 </TableCell>
@@ -225,3 +235,4 @@ export const ProductsDashboard = () => {
         </div>
     );
 };
+

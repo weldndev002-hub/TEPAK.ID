@@ -2,33 +2,33 @@ import React, { forwardRef } from 'react';
 import { cn } from '../../lib/utils';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-    iconLeft?: string;
+    iconLeft?: React.ElementType;
     iconRight?: React.ReactNode;
     addonRight?: string;
     hasError?: boolean;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-    ({ className, iconLeft, iconRight, addonRight, hasError, ...props }, ref) => {
+    ({ className, iconLeft: IconLeft, iconRight, addonRight, hasError, ...props }, ref) => {
         return (
             <div className={cn(
                 "relative flex w-full overflow-hidden transition-colors rounded-xl",
                 addonRight ? "border focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10" : ""
             )}>
-                {iconLeft && !addonRight && (
-                    <span className={cn(
-                        "material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 transition-colors text-xl",
+                {IconLeft && !addonRight && (
+                    <div className={cn(
+                        "absolute left-4 top-1/2 -translate-y-1/2 transition-colors",
                         hasError ? "text-error" : "text-slate-400 peer-focus:text-primary"
                     )}>
-                        {iconLeft}
-                    </span>
+                        <IconLeft className="w-5 h-5" />
+                    </div>
                 )}
                 
                 <input
                     ref={ref}
                     className={cn(
                         "flex-1 h-12 text-sm font-medium placeholder:text-slate-400/70 outline-none transition-all peer",
-                        iconLeft && !addonRight ? "pl-12" : "pl-4",
+                        IconLeft && !addonRight ? "pl-12" : "pl-4",
                         iconRight && !addonRight ? "pr-12" : "pr-4",
                         addonRight 
                             ? "bg-white border-none focus:ring-0" 
@@ -60,3 +60,4 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 Input.displayName = 'Input';
 
 export default Input;
+

@@ -4,58 +4,67 @@ import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
+import { 
+    ShieldCheckIcon, 
+    EyeIcon, 
+    CheckCircleIcon, 
+    LockClosedIcon,
+    CheckIcon 
+} from '@heroicons/react/24/outline';
 
 export const BankInfoSettingsDashboard = () => {
     return (
-        <div className="flex-1 p-8 min-h-screen bg-[#F8FAFC]">
+        <div className="flex-1 p-8 min-h-screen bg-slate-50 font-['Plus_Jakarta_Sans',sans-serif]">
             <div className="max-w-4xl mx-auto">
                 {/* Page Header */}
-                <div className="mb-8">
-                    <h2 className="text-3xl font-extrabold text-[#005ab4] tracking-tight mb-2">Payout Method</h2>
-                    <nav className="flex gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                        <a href="/settings" className="hover:text-[#005ab4] transition-colors">Settings</a>
-                        <span className="text-slate-300">/</span>
-                        <span className="text-[#465f89]">Payout Method</span>
+                <div className="mb-10">
+                    <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2 block">Earnings & Payouts</span>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Payout Method</h2>
+                    <nav className="flex gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">
+                        <a href="/settings" className="hover:text-primary transition-colors">Settings</a>
+                        <span className="text-slate-200">/</span>
+                        <span className="text-primary">Payout Method</span>
                     </nav>
                 </div>
 
                 {/* Information Banner */}
-                <div className="bg-gradient-to-r from-[#465f89] to-[#b7cfff] rounded-xl p-6 mb-10 flex items-start gap-4 shadow-sm">
-                    <div className="bg-white/20 p-2 rounded-lg">
-                        <span className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1" }}>security</span>
+                <div className="bg-slate-900 rounded-3xl p-8 mb-12 flex items-start gap-6 shadow-sm relative overflow-hidden">
+                    <div className="bg-white/10 p-4 rounded-2xl relative z-10 backdrop-blur-sm">
+                        <ShieldCheckIcon className="w-8 h-8 text-white" />
                     </div>
-                    <div>
-                        <h3 className="text-white font-bold mb-1">Transaction Security</h3>
-                        <p className="text-white/90 text-sm leading-relaxed">This bank information is used to securely process your earnings payouts. Please ensure the data you enter is correct to avoid disbursement issues.</p>
+                    <div className="relative z-10">
+                        <h3 className="text-white font-black uppercase tracking-tight mb-2">Transaction Security</h3>
+                        <p className="text-slate-400 text-xs leading-relaxed max-w-xl">This bank information is used to securely process your earnings payouts. Please ensure the data you enter is correct to avoid disbursement issues.</p>
                     </div>
+                    <ShieldCheckIcon className="absolute -right-10 -bottom-10 w-48 h-48 text-white/[0.03] rotate-12" />
                 </div>
 
-                <div className="grid grid-cols-1 gap-8">
+                <div className="grid grid-cols-1 gap-10">
                     {/* Section: Bank Terdaftar */}
                     <section>
-                        <h4 className="text-sm font-bold text-[#005ab4] mb-4 flex items-center gap-2">
+                        <h4 className="text-[10px] font-black text-slate-400 mb-6 flex items-center gap-4 uppercase tracking-[0.2em]">
                             Registered Bank
-                            <span className="h-[1px] flex-grow bg-slate-200"></span>
+                            <span className="h-[1px] flex-grow bg-slate-100"></span>
                         </h4>
-                        <Card className="p-6 flex flex-col sm:flex-row sm:items-center justify-between shadow-sm transition-transform hover:scale-[1.01] duration-200 border-none group cursor-pointer hover:shadow-md">
-                            <div className="flex items-center gap-6">
-                                <div className="w-16 h-16 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-100">
-                                    <div className="bg-[#005BAB] text-white font-black px-2 py-1 rounded text-xs italic">BCA</div>
+                        <Card className="p-8 flex flex-col sm:flex-row sm:items-center justify-between shadow-sm border-slate-100 rounded-3xl transition-all hover:border-primary/20 hover:shadow-md group cursor-pointer active:scale-[0.99]">
+                            <div className="flex items-center gap-8">
+                                <div className="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 group-hover:bg-white transition-colors">
+                                    <div className="bg-[#005BAB] text-white font-black px-3 py-1 rounded-lg text-[10px] italic tracking-tighter">BCA</div>
                                 </div>
                                 <div>
-                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Bank Central Asia (BCA)</p>
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-xl font-mono text-slate-800">••••••••5678</span>
-                                        <button className="text-slate-400 hover:text-[#465f89] transition-colors focus:outline-none">
-                                            <span className="material-symbols-outlined text-[20px]">visibility</span>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Bank Central Asia (BCA)</p>
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <span className="text-2xl font-black text-slate-900 tracking-tight">••••••••5678</span>
+                                        <button className="text-slate-300 hover:text-primary transition-colors focus:outline-none">
+                                            <EyeIcon className="w-5 h-5" />
                                         </button>
                                     </div>
-                                    <p className="text-sm font-medium text-slate-500 italic">a.n. John Doe</p>
+                                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">a.n. John Doe</p>
                                 </div>
                             </div>
-                            <div className="flex flex-col items-end gap-2 mt-4 sm:mt-0">
-                                <Badge variant="success" className="inline-flex items-center gap-1.5 px-3 py-1 font-bold">
-                                    <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                            <div className="flex flex-col items-end gap-2 mt-6 sm:mt-0">
+                                <Badge variant="pro" className="inline-flex items-center gap-2 px-4 py-2 font-black text-[10px] tracking-widest">
+                                    <CheckCircleIcon className="w-4 h-4" />
                                     VERIFIED
                                 </Badge>
                             </div>
@@ -64,16 +73,16 @@ export const BankInfoSettingsDashboard = () => {
 
                     {/* Section: Ubah Informasi Bank */}
                     <section>
-                        <h4 className="text-sm font-bold text-[#005ab4] mb-4 flex items-center gap-2">
+                        <h4 className="text-[10px] font-black text-slate-400 mb-6 flex items-center gap-4 uppercase tracking-[0.2em]">
                             Update Bank Information
-                            <span className="h-[1px] flex-grow bg-slate-200"></span>
+                            <span className="h-[1px] flex-grow bg-slate-100"></span>
                         </h4>
-                        <Card className="p-8 shadow-sm border-none">
-                            <div className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">Select Bank</label>
-                                        <Select defaultValue="BCA">
+                        <Card className="p-10 shadow-sm border-slate-100 rounded-3xl">
+                            <div className="space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-3">
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Select Bank</label>
+                                        <Select defaultValue="BCA" className="rounded-xl border-slate-100 font-black text-xs uppercase tracking-tight bg-slate-50/50">
                                             <option value="BCA">Bank Central Asia (BCA)</option>
                                             <option value="Mandiri">Bank Mandiri</option>
                                             <option value="BRI">Bank Rakyat Indonesia (BRI)</option>
@@ -81,29 +90,31 @@ export const BankInfoSettingsDashboard = () => {
                                             <option value="HSBC">HSBC Bank</option>
                                         </Select>
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">Account Number</label>
-                                        <Input type="text" placeholder="Enter your account number" />
+                                    <div className="space-y-3">
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Account Number</label>
+                                        <Input type="text" placeholder="Enter your account number" className="rounded-xl border-slate-100 font-black text-xs uppercase tracking-tight bg-slate-50/50" />
                                     </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">Account Owner Name</label>
-                                    <Input type="text" placeholder="As it appears on your bank statement" />
+                                <div className="space-y-3">
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Account Owner Name</label>
+                                    <Input type="text" placeholder="As it appears on your bank statement" className="rounded-xl border-slate-100 font-black text-xs uppercase tracking-tight bg-slate-50/50" />
                                 </div>
                             </div>
                         </Card>
                     </section>
 
                     {/* Security Note */}
-                    <div className="bg-slate-50 border-l-4 border-slate-300 rounded-r-xl p-5 flex items-center gap-4">
-                        <span className="material-symbols-outlined text-slate-400" style={{ fontVariationSettings: "'FILL' 1" }}>lock</span>
-                        <p className="text-xs text-slate-500 leading-relaxed">Your banking data is encrypted using standard industry protocols (AES-256). Tepak.id never stores full card information or has direct access to your account outside of automated transfer processing needs.</p>
+                    <div className="bg-white border border-slate-100 rounded-3xl p-6 flex items-start gap-5 shadow-sm">
+                        <div className="p-2 bg-slate-50 rounded-xl">
+                            <LockClosedIcon className="w-5 h-5 text-slate-400" />
+                        </div>
+                        <p className="text-[10px] text-slate-400 leading-relaxed font-medium uppercase tracking-tight pt-1">Your banking data is encrypted using standard industry protocols (AES-256). Tepak.id never stores full card information or has direct access to your account outside of automated transfer processing needs.</p>
                     </div>
 
                     {/* Action Button */}
-                    <div className="flex justify-end pt-4">
-                        <Button className="bg-[#465f89] hover:bg-[#344d77] text-white px-10 border-none font-bold shadow-lg shadow-blue-900/20 active:scale-95 flex items-center gap-2">
-                            <span className="material-symbols-outlined text-[20px]">save</span>
+                    <div className="flex justify-end pt-6">
+                        <Button className="bg-primary text-white px-12 py-4 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3">
+                            <CheckIcon className="w-5 h-5" />
                             Save Bank Information
                         </Button>
                     </div>
@@ -112,3 +123,4 @@ export const BankInfoSettingsDashboard = () => {
         </div>
     );
 };
+
