@@ -41,12 +41,8 @@ export const LightSidebar: React.FC<LightSidebarProps> = ({ activePage = 'dashbo
   return (
     <aside className="hidden md:flex flex-col sticky top-0 h-screen shrink-0 w-64 p-4 gap-2 bg-slate-50 border-r border-slate-200 font-['Plus_Jakarta_Sans',sans-serif] antialiased">
       {/* BRANDING */}
-      <div className="flex items-center gap-3 px-2 py-4 mb-4">
-        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white font-black text-lg">T</div>
-        <div>
-          <p className="text-lg font-black text-primary tracking-tighter leading-none">tepak.id</p>
-          <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mt-1">Creator Hub</p>
-        </div>
+      <div className="flex items-center gap-3 px-3 py-6 mb-4">
+        <img src="/logo-light.png" alt="Orbit Site" className="w-32 h-auto" />
       </div>
 
       {/* NAVIGATION */}

@@ -64,7 +64,7 @@ export const BannedView = () => {
  
                 {/* FOOTER */}
                 <div className="mt-12 flex justify-between items-center px-8 opacity-30">
-                    <span className="text-2xl font-black text-slate-900 tracking-tighter uppercase">tepak.id</span>
+                    <span className="text-2xl font-black text-slate-900 tracking-tighter uppercase">Orbit Site</span>
                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.4em]">Case ID: #TK-BAN-9102</span>
                 </div>
             </div>

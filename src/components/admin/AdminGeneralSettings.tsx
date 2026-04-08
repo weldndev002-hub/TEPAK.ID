@@ -58,11 +58,11 @@ export const AdminGeneralSettings = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Platform Name</label>
-                                    <input className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" type="text" defaultValue="Tepak.id" />
+                                    <input className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" type="text" defaultValue="Orbit Site" />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Slogan / Tagline</label>
-                                    <input className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" type="text" defaultValue="The Digital Architect for Creators" />
+                                    <input className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" type="text" defaultValue="The Digital Hub for Creators" />
                                 </div>
                             </div>
                             
@@ -70,7 +70,7 @@ export const AdminGeneralSettings = () => {
                                 <div className="space-y-3">
                                     <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider block">Official Logo</label>
                                     <div className="w-24 h-24 bg-slate-100 rounded-2xl flex items-center justify-center border-2 border-dashed border-slate-200 relative group cursor-pointer overflow-hidden">
-                                        <div className="text-2xl font-black text-blue-600">T.id</div>
+                                        <div className="text-2xl font-black text-blue-600">Orbit</div>
                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                             <span className="material-symbols-outlined text-white">upload</span>
                                         </div>
@@ -82,8 +82,8 @@ export const AdminGeneralSettings = () => {
                                      <div className="space-y-2">
                                         <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Favicon</label>
                                         <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                                            <div className="w-8 h-8 bg-white rounded-lg border border-slate-100 flex items-center justify-center text-blue-600 font-bold text-xs shadow-sm">T</div>
-                                            <div className="flex-1 text-xs text-slate-500 font-medium truncate">favicon-official_tepak.ico</div>
+                                            <div className="w-8 h-8 bg-white rounded-lg border border-slate-100 flex items-center justify-center text-blue-600 font-bold text-xs shadow-sm">O</div>
+                                            <div className="flex-1 text-xs text-slate-500 font-medium truncate">favicon-official_orbit.ico</div>
                                             <Button variant="ghost" className="text-xs h-8 px-3">Change</Button>
                                         </div>
                                     </div>
@@ -118,7 +118,7 @@ export const AdminGeneralSettings = () => {
                                 <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Support Email Address</label>
                                 <div className="relative">
                                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg">mail</span>
-                                    <input className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" type="email" defaultValue="support@tepak.id" />
+                                    <input className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" type="email" defaultValue="support@orbitsite.com" />
                                 </div>
                             </div>
                             <div className="space-y-2">
@@ -197,7 +197,7 @@ export const AdminGeneralSettings = () => {
                                 <div className="space-y-1.5">
                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Default Meta Description</p>
                                     <div className="p-3 bg-white/5 rounded-lg border border-white/10 text-xs text-slate-300 italic group-hover:border-blue-500/30 transition-colors">
-                                        "Transform your creative potential into a sustainable digital career with Tepak.id"
+                                        "Transform your creative potential into a sustainable digital career with Orbit Site"
                                     </div>
                                 </div>
                                 <button className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-all active:scale-95">

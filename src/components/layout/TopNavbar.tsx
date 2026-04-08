@@ -16,8 +16,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({ className }) => {
             <div className="flex justify-between items-center max-w-6xl mx-auto px-6 lg:px-12 h-20">
                 
                 {/* LOGO */}
-                <div className="text-2xl font-black text-slate-900 tracking-tighter uppercase">
-                    tepak.id
+                <div className="flex items-center">
+                    <img src="/logo-light.png" alt="Orbit Site" className="w-32 h-auto" />
                 </div>
 
                 {/* NAVIGATION LINKS */}

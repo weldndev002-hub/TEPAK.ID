@@ -29,7 +29,7 @@ export const SubdomainInput: React.FC<SubdomainInputProps> = ({
           onChange={(e) => onChange(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
           placeholder="your-store-name"
         />
-        <span className="absolute right-6 text-slate-300 font-black text-[10px] tracking-widest uppercase select-none">.tepak.id</span>
+        <span className="absolute right-6 text-slate-300 font-black text-[10px] tracking-widest uppercase select-none">.orbitsite.com</span>
       </div>
       
       <div className="mt-6 h-6 px-1 transition-all duration-300">

@@ -15,7 +15,7 @@ export const AcademyHero: React.FC = () => {
         </h2>
         
         <p className="text-slate-500 text-lg max-w-xl leading-relaxed font-medium">
-          Kuasai setiap fitur <span className="text-primary font-black uppercase tracking-tight">tepak.id</span> dengan panduan visual mendalam dari para ahli strategi digital.
+          Kuasai setiap fitur <span className="text-primary font-black uppercase tracking-tight">Orbit Site</span> dengan panduan visual mendalam dari para ahli strategi digital.
         </p>
       </div>
 

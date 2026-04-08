@@ -54,7 +54,7 @@ export const AdminOverviewDashboard = () => {
                         <span className="text-xs font-bold text-[#405882] bg-[#b7cfff]/30 px-2 py-1 rounded">+21%</span>
                     </div>
                     <p className="text-slate-500 text-sm font-semibold mb-1">Total GMV</p>
-                    <h3 className="text-3xl font-black tracking-tighter text-[#005ab4]">$1.4M</h3>
+                    <h3 className="text-3xl font-black tracking-tighter text-[#005ab4]">Rp 21 Miliar</h3>
                 </Card>
 
                 <Card className="p-6">
@@ -217,7 +217,7 @@ export const AdminOverviewDashboard = () => {
                                 </div>
                                 <div className="flex-1 pb-8">
                                     <p className="text-sm font-bold text-[#005ab4]">Payout approved</p>
-                                    <p className="text-sm text-slate-500">Payout ID #TRX-9902 approved for $4,200.</p>
+                                    <p className="text-sm text-slate-500">Payout ID #TRX-9902 approved for Rp 63.000.000.</p>
                                     <span className="text-[10px] font-bold text-slate-400 uppercase mt-2 block">45 minutes ago</span>
                                 </div>
                             </div>
@@ -254,7 +254,7 @@ export const AdminOverviewDashboard = () => {
                         <div className="mt-12 bg-slate-50 border border-slate-100 p-6 rounded-xl relative overflow-hidden group">
                             <div className="relative z-10">
                                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Pending Payouts</p>
-                                <h4 className="text-2xl font-black text-[#005ab4] mb-4">$82,500.00</h4>
+                                <h4 className="text-2xl font-black text-[#005ab4] mb-4">Rp 1.237.500.000</h4>
                                 <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
                                     <span className="material-symbols-outlined text-sm">schedule</span>
                                     Next processing: Tomorrow, 09:00 AM
