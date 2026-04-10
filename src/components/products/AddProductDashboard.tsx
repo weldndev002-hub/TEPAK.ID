@@ -362,7 +362,6 @@ export const AddProductDashboard = () => {
                     </div>
                 </div>
             </main>
-        </div>
 
             {/* Publish Confirm Modal */}
             {publishConfirm && (
