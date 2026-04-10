@@ -75,14 +75,14 @@ export const AnalyticsDashboard = () => {
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Control Bar */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-white p-5 md:p-6 rounded-[2rem] border border-slate-100 shadow-sm">
                 <div className="flex flex-wrap items-center gap-2">
                     {['24h', '7d', '30d', '90d'].map((r) => (
                         <button 
                             key={r}
                             onClick={() => setRange(r)}
                             className={cn(
-                                "px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+                                "px-4 md:px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
                                 range === r ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-slate-50 text-slate-400 hover:bg-slate-100"
                             )}
                         >
@@ -91,40 +91,40 @@ export const AnalyticsDashboard = () => {
                     ))}
                 </div>
 
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
-                        <div className="flex items-center px-3 gap-2">
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-100 w-full sm:w-auto">
+                        <div className="flex items-center px-2 md:px-3 gap-2 flex-1 sm:flex-none">
                             <CalendarIcon className="w-4 h-4 text-slate-400" />
                             <input 
                                 type="date" 
                                 value={dateRange.start}
                                 onChange={(e) => handleDateChange('start', e.target.value)}
-                                className="bg-transparent border-none text-[10px] font-black text-slate-600 focus:ring-0 uppercase" 
+                                className="bg-transparent border-none text-[10px] font-black text-slate-600 focus:ring-0 uppercase p-0" 
                             />
                         </div>
                         <div className="w-px h-4 bg-slate-200"></div>
-                        <div className="flex items-center px-3 gap-2">
+                        <div className="flex items-center px-2 md:px-3 gap-2 flex-1 sm:flex-none">
                             <input 
                                 type="date" 
                                 value={dateRange.end}
                                 onChange={(e) => handleDateChange('end', e.target.value)}
-                                className="bg-transparent border-none text-[10px] font-black text-slate-600 focus:ring-0 uppercase" 
+                                className="bg-transparent border-none text-[10px] font-black text-slate-600 focus:ring-0 uppercase p-0" 
                             />
                         </div>
                     </div>
                     <Button 
                         variant="ghost" 
                         onClick={handleRefresh}
-                        className={cn("p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-all", isLoading && "animate-spin")}
+                        className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-all w-full sm:w-auto flex justify-center"
                     >
-                        <ArrowPathIcon className="w-5 h-5 text-slate-500" />
+                        <ArrowPathIcon className={cn("w-5 h-5 text-slate-500", isLoading && "animate-spin")} />
                     </Button>
                 </div>
             </div>
 
             {/* ERROR STATE / BLANK CHART */}
             {error ? (
-                <div className="min-h-[400px] flex flex-col items-center justify-center bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200 p-12 text-center group">
+                <div className="min-h-[400px] flex flex-col items-center justify-center bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200 p-8 md:p-12 text-center group">
                     <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center text-rose-500 mb-6 group-hover:shake transition-transform">
                         <ExclamationTriangleIcon className="w-10 h-10" />
                     </div>

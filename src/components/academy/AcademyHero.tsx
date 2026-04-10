@@ -2,7 +2,7 @@ import React from 'react';
 
 export const AcademyHero: React.FC = () => {
   return (
-    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 ">
+    <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12 ">
       <div className="max-w-2xl">
         <nav className="flex gap-2 mb-4">
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Academy</span>
@@ -10,7 +10,7 @@ export const AcademyHero: React.FC = () => {
           <span className="text-[10px] font-black uppercase tracking-widest text-primary">Tutorials</span>
         </nav>
         
-        <h2 className="text-5xl font-black text-slate-900 tracking-tighter leading-[0.9] mb-6 uppercase">
+        <h2 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter leading-tight md:leading-[0.9] mb-6 uppercase">
           Tutorial & <span className="text-primary italic font-medium lowercase">Panduan Kreator.</span>
         </h2>
         

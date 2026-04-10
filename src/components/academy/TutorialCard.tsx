@@ -51,7 +51,7 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({
       </div>
 
       {/* Content Area */}
-      <div className="p-8 flex-1 flex flex-col">
+      <div className="p-6 md:p-8 flex-1 flex flex-col">
         <div className="flex items-center justify-between mb-4">
           <span className="px-3 py-1 bg-primary/5 text-primary text-[10px] font-black uppercase tracking-widest rounded-md">
             {category}
@@ -70,7 +70,7 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({
           </div>
         </div>
 
-        <h3 className="text-xl font-black text-slate-900 leading-tight group-hover:text-primary transition-colors mb-4 uppercase tracking-tight">
+        <h3 className="text-lg md:text-xl font-black text-slate-900 leading-tight group-hover:text-primary transition-colors mb-4 uppercase tracking-tight">
           {title}
         </h3>
 

@@ -74,11 +74,11 @@ export const TutorialsExplorer: React.FC<TutorialsExplorerProps> = ({ tutorials 
             </div>
 
             {/* RESULTS COUNTER */}
-            <div className="flex items-center gap-3 px-1">
+            <div className="flex items-center justify-center lg:justify-start gap-3 px-1">
                 <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
                     Showing {filteredTutorials.length} Tutorials
-                    {searchTerm && <span className="text-primary ml-2">Matching "{searchTerm}"</span>}
+                    {searchTerm && <span className="text-primary ml-2 uppercase">Matching "{searchTerm}"</span>}
                 </p>
             </div>
 

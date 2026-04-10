@@ -24,8 +24,8 @@ export const LightTopNavbar: React.FC = () => {
   }, []);
 
   return (
-    <nav className="sticky top-0 z-50 flex justify-between items-center px-6 h-16 w-full bg-white border-b border-slate-200 shadow-sm  antialiased">
-      <div className="flex items-center gap-4">
+    <nav className="sticky top-0 z-50 flex justify-between items-center px-3 md:px-6 h-16 w-full bg-white border-b border-slate-200 shadow-sm antialiased">
+      <div className="flex items-center gap-1.5 md:gap-4">
         <div className="hidden md:flex items-center bg-slate-100 rounded-lg px-3 py-1.5 gap-2 group transition-all focus-within:ring-2 focus-within:ring-primary/10">
           <MagnifyingGlassIcon className="w-4 h-4 text-slate-400" />
           <input 
@@ -34,30 +34,34 @@ export const LightTopNavbar: React.FC = () => {
             type="text"
           />
         </div>
+        {/* Placeholder for mobile logo or title if needed */}
+        <div className="md:hidden">
+           <span className="text-[10px] font-black text-primary tracking-tighter uppercase">TEPAK<span className="text-slate-900">.ID</span></span>
+        </div>
       </div>
       
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-1.5 md:gap-4">
         {/* Plan Badge */}
         <div className={cn(
-          "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all duration-300",
+          "px-2 md:px-3 py-1 rounded-full text-[7px] md:text-[10px] font-black uppercase tracking-widest border transition-all duration-300 shrink-0",
           plan === 'PRO' 
             ? "bg-primary/10 text-primary border-primary/20 shadow-[0_0_15px_rgba(255,185,76,0.3)] animate-pulse" 
             : "bg-slate-100 text-slate-400 border-slate-200"
         )}>
-          {plan} Account
+          {plan} <span className="hidden sm:inline">Account</span>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0">
           <button className="text-slate-500 hover:text-primary hover:bg-slate-50 p-2 rounded-full transition-colors relative">
-            <BellIcon className="w-5 h-5" />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+            <BellIcon className="w-5 h-5 mx-auto" />
+            <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full border border-white"></span>
           </button>
-          <button className="text-slate-500 hover:text-primary hover:bg-slate-50 p-2 rounded-full transition-colors">
+          <button className="text-slate-500 hover:text-primary hover:bg-slate-50 p-2 rounded-full transition-colors hidden sm:block">
             <QuestionMarkCircleIcon className="w-5 h-5" />
           </button>
         </div>
         
-        <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 overflow-hidden shadow-sm flex items-center justify-center">
+        <div className="w-7 h-7 md:w-9 md:h-9 rounded-full bg-slate-100 border border-slate-200 overflow-hidden shadow-sm flex items-center justify-center shrink-0">
           <img 
             alt="User profile" 
             className="w-full h-full object-cover"
