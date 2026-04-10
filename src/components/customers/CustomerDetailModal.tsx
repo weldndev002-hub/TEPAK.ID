@@ -116,9 +116,6 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({ isOpen
                     <Button variant="outline" className="px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest border-slate-100" onClick={onClose}>
                         Close Window
                     </Button>
-                    <Button variant="primary" className="px-8 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest bg-primary text-white shadow-lg shadow-primary/20">
-                        View Full Profile
-                    </Button>
                 </div>
             </Card>
         </div>

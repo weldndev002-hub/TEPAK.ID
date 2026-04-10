@@ -71,9 +71,9 @@ const ConfirmModal = ({
 
 export const UserManagementDashboard = () => {
     const [users, setUsers] = React.useState([
-        { id: 1, name: 'Aditya Pratama', email: 'aditya.p@email.com', plan: 'PRO', planExpiry: 'Oct 12, 2024', status: 'Active', joined: 'Oct 12, 2023', total: '$165.00', pagesCount: 12, productsCount: 8, is_banned: false },
-        { id: 2, name: 'Siti Rahma', email: 'siti.rahma@email.com', plan: 'STANDARD', planExpiry: 'Nov 25, 2024', status: 'Active', joined: 'Nov 25, 2023', total: '$28.00', pagesCount: 3, productsCount: 1, is_banned: false },
-        { id: 3, name: 'Root Admin', email: 'admin@tepak.id', plan: 'PRO', planExpiry: 'Lifetime', status: 'Active', joined: 'Jan 01, 2023', total: '$0.00', pagesCount: 0, productsCount: 0, is_banned: false }
+        { id: 1, name: 'Aditya Pratama', email: 'aditya.p@email.com', phone: '+62 812-3456-7890', socials: '@aditya_p', plan: 'PRO', planExpiry: 'Oct 12, 2024', status: 'Active', joined: 'Oct 12, 2023', total: '$165.00', pagesCount: 12, productsCount: 8, is_banned: false },
+        { id: 2, name: 'Siti Rahma', email: 'siti.rahma@email.com', phone: '+62 856-9876-5432', socials: '@sitirahma', plan: 'STANDARD', planExpiry: 'Nov 25, 2024', status: 'Active', joined: 'Nov 25, 2023', total: '$28.00', pagesCount: 3, productsCount: 1, is_banned: false },
+        { id: 3, name: 'Root Admin', email: 'admin@tepak.id', phone: '-', socials: '-', plan: 'PRO', planExpiry: 'Lifetime', status: 'Active', joined: 'Jan 01, 2023', total: '$0.00', pagesCount: 0, productsCount: 0, is_banned: false }
     ]);
     const [selectedUser, setSelectedUser] = React.useState<any>(null);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -134,6 +134,33 @@ export const UserManagementDashboard = () => {
     // Sync selectedUser with users state
     const liveSelectedUser = selectedUser ? users.find(u => u.id === selectedUser.id) ?? selectedUser : null;
 
+    const handleExportCSV = () => {
+        const headers = ['Name', 'Email', 'Phone', 'Social Media', 'Plan', 'Status', 'Joined Date', 'Total Transacted'];
+        const csvContent = [
+            headers.join(','),
+            ...users.map(user => [
+                `"${user.name}"`,
+                `"${user.email}"`,
+                `"${user.phone}"`,
+                `"${user.socials}"`,
+                `"${user.plan}"`,
+                `"${user.status}"`,
+                `"${user.joined}"`,
+                `"${user.total}"`
+            ].join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `tepak_users_export_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <div className="w-full ">
             {/* Header Section */}
@@ -143,7 +170,11 @@ export const UserManagementDashboard = () => {
                     <h2 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Manage Users</h2>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="ghost" className="flex items-center gap-2 border-slate-100 bg-white font-black text-[11px] uppercase tracking-wider">
+                    <Button 
+                        variant="ghost" 
+                        onClick={handleExportCSV}
+                        className="flex items-center gap-2 border-slate-100 bg-white font-black text-[11px] uppercase tracking-wider"
+                    >
                         <ArrowDownTrayIcon className="w-4 h-4" />
                         <span>Export CSV</span>
                     </Button>
