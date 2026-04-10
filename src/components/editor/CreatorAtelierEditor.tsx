@@ -11,6 +11,7 @@ import { BottomNavbar } from '../layout/BottomNavbar';
 import { 
     PlusCircleIcon
 } from '@heroicons/react/24/solid';
+import { TrashIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { AddBlockDrawer } from './AddBlockDrawer';
 import { BlockSettingsForm } from './BlockSettingsForm';
 import { PhoneFrame } from './PhoneFrame';
@@ -31,11 +32,16 @@ export const CreatorAtelierEditor: React.FC = () => {
         { id: '3', type: 'video', icon: 'PlayCircleIcon', title: 'Latest Showreel', subtitle: 'YouTube Embed • 03:45' },
     ]);
 
+    // Delete confirm modal
+    const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+    const blockToDelete = blocks.find(b => b.id === deleteTarget);
+
     const handleSelectBlock = (type: string) => {
         setActiveBlockType(type);
         setIsAddBlockOpen(false);
     };
 
+    // After saving a block: add it to list and go back to the block drawer
     const handleSaveBlock = (data: any) => {
         let subtitle = data.url || 'Configure details in settings';
         
@@ -56,14 +62,24 @@ export const CreatorAtelierEditor: React.FC = () => {
             icon: activeBlockType === 'link' ? 'LinkIcon' : activeBlockType === 'video' ? 'PlayCircleIcon' : activeBlockType === 'social' ? 'MegaphoneIcon' : activeBlockType === 'image' ? 'PhotoIcon' : 'CubeIcon',
             title: data.title || (activeBlockType === 'social' ? 'Social Profiles' : activeBlockType === 'image' ? (data.title || 'Image Content') : `New ${activeBlockType} Item`),
             subtitle: subtitle,
-            data: data // Store raw data for preview
+            data: data
         };
         setBlocks([...blocks, newBlock]);
+        // Return to block drawer after saving
         setActiveBlockType(null);
+        setIsAddBlockOpen(true);
     };
 
-    const handleDeleteBlock = (id: string) => {
-        setBlocks(blocks.filter(b => b.id !== id));
+    // Close block settings → go back to block drawer
+    const handleCloseBlockSettings = () => {
+        setActiveBlockType(null);
+        setIsAddBlockOpen(true);
+    };
+
+    // Confirm delete
+    const handleDeleteConfirmed = () => {
+        if (deleteTarget) setBlocks(prev => prev.filter(b => b.id !== deleteTarget));
+        setDeleteTarget(null);
     };
 
     return (
@@ -142,7 +158,7 @@ export const CreatorAtelierEditor: React.FC = () => {
                                                 title={block.title} 
                                                 subtitle={block.subtitle} 
                                                 onEdit={() => setActiveBlockType(block.type)} 
-                                                onDelete={() => handleDeleteBlock(block.id)}
+                                                onDelete={() => setDeleteTarget(block.id)}
                                             />
                                         ))}
                                     </div>
@@ -286,9 +302,40 @@ export const CreatorAtelierEditor: React.FC = () => {
             {activeBlockType && (
                 <BlockSettingsForm 
                     blockType={activeBlockType} 
-                    onClose={() => setActiveBlockType(null)} 
+                    onClose={handleCloseBlockSettings}
                     onSave={handleSaveBlock}
                 />
+            )}
+
+            {/* Delete Confirm Modal */}
+            {deleteTarget && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-sm rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-8">
+                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-rose-100 mb-4">
+                                <TrashIcon className="w-6 h-6 text-rose-500" />
+                            </div>
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Delete Block?</h3>
+                            <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                Block <strong className="text-slate-900">"{blockToDelete?.title}"</strong> akan dihapus dari halaman. Tindakan ini tidak dapat dibatalkan.
+                            </p>
+                        </div>
+                        <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                            <button
+                                className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest"
+                                onClick={() => setDeleteTarget(null)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="px-6 py-2.5 rounded-xl font-black bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/20 transition-all text-[10px] uppercase tracking-widest"
+                                onClick={handleDeleteConfirmed}
+                            >
+                                Yes, Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
         </>

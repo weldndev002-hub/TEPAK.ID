@@ -9,25 +9,82 @@ import {
     ChevronLeftIcon, 
     ChevronRightIcon, 
     ArrowTrendingUpIcon, 
-    ChartPieIcon 
+    ChartPieIcon,
+    ExclamationTriangleIcon,
+    ArrowRightEndOnRectangleIcon,
+    NoSymbolIcon,
 } from '@heroicons/react/24/outline';
+
+// Reusable Warning/Confirm Modal
+const ConfirmModal = ({ 
+    isOpen, 
+    onClose, 
+    onConfirm, 
+    title, 
+    message, 
+    confirmLabel = 'Confirm', 
+    confirmStyle = 'danger',
+    icon,
+}: { 
+    isOpen: boolean; 
+    onClose: () => void; 
+    onConfirm: () => void; 
+    title: string; 
+    message: React.ReactNode;
+    confirmLabel?: string;
+    confirmStyle?: 'danger' | 'warning' | 'primary';
+    icon?: React.ReactNode;
+}) => {
+    if (!isOpen) return null;
+    const confirmClass = {
+        danger: 'bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/20',
+        warning: 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20',
+        primary: 'bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/20',
+    }[confirmStyle];
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+            <div className="bg-white w-full max-w-md rounded-[24px] shadow-2xl overflow-hidden">
+                <div className="p-8">
+                    {icon && <div className="mb-4">{icon}</div>}
+                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">{title}</h3>
+                    <div className="text-sm text-slate-500 font-medium leading-relaxed">{message}</div>
+                </div>
+                <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                    <button 
+                        className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest"
+                        onClick={onClose}
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        className={cn("px-6 py-2.5 rounded-xl font-black shadow-lg transition-all text-[10px] uppercase tracking-widest", confirmClass)}
+                        onClick={onConfirm}
+                    >
+                        {confirmLabel}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 export const UserManagementDashboard = () => {
     const [users, setUsers] = React.useState([
-        { id: 1, name: 'Aditya Pratama', email: 'aditya.p@email.com', plan: 'PRO', status: 'Active', joined: 'Oct 12, 2023', total: '$165.00', pagesCount: 12, productsCount: 8, is_banned: false },
-        { id: 2, name: 'Siti Rahma', email: 'siti.rahma@email.com', plan: 'STANDARD', status: 'Active', joined: 'Nov 25, 2023', total: '$28.00', pagesCount: 3, productsCount: 1, is_banned: false },
-        { id: 3, name: 'Root Admin', email: 'admin@tepak.id', plan: 'PRO', status: 'Active', joined: 'Jan 01, 2023', total: '$0.00', pagesCount: 0, productsCount: 0, is_banned: false }
+        { id: 1, name: 'Aditya Pratama', email: 'aditya.p@email.com', plan: 'PRO', planExpiry: 'Oct 12, 2024', status: 'Active', joined: 'Oct 12, 2023', total: '$165.00', pagesCount: 12, productsCount: 8, is_banned: false },
+        { id: 2, name: 'Siti Rahma', email: 'siti.rahma@email.com', plan: 'STANDARD', planExpiry: 'Nov 25, 2024', status: 'Active', joined: 'Nov 25, 2023', total: '$28.00', pagesCount: 3, productsCount: 1, is_banned: false },
+        { id: 3, name: 'Root Admin', email: 'admin@tepak.id', plan: 'PRO', planExpiry: 'Lifetime', status: 'Active', joined: 'Jan 01, 2023', total: '$0.00', pagesCount: 0, productsCount: 0, is_banned: false }
     ]);
     const [selectedUser, setSelectedUser] = React.useState<any>(null);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
 
-    const toggleBan = (userId: number) => {
-        const user = users.find(u => u.id === userId);
-        if (user?.email === 'admin@tepak.id') {
-            alert("Sistem Keamanan: Anda tidak dapat memblokir akun Administrator Utama!");
-            return;
-        }
+    // Confirm modals state
+    const [banConfirm, setBanConfirm] = React.useState<{ open: boolean; userId: number | null }>({ open: false, userId: null });
+    const [loginAsConfirm, setLoginAsConfirm] = React.useState<{ open: boolean; user: any | null }>({ open: false, user: null });
 
+    const executeBan = (userId: number) => {
+        const user = users.find(u => u.id === userId);
+        if (user?.email === 'admin@tepak.id') return;
         setUsers(prev => prev.map(u => {
             if (u.id === userId) {
                 const newStatus = u.is_banned ? 'Active' : 'Banned';
@@ -35,18 +92,47 @@ export const UserManagementDashboard = () => {
             }
             return u;
         }));
+        // Update selectedUser if modal is open
+        setSelectedUser((prev: any) => {
+            if (prev && prev.id === userId) {
+                const updated = users.find(u => u.id === userId);
+                if (updated) return { ...updated, is_banned: !updated.is_banned, status: !updated.is_banned ? 'Active' : 'Banned' };
+            }
+            return prev;
+        });
     };
 
-    const handleLoginAs = (user: any) => {
+    const handleBanClick = (userId: number) => {
+        const user = users.find(u => u.id === userId);
+        if (user?.email === 'admin@tepak.id') return;
+        setBanConfirm({ open: true, userId });
+    };
+
+    const confirmBan = () => {
+        if (banConfirm.userId !== null) executeBan(banConfirm.userId);
+        setBanConfirm({ open: false, userId: null });
+    };
+
+    const executeLoginAs = (user: any) => {
         localStorage.setItem('impersonating_user', JSON.stringify({ name: user.name, id: user.id }));
         window.dispatchEvent(new Event('impersonation-change'));
         window.location.href = '/dashboard';
+    };
+
+    const handleLoginAsClick = (user: any) => {
+        setLoginAsConfirm({ open: true, user });
     };
 
     const openDetails = (user: any) => {
         setSelectedUser(user);
         setIsModalOpen(true);
     };
+
+    const banTarget = users.find(u => u.id === banConfirm.userId);
+    const isBanning = banTarget ? !banTarget.is_banned : false;
+
+    // Sync selectedUser with users state
+    const liveSelectedUser = selectedUser ? users.find(u => u.id === selectedUser.id) ?? selectedUser : null;
 
     return (
         <div className="w-full ">
@@ -134,16 +220,17 @@ export const UserManagementDashboard = () => {
                                         <div className="flex items-center justify-end gap-2">
                                             <Button 
                                                 variant="ghost" 
-                                                onClick={() => handleLoginAs(user)}
+                                                onClick={() => handleLoginAsClick(user)}
                                                 className="px-4 py-2 text-[10px] font-black text-slate-900 border border-slate-100 rounded-xl hover:bg-slate-50 uppercase tracking-widest"
                                             >
                                                 Login As
                                             </Button>
                                             <Button 
                                                 variant="ghost" 
-                                                onClick={() => toggleBan(user.id)}
+                                                onClick={() => handleBanClick(user.id)}
+                                                disabled={user.email === 'admin@tepak.id'}
                                                 className={cn(
-                                                    "px-4 py-2 text-[10px] font-black border rounded-xl uppercase tracking-widest transition-all",
+                                                    "px-4 py-2 text-[10px] font-black border rounded-xl uppercase tracking-widest transition-all disabled:opacity-30 disabled:cursor-not-allowed",
                                                     user.is_banned 
                                                         ? "text-emerald-500 border-emerald-100 hover:bg-emerald-50" 
                                                         : "text-rose-500 border-rose-100 hover:bg-rose-50"
@@ -224,17 +311,17 @@ export const UserManagementDashboard = () => {
             </div>
 
             {/* User Detail Modal */}
-            {isModalOpen && selectedUser && (
+            {isModalOpen && liveSelectedUser && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
                     <div className="bg-white w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                         <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                             <div className="flex items-center gap-4">
                                 <div className="h-12 w-12 rounded-full flex items-center justify-center bg-slate-900 font-black text-white text-sm uppercase">
-                                    {selectedUser.name.split(' ').map((n: string) => n[0]).join('')}
+                                    {liveSelectedUser.name.split(' ').map((n: string) => n[0]).join('')}
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">{selectedUser.name}</h2>
-                                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">{selectedUser.email}</p>
+                                    <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">{liveSelectedUser.name}</h2>
+                                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">{liveSelectedUser.email}</p>
                                 </div>
                             </div>
                             <button 
@@ -249,28 +336,40 @@ export const UserManagementDashboard = () => {
                             <div className="grid grid-cols-2 gap-8 mb-10">
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Username</p>
-                                    <p className="text-sm font-black text-slate-900">@{selectedUser.email.split('@')[0]}</p>
+                                    <p className="text-sm font-black text-slate-900">@{liveSelectedUser.email.split('@')[0]}</p>
                                 </div>
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Member Since</p>
-                                    <p className="text-sm font-black text-slate-900">{selectedUser.joined}</p>
+                                    <p className="text-sm font-black text-slate-900">{liveSelectedUser.joined}</p>
+                                </div>
+                                {/* Active Plan */}
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Active Plan</p>
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant={liveSelectedUser.plan.toLowerCase() === 'pro' ? 'pro' : 'ghost'}>{liveSelectedUser.plan}</Badge>
+                                        <span className="text-[10px] text-slate-400 font-medium">Exp: {liveSelectedUser.planExpiry}</span>
+                                    </div>
                                 </div>
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Platform Stats</p>
                                     <div className="flex items-center gap-3">
-                                        <div className="px-2 py-1 bg-slate-100 rounded text-[9px] font-black uppercase">{selectedUser.pagesCount} Pages</div>
-                                        <div className="px-2 py-1 bg-slate-100 rounded text-[9px] font-black uppercase">{selectedUser.productsCount} Products</div>
+                                        <div className="px-2 py-1 bg-slate-100 rounded text-[9px] font-black uppercase">{liveSelectedUser.pagesCount} Pages</div>
+                                        <div className="px-2 py-1 bg-slate-100 rounded text-[9px] font-black uppercase">{liveSelectedUser.productsCount} Products</div>
                                     </div>
                                 </div>
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Account Status</p>
                                     <div className={cn(
                                         "flex items-center gap-1.5 font-black text-[10px] uppercase tracking-wider",
-                                        selectedUser.is_banned ? "text-rose-500" : "text-emerald-500"
+                                        liveSelectedUser.is_banned ? "text-rose-500" : "text-emerald-500"
                                     )}>
-                                        <span className={cn("w-1.5 h-1.5 rounded-full", selectedUser.is_banned ? "bg-rose-500" : "bg-emerald-500")}></span>
-                                        {selectedUser.status}
+                                        <span className={cn("w-1.5 h-1.5 rounded-full", liveSelectedUser.is_banned ? "bg-rose-500" : "bg-emerald-500")}></span>
+                                        {liveSelectedUser.status}
                                     </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Total Transacted</p>
+                                    <p className="text-sm font-black text-slate-900">{liveSelectedUser.total}</p>
                                 </div>
                             </div>
 
@@ -298,19 +397,20 @@ export const UserManagementDashboard = () => {
                         <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
                             <Button 
                                 variant="ghost" 
-                                onClick={() => toggleBan(selectedUser.id)}
+                                onClick={() => handleBanClick(liveSelectedUser.id)}
+                                disabled={liveSelectedUser.email === 'admin@tepak.id'}
                                 className={cn(
-                                    "font-black text-[10px] uppercase tracking-widest px-6",
-                                    selectedUser.is_banned ? "text-emerald-500 hover:bg-emerald-50" : "text-rose-500 hover:bg-rose-50"
+                                    "font-black text-[10px] uppercase tracking-widest px-6 disabled:opacity-30 disabled:cursor-not-allowed",
+                                    liveSelectedUser.is_banned ? "text-emerald-500 hover:bg-emerald-50" : "text-rose-500 hover:bg-rose-50"
                                 )}
                             >
-                                {selectedUser.is_banned ? 'Unban Account' : 'Suspend Account'}
+                                {liveSelectedUser.is_banned ? 'Unban Account' : 'Suspend Account'}
                             </Button>
                             <div className="flex gap-3">
                                 <Button variant="ghost" className="font-black text-[10px] uppercase tracking-widest px-6" onClick={() => setIsModalOpen(false)}>Close</Button>
                                 <Button 
                                     variant="primary" 
-                                    onClick={() => handleLoginAs(selectedUser)}
+                                    onClick={() => handleLoginAsClick(liveSelectedUser)}
                                     className="bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest px-8 shadow-xl shadow-slate-900/20"
                                 >
                                     Login As User
@@ -320,6 +420,44 @@ export const UserManagementDashboard = () => {
                     </div>
                 </div>
             )}
+
+            {/* Ban / Unban Confirm Modal */}
+            <ConfirmModal
+                isOpen={banConfirm.open}
+                onClose={() => setBanConfirm({ open: false, userId: null })}
+                onConfirm={confirmBan}
+                title={isBanning ? 'Suspend Account?' : 'Restore Account?'}
+                confirmLabel={isBanning ? 'Yes, Suspend' : 'Yes, Restore'}
+                confirmStyle={isBanning ? 'danger' : 'primary'}
+                icon={
+                    <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center", isBanning ? "bg-rose-100" : "bg-emerald-100")}>
+                        <NoSymbolIcon className={cn("w-6 h-6", isBanning ? "text-rose-500" : "text-emerald-500")} />
+                    </div>
+                }
+                message={
+                    isBanning
+                        ? <>Are you sure you want to <strong>suspend</strong> the account of <strong>{banTarget?.name}</strong>? This will immediately block their access to all platform features.</>
+                        : <>Are you sure you want to <strong>restore access</strong> for <strong>{banTarget?.name}</strong>? They will regain full access immediately.</>
+                }
+            />
+
+            {/* Login As Confirm Modal */}
+            <ConfirmModal
+                isOpen={loginAsConfirm.open}
+                onClose={() => setLoginAsConfirm({ open: false, user: null })}
+                onConfirm={() => { executeLoginAs(loginAsConfirm.user); setLoginAsConfirm({ open: false, user: null }); }}
+                title="Impersonate User?"
+                confirmLabel="Continue to Dashboard"
+                confirmStyle="warning"
+                icon={
+                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-amber-100">
+                        <ArrowRightEndOnRectangleIcon className="w-6 h-6 text-amber-600" />
+                    </div>
+                }
+                message={
+                    <>You are about to log in as <strong>{loginAsConfirm.user?.name}</strong>. You will be redirected to their dashboard and can see all their data. Use the impersonation banner to return to your admin account.</>
+                }
+            />
         </div>
     );
 };
