@@ -90,6 +90,7 @@ export const AddProductDashboard = () => {
     };
 
     return (
+        <>
         <div className="flex-1 flex flex-col min-h-screen bg-[#F8FAFC] ">
             {/* Contextual Header */}
             <header className="sticky top-0 z-40 bg-white/70 backdrop-blur-md flex justify-between items-center w-full px-8 py-4 shadow-[0px_20px_40px_rgba(16,27,50,0.06)] border-b border-slate-200">
@@ -426,5 +427,6 @@ export const AddProductDashboard = () => {
                 </div>
             )}
         </div>
+        </>
     );
 };
