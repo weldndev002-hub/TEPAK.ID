@@ -59,10 +59,13 @@ const page_config = {
         }
     ]
 };
+
+// Mock status for demonstration
+const is_banned = false;
 ---
 
 <BaseLayout title={`${page_config.profile.name} | tepak.id Ecosystem`}>
-    <div class="min-h-screen bg-[#F8F9FB] text-[#191C1E] font-['Plus_Jakarta_Sans',sans-serif] antialiased">
+    <div class="min-h-screen bg-[#F8F9FB] text-[#191C1E] font-['Funnel_Display',sans-serif] antialiased">
         
         <main class="pt-20 pb-20 max-w-4xl mx-auto px-6">
             {is_banned ? (
