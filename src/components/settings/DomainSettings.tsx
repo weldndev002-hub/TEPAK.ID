@@ -68,7 +68,8 @@ export const DomainSettingsDashboard = () => {
         }
     }, [cooldown]);
     return (
-        <div className="flex-1 p-8 min-h-screen bg-slate-50 ">
+        <>
+            <div className="flex-1 p-8 min-h-screen bg-slate-50 ">
             <div className="max-w-5xl mx-auto">
                 
                 {/* Breadcrumbs */}
@@ -282,6 +283,7 @@ export const DomainSettingsDashboard = () => {
                 </div>
             </div>
         )}
+        </>
     );
 };
 

@@ -29,12 +29,16 @@ export const TutorialManagementDashboard = () => {
         category: '',
         youtubeLink: '',
     });
+    const [isDirty, setIsDirty] = useState(false);
+    const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+    const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
     const categories = ['All', 'Onboarding', 'Marketing', 'Monetization', 'Advanced Tools'];
 
     const handleAddTutorial = () => {
         if (!newTutorial.title || !newTutorial.category || !newTutorial.youtubeLink) {
             showToast('error', 'Harap lengkapi semua data tutorial sebelum mempublikasikan.');
+            setShowSaveConfirm(false);
             return;
         }
 
@@ -50,7 +54,17 @@ export const TutorialManagementDashboard = () => {
         setTutorials([tutorial, ...tutorials]);
         setIsModalOpen(false);
         setNewTutorial({ title: '', category: '', youtubeLink: '' });
+        setIsDirty(false);
+        setShowSaveConfirm(false);
         showToast('success', 'Tutorial berhasil dipublikasikan! Kreator dapat melihatnya di Academy.');
+    };
+
+    const handleCancel = () => {
+        if (isDirty) {
+            setShowDiscardConfirm(true);
+        } else {
+            setIsModalOpen(false);
+        }
     };
 
     const handleDeleteConfirmed = () => {
@@ -204,7 +218,10 @@ export const TutorialManagementDashboard = () => {
                                         placeholder="e.g. Setting Up Your Profile" 
                                         type="text" 
                                         value={newTutorial.title}
-                                        onChange={(e) => setNewTutorial({...newTutorial, title: e.target.value})}
+                                        onChange={(e) => {
+                                            setNewTutorial({...newTutorial, title: e.target.value});
+                                            setIsDirty(true);
+                                        }}
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -212,7 +229,10 @@ export const TutorialManagementDashboard = () => {
                                     <select 
                                         className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#005ab4]/20 outline-none transition-all font-medium"
                                         value={newTutorial.category}
-                                        onChange={(e) => setNewTutorial({...newTutorial, category: e.target.value})}
+                                        onChange={(e) => {
+                                            setNewTutorial({...newTutorial, category: e.target.value});
+                                            setIsDirty(true);
+                                        }}
                                     >
                                         <option value="">Select Category</option>
                                         {categories.filter(c => c !== 'All').map(cat => (
@@ -232,7 +252,10 @@ export const TutorialManagementDashboard = () => {
                                         placeholder="https://youtube.com/watch?v=..." 
                                         type="text" 
                                         value={newTutorial.youtubeLink}
-                                        onChange={(e) => setNewTutorial({...newTutorial, youtubeLink: e.target.value})}
+                                        onChange={(e) => {
+                                            setNewTutorial({...newTutorial, youtubeLink: e.target.value});
+                                            setIsDirty(true);
+                                        }}
                                     />
                                 </div>
                             </div>
@@ -252,16 +275,58 @@ export const TutorialManagementDashboard = () => {
                         <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
                             <button 
                                 className="px-6 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-all"
-                                onClick={() => setIsModalOpen(false)}
+                                onClick={handleCancel}
                             >
                                 Cancel
                             </button>
                             <button
                                 className="px-8 py-2.5 rounded-xl bg-[#465f89] text-white font-bold shadow-lg shadow-[#465f89]/20 hover:scale-[1.02] active:scale-95 transition-all"
-                                onClick={handleAddTutorial}
+                                onClick={() => setShowSaveConfirm(true)}
                             >
                                 {modalMode === 'add' ? 'Publish Tutorial' : 'Save Changes'}
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Save Confirmation Modal */}
+            {showSaveConfirm && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-sm rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-8 text-center">
+                            <div className="w-16 h-16 rounded-full flex items-center justify-center bg-emerald-100 mx-auto mb-4">
+                                <CheckCircleIcon className="w-9 h-9 text-emerald-500" />
+                            </div>
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Publikasikan Tutorial?</h3>
+                            <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                Pastikan semua informasi sudah benar. Tutorial akan langsung dapat diakses oleh seluruh Kreator.
+                            </p>
+                        </div>
+                        <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                            <button className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setShowSaveConfirm(false)}>Kembali</button>
+                            <button className="px-6 py-2.5 rounded-xl font-black bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 transition-all text-[10px] uppercase tracking-widest" onClick={handleAddTutorial}>Ya, Publikasikan</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Discard Changes Modal */}
+            {showDiscardConfirm && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-sm rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-8 text-center">
+                            <div className="w-16 h-16 rounded-full flex items-center justify-center bg-amber-100 mx-auto mb-4">
+                                <span className="material-symbols-outlined text-amber-500 text-4xl">warning</span>
+                            </div>
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Batalkan Perubahan?</h3>
+                            <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                Anda memiliki perubahan yang belum disimpan. Semua input akan hilang jika Anda terus membatalkan.
+                            </p>
+                        </div>
+                        <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                            <button className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setShowDiscardConfirm(false)}>Batal</button>
+                            <button className="px-6 py-2.5 rounded-xl font-black bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20 transition-all text-[10px] uppercase tracking-widest" onClick={() => { setIsModalOpen(false); setShowDiscardConfirm(false); setIsDirty(false); }}>Ya, Buang</button>
                         </div>
                     </div>
                 </div>

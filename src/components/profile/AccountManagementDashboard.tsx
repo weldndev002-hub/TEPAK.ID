@@ -205,7 +205,8 @@ export const AccountManagementDashboard = () => {
                         <button className="px-6 py-2.5 rounded-xl font-black bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-600/20 transition-all text-[10px] uppercase tracking-widest" onClick={() => window.location.href='/logout'}>Terminate Permanently</button>
                     </div>
                 </div>
-            )}
+            </div>
+        )}
         </div>
     </>
     );

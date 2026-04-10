@@ -47,11 +47,14 @@ export const UnifiedSettings = ({ defaultTab = 'account' }: { defaultTab?: 'acco
         ownerName: ''
     });
     const [bankLoading, setBankLoading] = useState(false);
+    const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+    const [showTerminateConfirm, setShowTerminateConfirm] = useState(false);
     const [toast, setToast] = useState<string | null>(null);
     const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000); };
 
     const handleSaveBank = async () => {
         setBankLoading(true);
+        setShowSaveConfirm(false);
         await new Promise(resolve => setTimeout(resolve, 1000));
         setBankData({
             ...bankData,
@@ -144,7 +147,10 @@ export const UnifiedSettings = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                                         </button>
                                     }
                                 />
-                                <button className="w-full h-14 bg-rose-600 text-white font-black uppercase text-[10px] tracking-[0.2em] rounded-xl shadow-lg shadow-rose-600/10 hover:opacity-90 transition-all">
+                                <button 
+                                    className="w-full h-14 bg-rose-600 text-white font-black uppercase text-[10px] tracking-[0.2em] rounded-xl shadow-lg shadow-rose-600/10 hover:opacity-90 transition-all"
+                                    onClick={() => setShowTerminateConfirm(true)}
+                                >
                                     Terminate Account
                                 </button>
                             </div>
@@ -249,13 +255,54 @@ export const UnifiedSettings = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                                     />
                                 </div>
                                 <Button 
-                                    onClick={handleSaveBank}
+                                    onClick={() => setShowSaveConfirm(true)}
                                     disabled={bankLoading}
                                     className="w-full bg-primary text-white h-14 rounded-xl font-black uppercase tracking-widest text-[11px] shadow-xl shadow-primary/20 hover:scale-[1.01] transition-all"
                                 >
                                     {bankLoading ? 'Processing...' : 'Securely Save Payout Data'}
                                 </Button>
                             </Card>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Bank Save Confirmation */}
+            {showSaveConfirm && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-sm rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-8 text-center">
+                            <div className="w-16 h-16 rounded-full flex items-center justify-center bg-blue-50 mx-auto mb-4">
+                                <BanknotesIcon className="w-9 h-9 text-primary" />
+                            </div>
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Simpan Perubahan?</h3>
+                            <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                Data rekening bank Anda akan diperbarui. Pastikan nomor rekening dan nama pemilik sudah sesuai.
+                            </p>
+                        </div>
+                        <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                            <button className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setShowSaveConfirm(false)}>Batal</button>
+                            <button className="px-6 py-2.5 rounded-xl font-black bg-primary text-white shadow-lg shadow-primary/20 transition-all text-[10px] uppercase tracking-widest" onClick={handleSaveBank}>Ya, Simpan</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Account Termination Confirmation */}
+            {showTerminateConfirm && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-md rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-8 text-center">
+                            <div className="w-16 h-16 rounded-full flex items-center justify-center bg-rose-100 mx-auto mb-4">
+                                <TrashIcon className="w-9 h-9 text-rose-500" />
+                            </div>
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Hapus Akun Permanen?</h3>
+                            <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                Seluruh data, konten, dan riwayat transaksi Anda akan <strong className="text-rose-600">dihapus selamanya</strong>. Tindakan ini tidak dapat dibatalkan.
+                            </p>
+                        </div>
+                        <div className="px-8 py-5 bg-rose-50 border-t border-rose-100 flex items-center justify-end gap-3">
+                            <button className="px-5 py-2.5 rounded-xl font-black text-slate-600 hover:bg-white transition-all text-[10px] uppercase tracking-widest" onClick={() => setShowTerminateConfirm(false)}>Batal</button>
+                            <button className="px-6 py-2.5 rounded-xl font-black bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-600/20 transition-all text-[10px] uppercase tracking-widest" onClick={() => window.location.href='/logout'}>Ya, Hapus Akun</button>
                         </div>
                     </div>
                 </div>

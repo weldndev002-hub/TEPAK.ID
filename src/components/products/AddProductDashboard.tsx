@@ -300,7 +300,6 @@ export const AddProductDashboard = () => {
                                     Recommended: 1080x1080px (1:1)
                                 </p>
                             </Card>
-                            </Card>
 
                             {/* Settings */}
                             <Card className="p-6 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
