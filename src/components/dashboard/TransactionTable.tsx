@@ -11,7 +11,7 @@ const transactions = [
 
 export const TransactionTable: React.FC = () => {
     return (
-        <div className="bg-white rounded-[2.5rem] shadow-sm overflow-hidden border border-slate-50 font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="bg-white rounded-[2.5rem] shadow-sm overflow-hidden border border-slate-50 ">
             <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-white">
                 <div>
                     <h3 className="text-xl font-black text-slate-900 tracking-tighter uppercase leading-none">Recent Transactions</h3>

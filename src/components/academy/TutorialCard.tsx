@@ -26,7 +26,7 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({
 }) => {
   return (
     <div className={cn(
-      "group bg-white rounded-3xl overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 border border-slate-100 hover:border-primary/10 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]",
+      "group bg-white rounded-3xl overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 border border-slate-100 hover:border-primary/10 flex flex-col ",
       className
     )}>
       {/* Thumbnail Area */}

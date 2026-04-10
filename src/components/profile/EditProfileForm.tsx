@@ -14,7 +14,7 @@ import {
 
 export const EditProfileForm = () => {
     return (
-        <div className="max-w-5xl mx-auto space-y-10 font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="max-w-5xl mx-auto space-y-10 ">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-4">
                 <div>
                     <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2 block">Identity Management</span>

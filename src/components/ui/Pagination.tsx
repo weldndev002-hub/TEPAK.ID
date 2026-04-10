@@ -26,7 +26,7 @@ export const Pagination: React.FC<PaginationProps> = ({
     const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
 
     return (
-        <div className={cn("px-8 py-6 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-t border-slate-50 font-['Plus_Jakarta_Sans',sans-serif]", className)}>
+        <div className={cn("px-8 py-6 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-t border-slate-50 ", className)}>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
                 Showing <span className="text-primary">{startIndex}-{endIndex}</span> of <span className="text-slate-900">{totalItems}</span> Records
             </p>

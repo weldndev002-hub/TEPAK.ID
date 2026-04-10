@@ -9,7 +9,7 @@ import {
 
 export const WithdrawalDetailsDashboard = () => {
     return (
-        <div className="max-w-3xl w-full mx-auto space-y-10 font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="max-w-3xl w-full mx-auto space-y-10 ">
             <div className="mb-10 text-center md:text-left">
                 <h1 className="text-3xl font-black text-slate-900 mb-2 uppercase tracking-tighter">Withdrawal Details</h1>
                 <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] leading-none">Comprehensive transaction log for your earnings disbursement.</p>

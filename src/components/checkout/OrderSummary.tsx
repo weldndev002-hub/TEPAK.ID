@@ -1,15 +1,17 @@
 import React from 'react';
-import { ArrowRightIcon, ShieldCheckIcon } from '@heroicons/react/24/solid';
+import { ArrowRightIcon, ShieldCheckIcon, CheckCircleIcon, XMarkIcon } from '@heroicons/react/24/solid';
 
 interface OrderSummaryProps {
     productTitle: string;
     productPrice: number;
     feePercentage: number;
     image: string;
+    onPay: () => void;
+    status: 'pending' | 'paid' | 'expired';
 }
 
 export const OrderSummary: React.FC<OrderSummaryProps> = ({ 
-    productTitle, productPrice, feePercentage, image 
+    productTitle, productPrice, feePercentage, image, onPay, status 
 }) => {
     const serviceFee = Math.round(productPrice * (feePercentage / 100));
     const totalPrice = productPrice + serviceFee;
@@ -23,7 +25,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
     };
 
     return (
-        <section className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/10 sticky top-28 font-['Plus_Jakarta_Sans',sans-serif]">
+        <section className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/10 sticky top-28 ">
             <h2 className="text-xl font-bold mb-6 text-primary tracking-tight">Ringkasan Pesanan</h2>
             
             {/* PRODUCT PREVIEW */}
@@ -59,10 +61,25 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
             </div>
 
             {/* ACTION BUTTON */}
-            <button className="w-full mt-8 bg-secondary-container text-white font-bold py-4 rounded-xl shadow-lg hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 group">
-                Bayar Sekarang
-                <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </button>
+            {status === 'paid' ? (
+                <div className="w-full mt-8 bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex flex-col items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+                    <CheckCircleIcon className="w-8 h-8 text-emerald-500" />
+                    <p className="text-sm font-black text-emerald-700 uppercase tracking-widest">Pembayaran Berhasil</p>
+                </div>
+            ) : status === 'expired' ? (
+                <div className="w-full mt-8 bg-rose-50 border border-rose-100 p-4 rounded-xl flex flex-col items-center gap-2">
+                    <XMarkIcon className="w-8 h-8 text-rose-500" />
+                    <p className="text-sm font-black text-rose-700 uppercase tracking-widest">Pesanan Kadaluarsa</p>
+                </div>
+            ) : (
+                <button 
+                    onClick={onPay}
+                    className="w-full mt-8 bg-secondary-container text-white font-bold py-4 rounded-xl shadow-lg hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 group"
+                >
+                    Bayar Sekarang
+                    <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
+            )}
 
             {/* TRUST BADGES */}
             <div className="mt-6 flex flex-col gap-4">

@@ -16,7 +16,7 @@ export const ThemeCard: React.FC<ThemeCardProps> = ({
     return (
         <div 
             onClick={() => onSelect(id)}
-            className="flex flex-col group cursor-pointer font-['Plus_Jakarta_Sans',sans-serif]"
+            className="flex flex-col group cursor-pointer "
         >
             <div className={cn(
                 "w-full aspect-[3/4] rounded-[2.5rem] p-8 transition-all duration-500 overflow-hidden relative shadow-sm border",

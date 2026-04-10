@@ -9,7 +9,7 @@ export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElemen
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     ({ className, hasError, children, ...props }, ref) => {
         return (
-            <div className="relative w-full font-['Plus_Jakarta_Sans',sans-serif]">
+            <div className="relative w-full ">
                 <select
                     ref={ref}
                     className={cn(

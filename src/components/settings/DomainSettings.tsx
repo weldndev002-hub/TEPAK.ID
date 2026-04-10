@@ -12,12 +12,62 @@ import {
     CheckCircleIcon,
     ShieldCheckIcon,
     LockClosedIcon,
-    TrashIcon
+    TrashIcon,
+    ExclamationCircleIcon,
+    ArrowPathIcon 
 } from '@heroicons/react/24/outline';
+import { z } from 'zod';
+import { cn } from '../../lib/utils';
 
 export const DomainSettingsDashboard = () => {
+    const [domainInput, setDomainInput] = React.useState('');
+    const [status, setStatus] = React.useState<'idle' | 'pending' | 'active'>('idle');
+    const [error, setError] = React.useState('');
+    const [isVerifying, setIsVerifying] = React.useState(false);
+    const [cooldown, setCooldown] = React.useState(0);
+
+    const domainSchema = z.string()
+        .regex(/^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/, "Format domain tidak valid, gunakan format: domainku.com")
+        .refine(val => !val.startsWith('http'), "Gunakan format domain yang benar, tanpa http/https");
+
+    const handleSaveDomain = () => {
+        const result = domainSchema.safeParse(domainInput);
+        if (!result.success) {
+            setError(result.error.issues[0].message);
+            return;
+        }
+        setError('');
+        setStatus('pending');
+        // Simulated Cloudflare API Call
+        console.log(`Registering ${domainInput} to Cloudflare Custom Hostname...`);
+    };
+
+    const handleVerify = async () => {
+        if (cooldown > 0) return;
+        
+        setIsVerifying(true);
+        // Simulate API verification call
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // 30% chance of success for demo purposes
+        const isSuccessful = Math.random() > 0.7;
+        
+        if (isSuccessful) {
+            setStatus('active');
+        } else {
+            setCooldown(30);
+        }
+        setIsVerifying(false);
+    };
+
+    React.useEffect(() => {
+        if (cooldown > 0) {
+            const timer = setInterval(() => setCooldown(c => c - 1), 1000);
+            return () => clearInterval(timer);
+        }
+    }, [cooldown]);
     return (
-        <div className="flex-1 p-8 min-h-screen bg-slate-50 font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="flex-1 p-8 min-h-screen bg-slate-50 ">
             <div className="max-w-5xl mx-auto">
                 
                 {/* Breadcrumbs */}
@@ -86,77 +136,125 @@ export const DomainSettingsDashboard = () => {
                                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Domain Name</label>
                                     <div className="flex gap-3">
                                         <div className="flex-1">
-                                            <Input type="text" placeholder="my-store.com" className="rounded-xl border-slate-100 uppercase text-xs font-black tracking-tight" />
+                                            <Input 
+                                                type="text" 
+                                                placeholder="my-store.com" 
+                                                className={cn(
+                                                    "rounded-xl border-slate-100 uppercase text-xs font-black tracking-tight",
+                                                    error ? "ring-2 ring-rose-500" : ""
+                                                )}
+                                                value={domainInput}
+                                                onChange={(e) => {
+                                                    setDomainInput(e.target.value.toLowerCase());
+                                                    if(error) setError('');
+                                                }}
+                                                disabled={status !== 'idle'}
+                                            />
                                         </div>
-                                        <Button variant="primary" className="px-8 font-black text-[11px] uppercase tracking-widest shadow-xl shadow-primary/20 rounded-xl">Save</Button>
+                                        {status === 'idle' && (
+                                            <Button 
+                                                variant="primary" 
+                                                className="px-8 font-black text-[11px] uppercase tracking-widest shadow-xl shadow-primary/20 rounded-xl"
+                                                onClick={handleSaveDomain}
+                                            >
+                                                Save
+                                            </Button>
+                                        )}
+                                        {status !== 'idle' && (
+                                            <Button 
+                                                variant="ghost" 
+                                                className="px-6 font-black text-[11px] uppercase tracking-widest rounded-xl border border-slate-100"
+                                                onClick={() => { setStatus('idle'); setDomainInput(''); }}
+                                            >
+                                                Change
+                                            </Button>
+                                        )}
                                     </div>
+                                    {error && <p className="text-[10px] font-black text-rose-500 uppercase flex items-center gap-1"><ExclamationCircleIcon className="w-3 h-3"/> {error}</p>}
                                 </div>
 
                                 {/* DNS Settings Instruction */}
-                                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6">
-                                    <h4 className="text-[11px] font-black text-slate-900 mb-6 flex items-center gap-2 uppercase tracking-widest">
-                                        <ServerStackIcon className="w-4 h-4 text-primary" />
-                                        DNS Settings
-                                    </h4>
-                                    
-                                    <div className="overflow-x-auto bg-white border border-slate-50 rounded-xl overflow-hidden">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow className="bg-slate-50/50">
-                                                    <TableHead className="font-black text-[10px] text-slate-400 uppercase tracking-widest px-6">Type</TableHead>
-                                                    <TableHead className="font-black text-[10px] text-slate-400 uppercase tracking-widest px-6">Name/Host</TableHead>
-                                                    <TableHead className="font-black text-[10px] text-slate-400 uppercase tracking-widest px-6">Value</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                <TableRow className="hover:bg-white bg-white">
-                                                    <TableCell className="font-black text-[11px] text-slate-900 px-6 uppercase tracking-tight">CNAME</TableCell>
-                                                    <TableCell className="font-black text-[11px] text-slate-900 px-6 uppercase tracking-tight">@ or www</TableCell>
-                                                    <TableCell className="font-black text-[11px] text-primary px-6 uppercase tracking-tight">custom.tepak.id</TableCell>
-                                                </TableRow>
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-                                </div>
+                                {status === 'pending' && (
+                                    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 animate-in slide-in-from-top-2 duration-300">
+                                        <h4 className="text-[11px] font-black text-slate-900 mb-6 flex items-center gap-2 uppercase tracking-widest">
+                                            <ServerStackIcon className="w-4 h-4 text-primary" />
+                                            Required DNS Settings
+                                        </h4>
+                                        
+                                        <div className="overflow-x-auto bg-white border border-slate-50 rounded-xl overflow-hidden mb-6">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow className="bg-slate-50/50">
+                                                        <TableHead className="font-black text-[10px] text-slate-400 uppercase tracking-widest px-6">Type</TableHead>
+                                                        <TableHead className="font-black text-[10px] text-slate-400 uppercase tracking-widest px-6">Name/Host</TableHead>
+                                                        <TableHead className="font-black text-[10px] text-slate-400 uppercase tracking-widest px-6">Value</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    <TableRow className="hover:bg-white bg-white">
+                                                        <TableCell className="font-black text-[11px] text-slate-900 px-6 uppercase tracking-tight">CNAME</TableCell>
+                                                        <TableCell className="font-black text-[11px] text-slate-900 px-6 uppercase tracking-tight">@ or www</TableCell>
+                                                        <TableCell className="font-black text-[11px] text-primary px-6 uppercase tracking-tight">custom.tepak.id</TableCell>
+                                                    </TableRow>
+                                                </TableBody>
+                                            </Table>
+                                        </div>
 
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pt-6 border-t border-slate-50">
-                                    <p className="text-[10px] text-slate-400 italic font-medium uppercase tracking-tight">DNS propagation may take up to 24-48 hours.</p>
-                                    <Button variant="outline" className="flex items-center gap-2 px-8 py-3 font-black text-[10px] uppercase tracking-widest rounded-xl transition-all border-slate-100">
-                                        <CheckCircleIcon className="w-4 h-4" />
-                                        Check Verification
-                                    </Button>
-                                </div>
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pt-6 border-t border-slate-100">
+                                            <p className="text-[10px] text-slate-400 italic font-medium uppercase tracking-tight">Status: <span className="font-black text-amber-500">PENDING PROPAGATION</span></p>
+                                            <Button 
+                                                variant="outline" 
+                                                className="flex items-center gap-2 px-8 py-3 font-black text-[10px] uppercase tracking-widest rounded-xl transition-all border-slate-100 disabled:opacity-50"
+                                                onClick={handleVerify}
+                                                disabled={isVerifying || cooldown > 0}
+                                            >
+                                                {isVerifying ? (
+                                                    <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                                                ) : (
+                                                    <CheckCircleIcon className="w-4 h-4" />
+                                                )}
+                                                {cooldown > 0 ? `Retry in ${cooldown}s` : 'Check Verification'}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </Card>
 
                         {/* Active Custom Domain Card */}
-                        <Card className="p-8 shadow-sm border-slate-100 rounded-3xl">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                                <div className="flex items-center gap-6">
-                                    <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center shrink-0 text-emerald-500">
-                                        <ShieldCheckIcon className="w-8 h-8" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase">my-store.com</h3>
-                                        <div className="flex items-center gap-4 mt-2 flex-wrap">
-                                            <span className="flex items-center gap-2 text-[10px] font-black text-emerald-500 uppercase tracking-widest">
-                                                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                                                Active
-                                            </span>
-                                            <span className="text-slate-100">•</span>
-                                            <span className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                                <LockClosedIcon className="w-3.5 h-3.5" />
-                                                SSL Secured
-                                            </span>
+                        {status === 'active' && (
+                            <Card className="p-8 shadow-sm border-slate-100 rounded-3xl animate-in fade-in zoom-in duration-500">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                                    <div className="flex items-center gap-6">
+                                        <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center shrink-0 text-emerald-500">
+                                            <ShieldCheckIcon className="w-8 h-8" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase">{domainInput}</h3>
+                                            <div className="flex items-center gap-4 mt-2 flex-wrap">
+                                                <span className="flex items-center gap-2 text-[10px] font-black text-emerald-500 uppercase tracking-widest">
+                                                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                                                    Active
+                                                </span>
+                                                <span className="text-slate-100">•</span>
+                                                <span className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                    <LockClosedIcon className="w-3.5 h-3.5" />
+                                                    SSL Secured
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
+                                    <Button 
+                                        variant="ghost" 
+                                        className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-rose-100 text-rose-500 text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 transition-all shrink-0 active:scale-95"
+                                        onClick={() => { setStatus('idle'); setDomainInput(''); }}
+                                    >
+                                        <TrashIcon className="w-4 h-4" />
+                                        Delete Domain
+                                    </Button>
                                 </div>
-                                <Button variant="ghost" className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-rose-100 text-rose-500 text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 transition-all shrink-0 active:scale-95">
-                                    <TrashIcon className="w-4 h-4" />
-                                    Delete Domain
-                                </Button>
-                            </div>
-                        </Card>
+                            </Card>
+                        )}
 
                     </div>
                 </div>

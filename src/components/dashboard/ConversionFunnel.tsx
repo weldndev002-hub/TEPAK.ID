@@ -11,7 +11,7 @@ const funnelSteps = [
 
 export const ConversionFunnel = () => {
     return (
-        <Card className="p-10 border-slate-50 shadow-sm h-full rounded-[2.5rem] font-['Plus_Jakarta_Sans',sans-serif]">
+        <Card className="p-10 border-slate-50 shadow-sm h-full rounded-[2.5rem] ">
             <div className="flex items-center justify-between mb-10">
                 <div>
                     <h3 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">Sales Funnel</h3>

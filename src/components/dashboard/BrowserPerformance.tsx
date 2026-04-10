@@ -18,7 +18,7 @@ const DEFAULT_STATS: BrowserStat[] = [
 
 export const BrowserPerformance: React.FC<{ stats?: BrowserStat[] }> = ({ stats = DEFAULT_STATS }) => {
   return (
-    <div className="bg-white rounded-[2.5rem] border border-slate-50 overflow-hidden shadow-sm font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className="bg-white rounded-[2.5rem] border border-slate-50 overflow-hidden shadow-sm ">
       <div className="p-8 border-b border-slate-50 flex items-center justify-between">
         <div>
             <h4 className="text-xl font-black text-slate-900 tracking-tighter uppercase leading-none">Browser Performance</h4>

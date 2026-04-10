@@ -40,7 +40,7 @@ export const LoginForm: React.FC = () => {
     };
 
     return (
-        <div className="w-full flex flex-col gap-10 font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="w-full flex flex-col gap-10 ">
             
             {/* Inputs Container */}
             <form onSubmit={handleLogin} className="w-full flex flex-col gap-8">

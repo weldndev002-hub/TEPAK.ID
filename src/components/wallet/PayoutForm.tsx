@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { cn } from '../../lib/utils';
-import Button from '../ui/Button';
+import { Button } from '../ui/Button';
 import { WalletIcon } from '@heroicons/react/24/outline';
 
 export interface PayoutFormProps {
@@ -8,11 +8,44 @@ export interface PayoutFormProps {
 }
 
 export const PayoutForm: React.FC<PayoutFormProps> = ({ className }) => {
-  const [amount, setAmount] = useState(1000000);
-  const balance = 2450000;
+  const [balance, setBalance] = useState(12450000);
+  const [amount, setAmount] = useState(50000);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  
+  const fee = 5000;
+  const minWithdrawal = 50000;
+
+  const handleWithdraw = async () => {
+    setError(null);
+    setLoading(true);
+
+    // 1. Validation Logic
+    if (amount < minWithdrawal) {
+        setError(`Minimal penarikan adalah Rp ${minWithdrawal.toLocaleString('id-ID')}`);
+        setLoading(false);
+        return;
+    }
+
+    // 2. Simulated Backend Security Check
+    // Even if user manipulates local 'amount' through devtools
+    const actualBalance = 12450000; // Mock db source
+    if (amount > actualBalance) {
+        setError("Request ditolak: Nominal melebihi saldo aktual Anda.");
+        setLoading(false);
+        return;
+    }
+
+    // 3. Process Withdrawal (Simulation)
+    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API lag
+    
+    setBalance(prev => prev - amount);
+    setLoading(false);
+    alert(`Penarikan sebesar Rp ${amount.toLocaleString('id-ID')} berhasil diajukan! (Biaya transfer Rp ${fee.toLocaleString('id-ID')} telah dipotong)`);
+  };
 
   return (
-    <div className={cn("max-w-xl mx-auto bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm font-['Plus_Jakarta_Sans',sans-serif]", className)}>
+    <div className={cn("max-w-xl mx-auto bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm ", className)}>
       
       <div className="flex items-center gap-4 mb-8">
         <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
@@ -59,13 +92,23 @@ export const PayoutForm: React.FC<PayoutFormProps> = ({ className }) => {
             />
           </div>
           <div className="flex justify-between mt-3 px-1">
-             <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em]">MIN: RP 50.000</span>
-             <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em]">FEE: RP 6.500</span>
+             <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em]">MIN: RP {minWithdrawal.toLocaleString('id-ID')}</span>
+             <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em]">FEE: RP {fee.toLocaleString('id-ID')}</span>
           </div>
+          {error && (
+             <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mt-4 p-4 bg-rose-50 border border-rose-100 rounded-xl leading-relaxed">
+                {error}
+             </p>
+          )}
         </div>
 
-        <Button variant="primary" className="w-full h-16 rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all font-black uppercase text-[11px] tracking-[0.3em] mt-6">
-            Initiate Withdrawal
+        <Button 
+            variant="primary" 
+            className="w-full h-16 rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all font-black uppercase text-[11px] tracking-[0.3em] mt-6"
+            onClick={handleWithdraw}
+            disabled={loading}
+        >
+            {loading ? 'Processing...' : 'Initiate Withdrawal'}
         </Button>
       </div>
 

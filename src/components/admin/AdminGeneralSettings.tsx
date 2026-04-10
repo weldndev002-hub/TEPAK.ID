@@ -3,8 +3,24 @@ import { Card } from '../ui/Card';
 import Button from '../ui/Button';
 import AvatarUpload from '../ui/AvatarUpload';
 import { Toggle } from '../ui/Toggle';
+import { z } from 'zod';
+
+const feeSchema = z.number().min(0, "Fee tidak boleh negatif").max(100, "Fee tidak boleh lebih dari 100%");
 
 export const AdminGeneralSettings = () => {
+    const [platformFee, setPlatformFee] = React.useState(5);
+    const [feeError, setFeeError] = React.useState<string | null>(null);
+
+    const handleSave = () => {
+        try {
+            feeSchema.parse(platformFee);
+            setFeeError(null);
+            alert(`Platform Fee diperbarui menjadi ${platformFee}%. Berlaku untuk semua transaksi baru.`);
+        } catch (err: any) {
+            setFeeError(err.errors[0].message);
+        }
+    };
+
     return (
         <div className="w-full">
             {/* Breadcrumb & Sub Nav */}
@@ -20,7 +36,7 @@ export const AdminGeneralSettings = () => {
                         <Button variant="ghost" className="bg-slate-50 text-slate-700 hover:bg-slate-100 transition-all text-sm font-semibold border-transparent">
                             Discard Changes
                         </Button>
-                        <Button variant="primary" className="bg-[#465f89] text-white hover:shadow-lg hover:shadow-[#465f89]/20 transition-all text-sm font-semibold shadow-sm">
+                        <Button onClick={handleSave} variant="primary" className="bg-[#465f89] text-white hover:shadow-lg hover:shadow-[#465f89]/20 transition-all text-sm font-semibold shadow-sm">
                             Save Changes
                         </Button>
                     </div>
@@ -32,10 +48,7 @@ export const AdminGeneralSettings = () => {
                         General Settings
                         <span className="absolute bottom-0 left-0 w-full h-1 bg-[#465f89] rounded-t-full"></span>
                     </button>
-                    <a href="/admin/settings" className="pb-4 text-sm font-medium text-slate-500 hover:text-[#465f89] transition-colors whitespace-nowrap relative">Transaction Fee</a>
-                    <button className="pb-4 text-sm font-medium text-slate-500 hover:text-[#465f89] transition-colors whitespace-nowrap relative">Payment Gateways</button>
-                    <button className="pb-4 text-sm font-medium text-slate-500 hover:text-[#465f89] transition-colors whitespace-nowrap relative">Webhook URLs</button>
-                    <button className="pb-4 text-sm font-medium text-slate-500 hover:text-[#465f89] transition-colors whitespace-nowrap relative">Security Policy</button>
+                    {/* Hide unused items for now as per request */}
                 </div>
             </div>
 
@@ -131,6 +144,56 @@ export const AdminGeneralSettings = () => {
                             <div className="space-y-2 md:col-span-2">
                                 <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Physical Office Address</label>
                                 <textarea className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold h-24 resize-none" defaultValue="Studio Nusantara Hub, 4th Floor, Jl. Sudirman No. 12, Jakarta" />
+                            </div>
+                        </div>
+                    </Card>
+
+                    {/* Fees & Commission Card */}
+                    <Card className="p-8 border-slate-100 shadow-xl shadow-blue-500/5 bg-blue-50/20">
+                        <div className="flex items-center gap-4 mb-8">
+                            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                                <span className="material-symbols-outlined">payments</span>
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-black text-[#005ab4] uppercase tracking-tight">Platform Fee Management</h3>
+                                <p className="text-xs text-[#465f89] font-medium">Global commission rate for digital product sales.</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Global Transaction Fee (%)</label>
+                                <div className="relative">
+                                    <input 
+                                        type="number" 
+                                        className={`w-full bg-white border ${feeError ? 'border-rose-500 ring-4 ring-rose-500/5' : 'border-slate-200'} rounded-xl py-3 px-4 text-sm font-black text-[#005ab4] focus:ring-4 focus:ring-blue-600/5 outline-none transition-all`}
+                                        value={platformFee}
+                                        onChange={(e) => setPlatformFee(Number(e.target.value))}
+                                    />
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-slate-300">%</span>
+                                </div>
+                                {feeError && <p className="text-[10px] font-bold text-rose-500 px-1">{feeError}</p>}
+                                <p className="text-[10px] text-[#465f89] font-medium italic mt-2">
+                                    *Nilai ini akan langsung memotong "Net Amount" pada setiap transaksi baru berikutnya.
+                                </p>
+                            </div>
+
+                            <div className="bg-white p-6 rounded-2xl border border-blue-100 space-y-4">
+                                <h4 className="text-[10px] font-black text-[#005ab4] uppercase tracking-widest">Fee Impact Projection</h4>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-slate-500 font-medium">Product Sale Price</span>
+                                        <span className="font-bold text-slate-900">$100.00</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-slate-500 font-medium font-bold">Platform Fee ({platformFee}%)</span>
+                                        <span className="font-bold text-rose-500">-${(100 * platformFee / 100).toFixed(2)}</span>
+                                    </div>
+                                    <div className="pt-3 border-t border-slate-100 flex justify-between items-center">
+                                        <span className="text-[10px] font-black text-[#005ab4] uppercase">Creator Gets</span>
+                                        <span className="text-lg font-black text-emerald-600">${(100 - (100 * platformFee / 100)).toFixed(2)}</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </Card>

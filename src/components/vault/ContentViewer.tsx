@@ -42,7 +42,7 @@ export const ContentViewer: React.FC<ContentViewerProps> = ({
     }, []);
 
     return (
-        <div className="relative min-h-[70vh] bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden select-none font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="relative min-h-[70vh] bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden select-none ">
             
             {/* PRINT PROTECTION CSS */}
             <style dangerouslySetInnerHTML={{ __html: `

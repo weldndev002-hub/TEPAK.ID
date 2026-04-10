@@ -19,7 +19,7 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({
   className 
 }) => {
   return (
-    <div className={cn("flex flex-col w-full max-w-2xl mx-auto relative font-['Plus_Jakarta_Sans',sans-serif]", className)}>
+    <div className={cn("flex flex-col w-full max-w-2xl mx-auto relative ", className)}>
         {/* Background Lines */}
         <div className="absolute top-6 left-10 right-10 h-[2px] flex z-0">
              {steps.map((_, index) => {

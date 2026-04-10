@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card } from '../ui/Card';
+import { cn } from '../../lib/utils';
 import Button from '../ui/Button';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '../ui/Table';
 import { Badge } from '../ui/Badge';
@@ -12,8 +13,43 @@ import {
 } from '@heroicons/react/24/outline';
 
 export const UserManagementDashboard = () => {
+    const [users, setUsers] = React.useState([
+        { id: 1, name: 'Aditya Pratama', email: 'aditya.p@email.com', plan: 'PRO', status: 'Active', joined: 'Oct 12, 2023', total: '$165.00', pagesCount: 12, productsCount: 8, is_banned: false },
+        { id: 2, name: 'Siti Rahma', email: 'siti.rahma@email.com', plan: 'STANDARD', status: 'Active', joined: 'Nov 25, 2023', total: '$28.00', pagesCount: 3, productsCount: 1, is_banned: false },
+        { id: 3, name: 'Root Admin', email: 'admin@tepak.id', plan: 'PRO', status: 'Active', joined: 'Jan 01, 2023', total: '$0.00', pagesCount: 0, productsCount: 0, is_banned: false }
+    ]);
+    const [selectedUser, setSelectedUser] = React.useState<any>(null);
+    const [isModalOpen, setIsModalOpen] = React.useState(false);
+
+    const toggleBan = (userId: number) => {
+        const user = users.find(u => u.id === userId);
+        if (user?.email === 'admin@tepak.id') {
+            alert("Sistem Keamanan: Anda tidak dapat memblokir akun Administrator Utama!");
+            return;
+        }
+
+        setUsers(prev => prev.map(u => {
+            if (u.id === userId) {
+                const newStatus = u.is_banned ? 'Active' : 'Banned';
+                return { ...u, is_banned: !u.is_banned, status: newStatus };
+            }
+            return u;
+        }));
+    };
+
+    const handleLoginAs = (user: any) => {
+        localStorage.setItem('impersonating_user', JSON.stringify({ name: user.name, id: user.id }));
+        window.dispatchEvent(new Event('impersonation-change'));
+        window.location.href = '/dashboard';
+    };
+
+    const openDetails = (user: any) => {
+        setSelectedUser(user);
+        setIsModalOpen(true);
+    };
+
     return (
-        <div className="w-full font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="w-full ">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
                 <div>
@@ -64,64 +100,61 @@ export const UserManagementDashboard = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {/* Row 1 */}
-                            <TableRow className="hover:bg-slate-50/50 transition-colors">
-                                <TableCell className="px-8 py-5">
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-10 w-10 rounded-full flex items-center justify-center bg-slate-100 font-black text-slate-400 text-xs uppercase">AP</div>
-                                        <div>
-                                            <div className="font-black text-slate-900 uppercase tracking-tight text-sm">Aditya Pratama</div>
-                                            <div className="text-[10px] text-slate-400 font-medium tracking-tight">aditya.p@email.com</div>
+                            {users.map((user) => (
+                                <TableRow key={user.id} className="hover:bg-slate-50/50 transition-colors">
+                                    <TableCell className="px-8 py-5">
+                                        <div className="flex items-center gap-3">
+                                            <div 
+                                                className="h-10 w-10 rounded-full flex items-center justify-center bg-slate-100 font-black text-slate-400 text-xs uppercase cursor-pointer hover:bg-slate-200 transition-colors" 
+                                                onClick={() => openDetails(user)}
+                                            >
+                                                {user.name.split(' ').map(n => n[0]).join('')}
+                                            </div>
+                                            <div className="cursor-pointer" onClick={() => openDetails(user)}>
+                                                <div className="font-black text-slate-900 uppercase tracking-tight text-sm hover:text-primary transition-colors">{user.name}</div>
+                                                <div className="text-[10px] text-slate-400 font-medium tracking-tight">{user.email}</div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </TableCell>
-                                <TableCell className="px-8 py-5">
-                                    <Badge variant="pro">PRO</Badge>
-                                </TableCell>
-                                <TableCell className="px-8 py-5">
-                                    <div className="flex items-center gap-1.5 text-emerald-500 font-black text-[10px] uppercase tracking-wider">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                        Active
-                                    </div>
-                                </TableCell>
-                                <TableCell className="px-8 py-5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Oct 12, 2023</TableCell>
-                                <TableCell className="px-8 py-5 text-sm font-black text-slate-900 text-right">$165.00</TableCell>
-                                <TableCell className="px-8 py-5 text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                        <Button variant="ghost" className="px-4 py-2 text-[10px] font-black text-slate-900 border border-slate-100 rounded-xl hover:bg-slate-50 uppercase tracking-widest">Login As</Button>
-                                        <Button variant="ghost" className="px-4 py-2 text-[10px] font-black text-rose-500 border border-rose-100 rounded-xl hover:bg-rose-50 uppercase tracking-widest">Ban</Button>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                            {/* Row 2 */}
-                            <TableRow className="hover:bg-slate-50/50 transition-colors">
-                                <TableCell className="px-8 py-5">
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-10 w-10 rounded-full flex items-center justify-center bg-slate-100 font-black text-slate-400 text-xs uppercase">SR</div>
-                                        <div>
-                                            <div className="font-black text-slate-900 uppercase tracking-tight text-sm">Siti Rahma</div>
-                                            <div className="text-[10px] text-slate-400 font-medium tracking-tight">siti.rahma@email.com</div>
+                                    </TableCell>
+                                    <TableCell className="px-8 py-5">
+                                        <Badge variant={user.plan.toLowerCase() === 'pro' ? 'pro' : 'ghost'}>{user.plan}</Badge>
+                                    </TableCell>
+                                    <TableCell className="px-8 py-5">
+                                        <div className={cn(
+                                            "flex items-center gap-1.5 font-black text-[10px] uppercase tracking-wider",
+                                            user.is_banned ? "text-rose-500" : "text-emerald-500"
+                                        )}>
+                                            <span className={cn("w-1.5 h-1.5 rounded-full", user.is_banned ? "bg-rose-500" : "bg-emerald-500")}></span>
+                                            {user.status}
                                         </div>
-                                    </div>
-                                </TableCell>
-                                <TableCell className="px-8 py-5">
-                                    <Badge variant="ghost">STANDARD</Badge>
-                                </TableCell>
-                                <TableCell className="px-8 py-5">
-                                    <div className="flex items-center gap-1.5 text-emerald-500 font-black text-[10px] uppercase tracking-wider">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                        Active
-                                    </div>
-                                </TableCell>
-                                <TableCell className="px-8 py-5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Nov 25, 2023</TableCell>
-                                <TableCell className="px-8 py-5 text-sm font-black text-slate-900 text-right">$28.00</TableCell>
-                                <TableCell className="px-8 py-5 text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                        <Button variant="ghost" className="px-4 py-2 text-[10px] font-black text-slate-900 border border-slate-100 rounded-xl hover:bg-slate-50 uppercase tracking-widest">Login As</Button>
-                                        <Button variant="ghost" className="px-4 py-2 text-[10px] font-black text-rose-500 border border-rose-100 rounded-xl hover:bg-rose-50 uppercase tracking-widest">Ban</Button>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
+                                    </TableCell>
+                                    <TableCell className="px-8 py-5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{user.joined}</TableCell>
+                                    <TableCell className="px-8 py-5 text-sm font-black text-slate-900 text-right">{user.total}</TableCell>
+                                    <TableCell className="px-8 py-5 text-right">
+                                        <div className="flex items-center justify-end gap-2">
+                                            <Button 
+                                                variant="ghost" 
+                                                onClick={() => handleLoginAs(user)}
+                                                className="px-4 py-2 text-[10px] font-black text-slate-900 border border-slate-100 rounded-xl hover:bg-slate-50 uppercase tracking-widest"
+                                            >
+                                                Login As
+                                            </Button>
+                                            <Button 
+                                                variant="ghost" 
+                                                onClick={() => toggleBan(user.id)}
+                                                className={cn(
+                                                    "px-4 py-2 text-[10px] font-black border rounded-xl uppercase tracking-widest transition-all",
+                                                    user.is_banned 
+                                                        ? "text-emerald-500 border-emerald-100 hover:bg-emerald-50" 
+                                                        : "text-rose-500 border-rose-100 hover:bg-rose-50"
+                                                )}
+                                            >
+                                                {user.is_banned ? 'Unban' : 'Ban'}
+                                            </Button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
                         </TableBody>
                     </Table>
                 </div>
@@ -189,6 +222,104 @@ export const UserManagementDashboard = () => {
                     </div>
                 </div>
             </div>
+
+            {/* User Detail Modal */}
+            {isModalOpen && selectedUser && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                            <div className="flex items-center gap-4">
+                                <div className="h-12 w-12 rounded-full flex items-center justify-center bg-slate-900 font-black text-white text-sm uppercase">
+                                    {selectedUser.name.split(' ').map((n: string) => n[0]).join('')}
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">{selectedUser.name}</h2>
+                                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">{selectedUser.email}</p>
+                                </div>
+                            </div>
+                            <button 
+                                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                                onClick={() => setIsModalOpen(false)}
+                            >
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+
+                        <div className="p-8 overflow-y-auto">
+                            <div className="grid grid-cols-2 gap-8 mb-10">
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Username</p>
+                                    <p className="text-sm font-black text-slate-900">@{selectedUser.email.split('@')[0]}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Member Since</p>
+                                    <p className="text-sm font-black text-slate-900">{selectedUser.joined}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Platform Stats</p>
+                                    <div className="flex items-center gap-3">
+                                        <div className="px-2 py-1 bg-slate-100 rounded text-[9px] font-black uppercase">{selectedUser.pagesCount} Pages</div>
+                                        <div className="px-2 py-1 bg-slate-100 rounded text-[9px] font-black uppercase">{selectedUser.productsCount} Products</div>
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Account Status</p>
+                                    <div className={cn(
+                                        "flex items-center gap-1.5 font-black text-[10px] uppercase tracking-wider",
+                                        selectedUser.is_banned ? "text-rose-500" : "text-emerald-500"
+                                    )}>
+                                        <span className={cn("w-1.5 h-1.5 rounded-full", selectedUser.is_banned ? "bg-rose-500" : "bg-emerald-500")}></span>
+                                        {selectedUser.status}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-6">
+                                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest border-b border-slate-100 pb-2">Recent Activity</h3>
+                                <div className="space-y-4">
+                                    {[
+                                        { action: 'Login from New IP', date: '2 hours ago', detail: 'IP: 182.25.1.xx (Jakarta, ID)' },
+                                        { action: 'Payout Requested', date: '1 day ago', detail: 'Amount: $25.00 to BCA' },
+                                        { action: 'Plan Upgraded to PRO', date: 'Oct 12, 2023', detail: 'Annual subscription started' }
+                                    ].map((item, i) => (
+                                        <div key={i} className="flex gap-4">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-slate-200 mt-1.5"></div>
+                                            <div>
+                                                <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{item.action}</p>
+                                                <p className="text-[10px] text-slate-500 font-medium">{item.detail}</p>
+                                                <p className="text-[9px] font-black text-slate-300 uppercase mt-1">{item.date}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                            <Button 
+                                variant="ghost" 
+                                onClick={() => toggleBan(selectedUser.id)}
+                                className={cn(
+                                    "font-black text-[10px] uppercase tracking-widest px-6",
+                                    selectedUser.is_banned ? "text-emerald-500 hover:bg-emerald-50" : "text-rose-500 hover:bg-rose-50"
+                                )}
+                            >
+                                {selectedUser.is_banned ? 'Unban Account' : 'Suspend Account'}
+                            </Button>
+                            <div className="flex gap-3">
+                                <Button variant="ghost" className="font-black text-[10px] uppercase tracking-widest px-6" onClick={() => setIsModalOpen(false)}>Close</Button>
+                                <Button 
+                                    variant="primary" 
+                                    onClick={() => handleLoginAs(selectedUser)}
+                                    className="bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest px-8 shadow-xl shadow-slate-900/20"
+                                >
+                                    Login As User
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

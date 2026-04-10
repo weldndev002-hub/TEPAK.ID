@@ -7,7 +7,8 @@ import {
     CalendarIcon, 
     MegaphoneIcon, 
     DocumentTextIcon,
-    XMarkIcon
+    XMarkIcon,
+    PhotoIcon
 } from '@heroicons/react/24/outline';
 
 export interface BlockType {
@@ -32,13 +33,15 @@ export const AddBlockDrawer: React.FC<AddBlockDrawerProps> = ({
     { id: 'product', label: 'Produk', icon: ShoppingBagIcon },
     { id: 'event', label: 'Event', icon: CalendarIcon },
     { id: 'social', label: 'Sosmed', icon: MegaphoneIcon },
+    { id: 'text', label: 'Blok Teks', icon: DocumentTextIcon },
+    { id: 'image', label: 'Gambar', icon: PhotoIcon },
     { id: 'article', label: 'Tulisan', icon: DocumentTextIcon },
   ];
 
   return (
     <div 
         className={cn(
-            "absolute top-0 right-0 w-96 h-full bg-white border-l border-slate-50 shadow-2xl z-20 flex flex-col transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) font-['Plus_Jakarta_Sans',sans-serif]",
+            "fixed inset-y-0 right-0 w-96 bg-white border-l border-slate-100 shadow-[0_0_50px_-12px_rgba(0,0,0,0.15)] z-[60] flex flex-col transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) ",
             isOpen ? "translate-x-0" : "translate-x-full",
             className
         )}

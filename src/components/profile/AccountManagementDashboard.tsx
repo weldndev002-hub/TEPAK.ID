@@ -25,7 +25,7 @@ export const AccountManagementDashboard = () => {
     const [showPassword, setShowPassword] = useState(false);
 
     return (
-        <div className="max-w-7xl w-full mx-auto space-y-12 font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="max-w-7xl w-full mx-auto space-y-12 ">
             <div className="mb-12">
                 <div className="flex items-center gap-4 mb-6">
                     <a href="/settings" className="w-10 h-10 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-primary transition-all hover:shadow-sm">

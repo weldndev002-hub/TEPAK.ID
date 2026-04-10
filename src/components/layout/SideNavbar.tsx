@@ -13,7 +13,7 @@ import {
 
 export const SideNavbar: React.FC = () => {
     return (
-        <aside className="flex flex-col h-screen fixed left-0 top-0 z-50 w-72 bg-[#1e2939] text-white font-['Plus_Jakarta_Sans',sans-serif] tracking-tight antialiased">
+        <aside className="flex flex-col h-screen fixed left-0 top-0 z-50 w-72 bg-[#1e2939] text-white  tracking-tight antialiased">
             <div className="p-8 pb-4 flex flex-col items-start space-y-2">
                 <img src="/logo-dark.png" alt="Orbit Site" className="w-32 h-auto" />
             </div>

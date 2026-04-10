@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { z } from 'zod';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
 import Stepper from '../ui/Stepper';
@@ -20,6 +21,13 @@ const ONBOARDING_STEPS = [
     { label: 'Finish' },
 ];
 
+const MOCK_EXISTING_DOMAINS = ['admin', 'orbit', 'tepak', 'studio'];
+
+const domainSchema = z.string()
+    .min(3, "Minimal 3 karakter")
+    .regex(/^[a-zA-Z0-9-]+$/, "Error format")
+    .refine((val) => !MOCK_EXISTING_DOMAINS.includes(val.toLowerCase()), "Subdomain telah digunakan");
+
 export const OnboardingForm: React.FC = () => {
     const [currentStep, setCurrentStep] = useState(0);
     const [domain, setDomain] = useState('yourname');
@@ -30,6 +38,9 @@ export const OnboardingForm: React.FC = () => {
     const [bio, setBio] = useState('');
     const [socials, setSocials] = useState({ ig: '', tt: '', yt: '' });
 
+    // VALIDATION STATES
+    const [errors, setErrors] = useState<{ domain?: string }>({});
+
     const themes = [
         { id: 'atelier-dark', name: 'Atelier Dark', gradient: 'bg-slate-900 shadow-2xl' },
         { id: 'clean-minimal', name: 'Clean Minimal', gradient: 'bg-white border-2 border-slate-100 shadow-sm' },
@@ -37,6 +48,15 @@ export const OnboardingForm: React.FC = () => {
     ];
 
     const nextStep = () => {
+        if (currentStep === 0) {
+            const result = domainSchema.safeParse(domain);
+            if (!result.success) {
+                setErrors({ domain: result.error.errors[0].message });
+                return;
+            }
+            setErrors({});
+        }
+
         if (currentStep < ONBOARDING_STEPS.length - 1) {
             setCurrentStep(currentStep + 1);
         }
@@ -49,7 +69,7 @@ export const OnboardingForm: React.FC = () => {
     };
 
     return (
-        <div className="w-full max-w-4xl mx-auto font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="w-full max-w-4xl mx-auto ">
             
             {/* STEPPER */}
             <Stepper steps={ONBOARDING_STEPS} currentStep={currentStep} className="mb-14" />
@@ -80,10 +100,22 @@ export const OnboardingForm: React.FC = () => {
                                         placeholder="yourname"
                                     />
                                     <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center translate-y-[1px]">
-                                        <CheckCircleIcon className="w-8 h-8 text-emerald-500" />
+                                        {domain && !errors.domain ? (
+                                            <CheckCircleIcon className="w-8 h-8 text-emerald-500 animate-in zoom-in duration-300" />
+                                        ) : domain && errors.domain ? (
+                                            <div className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-500 animate-in zoom-in duration-300">
+                                                <span className="font-black text-xs">!</span>
+                                            </div>
+                                        ) : null}
                                     </div>
                                 </div>
-                                <p className="text-[10px] font-black text-primary uppercase tracking-widest px-2">Domain is available! This will be your primary store link.</p>
+                                {errors.domain ? (
+                                    <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest px-2 animate-in fade-in slide-in-from-top-1">
+                                        {errors.domain}
+                                    </p>
+                                ) : domain && (
+                                    <p className="text-[10px] font-black text-primary uppercase tracking-widest px-2">Domain is available! This will be your primary store link.</p>
+                                )}
                             </div>
 
                             {/* THEME PICKER */}
@@ -205,7 +237,14 @@ export const OnboardingForm: React.FC = () => {
                             <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase whitespace-pre-line leading-tight">Masterfully\nCreated</h2>
                             <p className="text-slate-400 font-medium text-center max-w-sm uppercase text-[10px] leading-relaxed tracking-widest mx-auto">The world can now experience your creations at\ntepak.id/{domain}</p>
                         </div>
-                        <Button variant="primary" size="lg" className="px-16 mt-6 font-black uppercase text-[11px] tracking-[0.2em] py-5 rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all">
+                        <Button 
+                            variant="primary" 
+                            size="lg" 
+                            className="px-16 mt-6 font-black uppercase text-[11px] tracking-[0.2em] py-5 rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all"
+                            onClick={() => {
+                                window.location.href = `/editor?theme=${selectedTheme}&subdomain=${domain}`;
+                            }}
+                        >
                             Open Dashboard
                         </Button>
                     </div>

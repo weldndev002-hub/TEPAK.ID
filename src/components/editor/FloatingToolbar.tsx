@@ -20,7 +20,7 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({ className }) =
 
   return (
     <div className={cn(
-      "fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur-2xl border border-white/10 rounded-[2rem] px-8 py-4 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] flex items-center gap-8 z-50 font-['Plus_Jakarta_Sans',sans-serif]",
+      "fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur-2xl border border-white/10 rounded-[2rem] px-8 py-4 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] flex items-center gap-8 z-50 ",
       className
     )}>
       {actions.map((action, index) => (

@@ -6,28 +6,60 @@ import {
     CreditCardIcon, 
     QrCodeIcon, 
     BuildingLibraryIcon, 
-    WalletIcon 
+    WalletIcon,
+    ExclamationCircleIcon 
 } from '@heroicons/react/24/outline';
+import { z } from 'zod';
+import { DuitkuSimulation } from './DuitkuSimulation';
+import { cn } from '../../lib/utils';
 
 export const CheckoutForm: React.FC = () => {
     const [buyerName, setBuyerName] = useState('');
     const [buyerEmail, setBuyerEmail] = useState('');
     const [buyerPhone, setBuyerPhone] = useState('');
     const [selectedMethod, setSelectedMethod] = useState('qris');
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+    const [orderStatus, setOrderStatus] = useState<'pending' | 'paid' | 'expired'>('pending');
 
-    const paymentMethods = [
-        { id: 'qris', title: 'QRIS', description: 'OVO, GoPay, Dana, LinkAja, ShopeePay', icon: QrCodeIcon },
-        { id: 'va', title: 'Virtual Account', description: 'BCA, Mandiri, BNI, BRI', icon: BuildingLibraryIcon },
-        { id: 'wallet', title: 'E-Wallet Direct', description: 'ShopeePay, OVO (One-Click)', icon: WalletIcon },
-    ];
+    const productPrice = 499000;
+    const feePercentage = 5;
 
-    const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value.replace(/\D/g, ''); // Hanya angka
-        setBuyerPhone(value);
+    // Validation Schema
+    const checkoutSchema = z.object({
+        name: z.string().min(3, "Nama minimal 3 karakter"),
+        email: z.string().email("Format email tidak valid"),
+        phone: z.string().regex(/^\d+$/, "Nomor HP hanya boleh berisi angka").min(9, "Nomor HP tidak valid"),
+    });
+
+    const handleInitiatePayment = () => {
+        const result = checkoutSchema.safeParse({
+            name: buyerName,
+            email: buyerEmail,
+            phone: buyerPhone
+        });
+
+        if (!result.success) {
+            const formattedErrors: Record<string, string> = {};
+            result.error.issues.forEach((issue) => {
+                formattedErrors[issue.path[0]] = issue.message;
+            });
+            setErrors(formattedErrors);
+            return;
+        }
+
+        setErrors({});
+        setIsPaymentOpen(true);
+    };
+
+    const handleSuccess = (netIncome: number) => {
+        setOrderStatus('paid');
+        setIsPaymentOpen(false);
+        alert(`Terima kasih! Pembayaran berhasil. Rp ${netIncome.toLocaleString('id-ID')} telah dikirim ke kreator.`);
     };
 
     return (
-        <div className="flex flex-col lg:flex-row gap-8 max-w-screen-2xl mx-auto w-full px-8 py-12 font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="flex flex-col lg:flex-row gap-8 max-w-screen-2xl mx-auto w-full px-8 py-12 ">
             
             {/* LEFT COLUMN: MAIN FORM CONTENT */}
             <div className="flex-grow lg:w-2/3 space-y-8">
@@ -43,35 +75,53 @@ export const CheckoutForm: React.FC = () => {
                         <div className="space-y-2">
                             <label className="text-sm font-semibold text-on-surface-variant">Nama Lengkap</label>
                             <input 
-                                className="w-full bg-surface-container-low border-none rounded-lg p-3 focus:ring-2 focus:ring-secondary transition-all placeholder:text-outline" 
+                                className={cn(
+                                    "w-full bg-surface-container-low border-none rounded-lg p-3 focus:ring-2 transition-all placeholder:text-outline",
+                                    errors.name ? "ring-2 ring-rose-500" : "focus:ring-secondary"
+                                )} 
                                 placeholder="Masukkan nama sesuai KTP"
                                 value={buyerName}
                                 onChange={(e) => setBuyerName(e.target.value)}
                                 type="text"
                             />
+                            {errors.name && <p className="text-[10px] font-black text-rose-500 uppercase flex items-center gap-1"><ExclamationCircleIcon className="w-3 h-3"/> {errors.name}</p>}
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-semibold text-on-surface-variant">Email</label>
                             <input 
-                                className="w-full bg-surface-container-low border-none rounded-lg p-3 focus:ring-2 focus:ring-secondary transition-all placeholder:text-outline" 
+                                className={cn(
+                                    "w-full bg-surface-container-low border-none rounded-lg p-3 focus:ring-2 transition-all placeholder:text-outline",
+                                    errors.email ? "ring-2 ring-rose-500" : "focus:ring-secondary"
+                                )} 
                                 placeholder="contoh@email.com"
                                 value={buyerEmail}
-                                onChange={(e) => setBuyerEmail(e.target.value)}
+                                onChange={(e) => {
+                                    setBuyerEmail(e.target.value);
+                                    if(errors.email) setErrors({...errors, email: ''});
+                                }}
                                 type="email"
                             />
+                            {errors.email && <p className="text-[10px] font-black text-rose-500 uppercase flex items-center gap-1"><ExclamationCircleIcon className="w-3 h-3"/> {errors.email}</p>}
                         </div>
                         <div className="md:col-span-2 space-y-2">
                             <label className="text-sm font-semibold text-on-surface-variant">No HP (WhatsApp)</label>
                             <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-on-surface-variant tracking-tighter opacity-50">+62</span>
+                                <span className={cn("absolute left-4 top-1/2 -translate-y-1/2 font-bold tracking-tighter opacity-50", errors.phone ? "text-rose-500" : "text-on-surface-variant")}>+62</span>
                                 <input 
-                                    className="w-full bg-surface-container-low border-none rounded-lg p-3 pl-14 focus:ring-2 focus:ring-secondary transition-all placeholder:text-outline font-medium tracking-widest" 
+                                    className={cn(
+                                        "w-full bg-surface-container-low border-none rounded-lg p-3 pl-14 focus:ring-2 transition-all placeholder:text-outline font-medium tracking-widest",
+                                        errors.phone ? "ring-2 ring-rose-500" : "focus:ring-secondary"
+                                    )} 
                                     placeholder="812 3456 7890" 
                                     value={buyerPhone}
-                                    onChange={handlePhoneChange}
-                                    type="tel"
+                                    onChange={(e) => {
+                                        setBuyerPhone(e.target.value);
+                                        if(errors.phone) setErrors({...errors, phone: ''});
+                                    }}
+                                    type="text"
                                 />
                             </div>
+                            {errors.phone && <p className="text-[10px] font-black text-rose-500 uppercase flex items-center gap-1"><ExclamationCircleIcon className="w-3 h-3"/> {errors.phone}</p>}
                         </div>
                     </div>
                 </section>
@@ -102,11 +152,20 @@ export const CheckoutForm: React.FC = () => {
             <div className="lg:w-1/3">
                 <OrderSummary 
                     productTitle="Mastering No-Code: Professional Edition"
-                    productPrice={499000}
-                    feePercentage={5}
+                    productPrice={productPrice}
+                    feePercentage={feePercentage}
                     image="https://lh3.googleusercontent.com/aida-public/AB6AXuA8uHu8gp3KKfCXG_MbnJzQ4Jj9ZUkrndYcEqZY1YbQDSzaE6nUX1x30Vhksf1XW-EbQw-dbxao5d80CzXzUHFLYzsM4_e4UVuMuA7hIcQIMBWEPNuRO1i7YMG01O1ZRcMh_lrQ_JT-PCl6KTz-ChYC3Eb_p3KR7fuRUAH1C0t_TlQEDpzY7mjTW5ha0G1AM3xKhwIzIYc8BdmyBhTn-1R_Lu3GIqN6n5FxPYGElZdG4nV5iU-0IDQXdO4WtzruigzCLRmAbRlE-lUX"
+                    onPay={handleInitiatePayment}
+                    status={orderStatus}
                 />
             </div>
+
+            <DuitkuSimulation 
+                isOpen={isPaymentOpen}
+                onClose={() => setIsPaymentOpen(false)}
+                onSuccess={handleSuccess}
+                grossAmount={productPrice + (productPrice * (feePercentage/100))}
+            />
         </div>
     );
 };

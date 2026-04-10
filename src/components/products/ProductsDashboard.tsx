@@ -25,7 +25,7 @@ export const ProductsDashboard = () => {
         { label: 'Sold Out', value: 'sold_out' },
     ];
     return (
-        <div className="flex-1 flex flex-col min-h-screen bg-[#f8f9fb] font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="flex-1 flex flex-col min-h-screen bg-[#f8f9fb] ">
             {/* Main Content */}
             <div className="px-8 mt-8 pb-12 overflow-y-auto">
                 <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -33,10 +33,10 @@ export const ProductsDashboard = () => {
                         <h2 className="text-3xl font-extrabold text-[#005ab4] tracking-tight">Digital Products</h2>
                         <p className="text-slate-500 mt-1 font-medium">Manage all your digital assets and courses from one place.</p>
                     </div>
-                    <Button variant="secondary" className="px-5 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20 active:scale-95 transition-transform bg-[#465f89] hover:bg-[#344d77] text-white">
+                    <a href="/add-product" className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-blue-900/20 active:scale-95 transition-transform bg-[#465f89] hover:bg-[#344d77] text-white">
                         <PlusIcon className="w-5 h-5" />
                         Add Product
-                    </Button>
+                    </a>
                 </div>
 
                 {/* Summary Row */}
@@ -104,7 +104,7 @@ export const ProductsDashboard = () => {
                                             <img alt="E-Book Design" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB7uu6UxFuaXnXuaIyO5j3EjVQgNUBmjEoMhrk44cqOTMWeqeqc1eayA_oq42UxyAniiY0djVt0F7lhy8LCQlRFE7sVxi-HqeFFFbMu0oSKZqcbx3wAafWzgXv1B5zdz5tJP2joWHnyefVsetMoKsGcuNF4N15v5SAP0JhHGwzaEcqalp1TCa1rU2LieciJktEcf99aBzC6ICjMSIYf_LCPMxGLO9ZlUS7TTqpdzWPN42ynZmhHRMAu1L9DlH5aF-_fh9ghiJD5hxPh"/>
                                         </div>
                                         <div>
-                                            <h4 className="text-sm font-bold text-[#005ab4] group-hover:text-[#465f89] transition-colors">Mastering UI Design for Creators</h4>
+                                            <a href="/product-detail" className="text-sm font-bold text-[#005ab4] group-hover:text-[#465f89] transition-colors hover:underline">Mastering UI Design for Creators</a>
                                             <p className="text-xs text-slate-500 font-medium">PDF, 124 Pages</p>
                                         </div>
                                     </div>
@@ -144,7 +144,7 @@ export const ProductsDashboard = () => {
                                             <img alt="Web Template" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUrJvg6hYUipxufaFuot0-TUo-ZqqjI1nre9KfTpgZQJdS45Bef59Z5YPilbfPn8n0SdIv2DCu84EN7pJ8MYhoUlJqcTV4pZ7WtzacfIls8xtl2FN4J8rdih9MOuZ8yegX4II82mMCHZYzDjTlRd2qClwBB05Xc9r0cHB8qKf3gRebvoOqvLAXuxLUmAZbjcoV1yRUrWSnQCrZcH01xYTAVqNpyuScj-vlEs8wzy7unfDivuI0B-OUtBe7e6B7EpaYiJw0VwFdcvv1"/>
                                         </div>
                                         <div>
-                                            <h4 className="text-sm font-bold text-[#005ab4] group-hover:text-[#465f89] transition-colors">Portfolio Template: Zenith Pro</h4>
+                                            <a href="/product-detail" className="text-sm font-bold text-[#005ab4] group-hover:text-[#465f89] transition-colors hover:underline">Portfolio Template: Zenith Pro</a>
                                             <p className="text-xs text-slate-500 font-medium">HTML/React Source</p>
                                         </div>
                                     </div>
@@ -184,7 +184,7 @@ export const ProductsDashboard = () => {
                                             <img alt="Video Course" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCx_jW_O6wmHNZtjt0psQRBdBxAsAEkzBRoIMZs1DKE57TqeY_0ZXZV7zEiv4ZN2FcF7UKQg9Ar8wC4vcpi8U9uz7beiyacFdCjsT4X1VlENz6KNrcqaXSk2QsI86SnpdF4b0NpjaHc1mwQyizh2LUuxn7mOjd97esTawARAe12pAtv6lyL8zSrE6shX-8srjaaywK8BkTjBZWjvdSr2pZQX62bTOhiWbVFU8j_P8CqzaPaNIARuNSFFaUWcmCYae05nftAmEyCoyrZ"/>
                                         </div>
                                         <div>
-                                            <h4 className="text-sm font-bold text-[#005ab4] group-hover:text-[#465f89] transition-colors">Social Media Strategy Bundle</h4>
+                                            <a href="/product-detail" className="text-sm font-bold text-[#005ab4] group-hover:text-[#465f89] transition-colors hover:underline">Social Media Strategy Bundle</a>
                                             <p className="text-xs text-slate-500 font-medium">Video &amp; Checklist</p>
                                         </div>
                                     </div>

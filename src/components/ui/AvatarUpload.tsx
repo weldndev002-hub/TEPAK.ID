@@ -24,7 +24,7 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({ image, onUpload, cla
     };
 
     return (
-        <div className={cn("relative group flex flex-col items-center font-['Plus_Jakarta_Sans',sans-serif]", className)}>
+        <div className={cn("relative group flex flex-col items-center ", className)}>
             <div className="relative">
                 {/* CIRCULAR FRAME */}
                 <div className="w-32 h-32 md:w-36 md:h-36 rounded-3xl overflow-hidden border-4 border-white shadow-xl bg-slate-50 relative">

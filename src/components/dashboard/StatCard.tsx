@@ -13,10 +13,12 @@ export interface StatCardProps {
   trendDirection?: 'up' | 'down' | 'neutral';
   colorTheme?: 'primary' | 'tertiary' | 'green' | 'slate';
   className?: string;
+  isEmpty?: boolean;
+  emptyMessage?: string;
 }
 
 export const StatCard: React.FC<StatCardProps> = ({
-  title, value, icon: Icon, trend, trendDirection, colorTheme = 'primary', className
+  title, value, icon: Icon, trend, trendDirection, colorTheme = 'primary', className, isEmpty, emptyMessage
 }) => {
   const iconThemeClasses = {
     primary: "bg-amber-50 text-primary",
@@ -26,7 +28,7 @@ export const StatCard: React.FC<StatCardProps> = ({
   };
 
   const trendRender = () => {
-    if (!trend) return null;
+    if (isEmpty || !trend) return null;
     
     if (trendDirection === 'neutral') {
       return (
@@ -54,7 +56,7 @@ export const StatCard: React.FC<StatCardProps> = ({
 
   return (
     <div className={cn(
-      "bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group hover:ring-2 hover:ring-primary/10 transition-all font-['Plus_Jakarta_Sans',sans-serif]",
+      "bg-white p-6 rounded-2xl shadow-sm border border-slate-100 group hover:ring-2 hover:ring-primary/10 transition-all ",
       className
     )}>
       <div className="flex justify-between items-start mb-4">
@@ -64,7 +66,14 @@ export const StatCard: React.FC<StatCardProps> = ({
         {trendRender()}
       </div>
       <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{title}</p>
-      <h4 className="text-2xl font-black text-slate-900 tracking-tighter">{value}</h4>
+      {isEmpty ? (
+        <div className="space-y-1">
+            <h4 className="text-3xl font-black text-slate-200 tracking-tighter italic">0</h4>
+            <p className="text-[10px] font-bold text-primary animate-pulse">{emptyMessage || "Belum ada aktivitas"}</p>
+        </div>
+      ) : (
+        <h4 className="text-2xl font-black text-slate-900 tracking-tighter">{value}</h4>
+      )}
     </div>
   );
 };

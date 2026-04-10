@@ -15,7 +15,7 @@ export const OrderStatus: React.FC<OrderStatusProps> = ({
 }) => {
   if (status === 'success') {
     return (
-      <div className={cn("bg-white p-12 rounded-[2.5rem] border border-slate-50 flex flex-col items-center text-center shadow-2xl shadow-slate-900/5 font-['Plus_Jakarta_Sans',sans-serif]", className)}>
+      <div className={cn("bg-white p-12 rounded-[2.5rem] border border-slate-50 flex flex-col items-center text-center shadow-2xl shadow-slate-900/5 ", className)}>
         <div className="w-20 h-20 bg-emerald-50 rounded-[2rem] flex items-center justify-center mb-8 border border-emerald-100/50 shadow-inner group">
           <CheckCircleIcon className="text-emerald-500 w-12 h-12 group-hover:scale-110 transition-transform duration-500" />
         </div>
@@ -31,7 +31,7 @@ export const OrderStatus: React.FC<OrderStatusProps> = ({
   }
 
   return (
-    <div className={cn("bg-white p-12 rounded-[2.5rem] border border-slate-50 flex flex-col items-center text-center shadow-2xl shadow-slate-900/5 font-['Plus_Jakarta_Sans',sans-serif]", className)}>
+    <div className={cn("bg-white p-12 rounded-[2.5rem] border border-slate-50 flex flex-col items-center text-center shadow-2xl shadow-slate-900/5 ", className)}>
       <div className="w-20 h-20 bg-amber-50 rounded-[2rem] flex items-center justify-center mb-8 border border-amber-100/50 shadow-inner group">
         <ClockIcon className="text-amber-500 w-12 h-12 group-hover:rotate-12 transition-transform duration-500" />
       </div>

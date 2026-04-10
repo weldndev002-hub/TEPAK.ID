@@ -60,7 +60,7 @@ export const ThemePickerCard: React.FC<ThemePickerCardProps> = ({
     <div 
         onClick={() => onSelect?.(theme.id)}
         className={cn(
-            "group relative bg-white rounded-[2rem] overflow-hidden p-4 cursor-pointer transition-all font-['Plus_Jakarta_Sans',sans-serif]",
+            "group relative bg-white rounded-[2rem] overflow-hidden p-4 cursor-pointer transition-all ",
             isSelected 
                 ? "border-2 border-primary shadow-xl" 
                 : "border border-slate-100 hover:border-primary/30 shadow-sm",

@@ -21,12 +21,33 @@ import {
   ShareIcon
 } from '@heroicons/react/24/outline';
 
-// Sample data from mockup
+// Initial metrics (simulated)
+const userStats = {
+  views: 0,
+  clicks: 0,
+  conversionRate: "0%",
+  revenue: "Rp 0"
+};
+
 const topMetrics = [
-  { title: "Total Impressions", value: "842.6k", icon: EyeIcon, trend: "12.5%", trendDirection: "up" as const, colorTheme: "tertiary" as const },
-  { title: "Click-through Rate", value: "4.12%", icon: CursorArrowRaysIcon, trend: "8.2%", trendDirection: "up" as const, colorTheme: "primary" as const },
-  { title: "Avg. Session Time", value: "2m 44s", icon: ClockIcon, trend: "2.4%", trendDirection: "down" as const, colorTheme: "slate" as const },
-  { title: "Projected Revenue", value: "Rp 4.290.000", icon: CurrencyDollarIcon, trend: "18.9%", trendDirection: "up" as const, colorTheme: "tertiary" as const }
+  { 
+    title: "Total Views", 
+    value: userStats.views, 
+    icon: EyeIcon, 
+    colorTheme: "tertiary" as const,
+    isEmpty: userStats.views === 0,
+    emptyMessage: "Mulai bagikan tautan Anda!"
+  },
+  { 
+    title: "Total Clicks", 
+    value: userStats.clicks, 
+    icon: CursorArrowRaysIcon, 
+    colorTheme: "primary" as const,
+    isEmpty: userStats.clicks === 0,
+    emptyMessage: "Kreativitas menunggu klik pertama."
+  },
+  { title: "Conversation Rate", value: userStats.conversionRate, icon: ClockIcon, colorTheme: "slate" as const },
+  { title: "Total Revenue", value: userStats.revenue, icon: CurrencyDollarIcon, colorTheme: "green" as const }
 ];
 ---
 

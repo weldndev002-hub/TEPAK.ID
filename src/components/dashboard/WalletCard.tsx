@@ -3,7 +3,7 @@ import { WalletIcon } from '@heroicons/react/24/outline';
 
 export const WalletCard: React.FC = () => {
     return (
-        <div className="bg-slate-900 text-white p-12 rounded-[3.5rem] shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[360px] border border-white/5 shadow-primary/10 font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="bg-slate-900 text-white p-12 rounded-[3.5rem] shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[360px] border border-white/5 shadow-primary/10 ">
             <div className="relative z-10">
                 <p className="text-primary text-[10px] font-black uppercase tracking-[0.4em] mb-3">Dompet Tepak</p>
                 <h4 className="text-4xl lg:text-5xl font-black mb-2 tracking-tighter uppercase tabular-nums">Rp 12,850,000</h4>

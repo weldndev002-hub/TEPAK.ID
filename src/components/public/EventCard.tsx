@@ -20,7 +20,7 @@ export const EventCard: React.FC<EventCardProps> = ({
   title, type = "Event", location, date, time, imageSrc, ticketsLeft, ctaText = "Beli Tiket", onBuy, className 
 }) => {
   return (
-    <div className={cn("w-full max-w-lg bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden flex flex-col md:flex-row transition-all hover:shadow-lg font-['Plus_Jakarta_Sans',sans-serif]", className)}>
+    <div className={cn("w-full max-w-lg bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden flex flex-col md:flex-row transition-all hover:shadow-lg ", className)}>
       
       {/* Event Image Cover (Left on Desktop, Top on Mobile) */}
       <div className="md:w-40 h-48 md:h-auto relative shrink-0">

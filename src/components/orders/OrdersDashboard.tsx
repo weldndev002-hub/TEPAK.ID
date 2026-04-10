@@ -28,7 +28,7 @@ export const OrdersDashboard = () => {
     ];
 
     return (
-        <div className="flex-1 p-10 min-h-screen bg-[#f8f9fb] font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="flex-1 p-10 min-h-screen bg-[#f8f9fb] ">
             {/* Breadcrumb / Section Header */}
             <div className="mb-12">
                 <h3 className="text-3xl font-black text-slate-900 tracking-tighter mb-2 uppercase">Order Management</h3>
@@ -126,7 +126,7 @@ export const OrdersDashboard = () => {
                         <TableBody>
                             {/* Row 1 */}
                             <TableRow className="cursor-pointer group hover:bg-slate-50/50 border-slate-50 transition-all border-b">
-                                <TableCell className="px-10 py-8 font-black text-primary text-xs uppercase tracking-tight">#TPK-88210</TableCell>
+                                <TableCell className="px-10 py-8 font-black text-primary text-xs uppercase tracking-tight"><a href="/order-detail" className="hover:underline">#TPK-88210</a></TableCell>
                                 <TableCell className="text-[10px] font-medium text-slate-400 uppercase tracking-tight">Oct 12, 2023, 14:20</TableCell>
                                 <TableCell>
                                     <div className="flex items-center gap-4">
@@ -159,7 +159,7 @@ export const OrdersDashboard = () => {
 
                             {/* Row 2 */}
                             <TableRow className="cursor-pointer group hover:bg-slate-50/50 border-slate-50 transition-all border-b">
-                                <TableCell className="px-10 py-8 font-black text-primary text-xs uppercase tracking-tight">#TPK-88211</TableCell>
+                                <TableCell className="px-10 py-8 font-black text-primary text-xs uppercase tracking-tight"><a href="/order-detail" className="hover:underline">#TPK-88211</a></TableCell>
                                 <TableCell className="text-[10px] font-medium text-slate-400 uppercase tracking-tight">Oct 12, 2023, 15:45</TableCell>
                                 <TableCell>
                                     <div className="flex items-center gap-4">
@@ -192,7 +192,7 @@ export const OrdersDashboard = () => {
 
                             {/* Row 3 */}
                             <TableRow className="cursor-pointer group hover:bg-slate-50/50 border-slate-50 transition-all border-b">
-                                <TableCell className="px-10 py-8 font-black text-primary text-xs uppercase tracking-tight">#TPK-88212</TableCell>
+                                <TableCell className="px-10 py-8 font-black text-primary text-xs uppercase tracking-tight"><a href="/order-detail" className="hover:underline">#TPK-88212</a></TableCell>
                                 <TableCell className="text-[10px] font-medium text-slate-400 uppercase tracking-tight">Oct 12, 2023, 16:10</TableCell>
                                 <TableCell>
                                     <div className="flex items-center gap-4">
@@ -225,7 +225,7 @@ export const OrdersDashboard = () => {
 
                             {/* Row 4 */}
                             <TableRow className="cursor-pointer group hover:bg-slate-50/50 border-transparent transition-all">
-                                <TableCell className="px-10 py-8 font-black text-primary text-xs uppercase tracking-tight">#TPK-88213</TableCell>
+                                <TableCell className="px-10 py-8 font-black text-primary text-xs uppercase tracking-tight"><a href="/order-detail" className="hover:underline">#TPK-88213</a></TableCell>
                                 <TableCell className="text-[10px] font-medium text-slate-400 uppercase tracking-tight">Oct 13, 2023, 09:12</TableCell>
                                 <TableCell>
                                     <div className="flex items-center gap-4">
@@ -269,11 +269,6 @@ export const OrdersDashboard = () => {
                 />
             </Card>
 
-            {/* Floating Action Button (FAB) */}
-            <button className="fixed bottom-12 right-12 w-16 h-16 bg-primary text-white rounded-3xl shadow-[0_20px_40px_-10px_rgba(var(--primary-rgb),0.3)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all group z-50">
-                <PlusIcon className="w-8 h-8 stroke-[3]" />
-                <span className="absolute right-full mr-6 px-4 py-2 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-xl opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0 pointer-events-none shadow-2xl">Create Manual Order</span>
-            </button>
         </div>
     );
 };

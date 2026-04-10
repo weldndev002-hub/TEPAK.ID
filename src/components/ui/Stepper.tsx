@@ -15,7 +15,7 @@ interface StepperProps {
 
 export const Stepper: React.FC<StepperProps> = ({ steps, currentStep, className }) => {
     return (
-        <div className={cn("flex flex-wrap items-center justify-center gap-6 py-12 mb-8 px-6 font-['Plus_Jakarta_Sans',sans-serif]", className)}>
+        <div className={cn("flex flex-wrap items-center justify-center gap-6 py-12 mb-8 px-6 ", className)}>
             {steps.map((step, index) => (
                 <React.Fragment key={index}>
                     {/* STEP CIRCLE & LABEL */}

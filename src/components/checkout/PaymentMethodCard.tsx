@@ -20,8 +20,8 @@ export const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
             className={cn(
                 "flex items-center justify-between p-4 rounded-xl cursor-pointer transition-all duration-300 border-2 group",
                 isSelected 
-                    ? "border-secondary bg-secondary/5 font-['Plus_Jakarta_Sans',sans-serif]" 
-                    : "border-outline-variant bg-surface hover:border-secondary/50 shadow-sm font-['Plus_Jakarta_Sans',sans-serif]"
+                    ? "border-secondary bg-secondary/5 " 
+                    : "border-outline-variant bg-surface hover:border-secondary/50 shadow-sm "
             )}
         >
             <div className="flex items-center gap-4">

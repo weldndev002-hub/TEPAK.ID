@@ -4,7 +4,7 @@ import { SparklesIcon, ArrowTrendingUpIcon, BanknotesIcon } from '@heroicons/rea
 
 export const DashboardBento: React.FC = () => {
     return (
-        <section className="grid grid-cols-1 md:grid-cols-12 gap-8 mb-12 font-['Plus_Jakarta_Sans',sans-serif]">
+        <section className="grid grid-cols-1 md:grid-cols-12 gap-8 mb-12 ">
             {/* WELCOME BANNER */}
             <div className="md:col-span-8 relative h-80 rounded-[3rem] overflow-hidden bg-slate-900 group shadow-2xl shadow-slate-900/10 transition-all duration-500 hover:shadow-primary/5">
                 {/* BACKGROUND IMAGE WITH OVERLAY */}

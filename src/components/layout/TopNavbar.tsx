@@ -10,7 +10,7 @@ interface TopNavBarProps {
 export const TopNavBar: React.FC<TopNavBarProps> = ({ className }) => {
     return (
         <nav className={cn(
-            "fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100/50 transition-all duration-500 font-['Plus_Jakarta_Sans',sans-serif]",
+            "fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100/50 transition-all duration-500 ",
             className
         )}>
             <div className="flex justify-between items-center max-w-6xl mx-auto px-6 lg:px-12 h-20">

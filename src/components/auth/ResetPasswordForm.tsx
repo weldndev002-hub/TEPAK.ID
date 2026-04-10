@@ -26,7 +26,7 @@ export const ResetPasswordForm = () => {
     if (isSuccess) {
         return (
             <>
-                <main className="w-full max-w-[480px] bg-white rounded-[2.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.05)] border border-slate-50 overflow-hidden flex flex-col items-center px-12 py-16 relative z-10 font-['Plus_Jakarta_Sans',sans-serif]">
+                <main className="w-full max-w-[480px] bg-white rounded-[2.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.05)] border border-slate-50 overflow-hidden flex flex-col items-center px-12 py-16 relative z-10 ">
                     {/* Illustration Section */}
                     <div className="mb-10 relative flex items-center justify-center">
                         <div className="w-[140px] h-[140px] bg-emerald-50 rounded-full flex items-center justify-center border border-emerald-100/50">
@@ -80,7 +80,7 @@ export const ResetPasswordForm = () => {
     }
 
     return (
-        <main className="w-full max-w-[480px] bg-white rounded-[2.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.05)] border border-slate-50 overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
+        <main className="w-full max-w-[480px] bg-white rounded-[2.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.05)] border border-slate-50 overflow-hidden ">
             <div className="p-10 relative">
                 {/* Back Button */}
                 <a href="/settings" className="absolute top-10 left-10 inline-flex items-center gap-2 text-[10px] font-black text-slate-400 hover:text-primary transition-all uppercase tracking-widest group">

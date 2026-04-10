@@ -35,13 +35,17 @@ export const SignupForm: React.FC = () => {
         // 2. Email Validation (Simple)
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!email.trim() || !emailRegex.test(email)) {
-            setEmailError('Alamat email tidak valid');
+            setEmailError('Format email tidak valid');
+            isValid = false;
+        } else if (email.trim() === 'admin@orbitsite.com') {
+            // Simulated: Email already registered
+            setEmailError('Email ini sudah terdaftar. Silakan login.');
             isValid = false;
         }
 
         // 3. Password Length Validation
         if (password.length < 8) {
-            setPasswordError('Kata sandi minimal 8 karakter');
+            setPasswordError('Password minimal 8 karakter');
             isValid = false;
         }
 
@@ -57,7 +61,7 @@ export const SignupForm: React.FC = () => {
     };
 
     return (
-        <div className="w-full flex flex-col gap-10 font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="w-full flex flex-col gap-10 ">
             
             <form onSubmit={handleSignup} className="w-full flex flex-col gap-8">
                 

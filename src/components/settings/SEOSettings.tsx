@@ -17,8 +17,22 @@ export const SEOSettingsDashboard = () => {
     const [description, setDescription] = useState('Helping brands build stunning digital presence with premium landing pages and creative strategies.');
     const [keywords, setKeywords] = useState('digital creator, landing page, branding, portfolio');
 
+    const sanitizeInput = (val: string) => {
+        return val.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gmi, "");
+    };
+
+    const handleSave = () => {
+        const cleanTitle = sanitizeInput(title);
+        const cleanDesc = sanitizeInput(description);
+        
+        setTitle(cleanTitle);
+        setDescription(cleanDesc);
+        
+        alert("SEO Settings Saved Successfully!");
+    };
+
     return (
-        <div className="w-full p-8 max-w-5xl mx-auto space-y-12 font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="w-full p-8 max-w-5xl mx-auto space-y-12 ">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
@@ -28,7 +42,13 @@ export const SEOSettingsDashboard = () => {
                 </div>
                 <div className="flex items-center gap-3">
                     <Button variant="ghost" className="border-slate-100 bg-white font-black text-[11px] uppercase tracking-widest px-6 py-2.5 rounded-xl">Discard</Button>
-                    <Button variant="primary" className="bg-primary text-white font-black text-[11px] uppercase tracking-widest px-8 py-2.5 rounded-xl shadow-xl shadow-primary/20 hover:bg-primary/90 transition-all active:scale-95">Save Settings</Button>
+                    <Button 
+                        variant="primary" 
+                        className="bg-primary text-white font-black text-[11px] uppercase tracking-widest px-8 py-2.5 rounded-xl shadow-xl shadow-primary/20 hover:bg-primary/90 transition-all active:scale-95"
+                        onClick={handleSave}
+                    >
+                        Save Settings
+                    </Button>
                 </div>
             </div>
 
@@ -53,7 +73,10 @@ export const SEOSettingsDashboard = () => {
                                 />
                                 <div className="flex justify-between items-center px-1">
                                     <p className="text-[10px] font-medium text-slate-400 uppercase tracking-tight">Main title shown in search tabs</p>
-                                    <p className={cn("text-[10px] font-black uppercase tracking-widest", title.length > 60 ? "text-orange-500" : "text-emerald-500")}>
+                                    <p className={cn(
+                                        "text-[10px] font-black uppercase tracking-widest", 
+                                        title.length > 70 ? "text-rose-500" : title.length > 60 ? "text-amber-500" : "text-emerald-500"
+                                    )}>
                                         {title.length}/60 chars
                                     </p>
                                 </div>
@@ -69,7 +92,10 @@ export const SEOSettingsDashboard = () => {
                                 />
                                 <div className="flex justify-between items-center px-1">
                                     <p className="text-[10px] font-medium text-slate-400 uppercase tracking-tight">Brief summary of your site (150-160 recommended)</p>
-                                    <p className={cn("text-[10px] font-black uppercase tracking-widest", description.length > 160 ? "text-orange-500" : "text-emerald-500")}>
+                                    <p className={cn(
+                                        "text-[10px] font-black uppercase tracking-widest", 
+                                        description.length > 170 ? "text-rose-500" : description.length > 160 ? "text-amber-500" : "text-emerald-500"
+                                    )}>
                                         {description.length}/160 chars
                                     </p>
                                 </div>

@@ -23,7 +23,7 @@ export const DraggableBlock: React.FC<DraggableBlockProps> = ({
   const Icon = getIcon(icon);
 
   return (
-    <div className={cn("bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center group transition-all hover:shadow-2xl hover:shadow-slate-100 font-['Plus_Jakarta_Sans',sans-serif]", className)}>
+    <div className={cn("bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center group transition-all hover:shadow-2xl hover:shadow-slate-100 ", className)}>
       <div className="mr-6 text-slate-300 cursor-grab active:cursor-grabbing group-hover:text-slate-400 transition-colors">
         <OutlineIcons.Bars2Icon className="w-6 h-6" />
       </div>

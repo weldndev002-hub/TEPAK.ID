@@ -23,7 +23,7 @@ const actions: ActionItem[] = [
 
 export const QuickActions: React.FC = () => {
     return (
-        <section className="space-y-8 font-['Plus_Jakarta_Sans',sans-serif]">
+        <section className="space-y-8 ">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Quick Actions</h3>
             <div className="grid grid-cols-2 gap-6">
                 {actions.map((action, i) => {

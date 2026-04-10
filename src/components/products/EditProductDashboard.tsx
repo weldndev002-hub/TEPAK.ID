@@ -20,7 +20,7 @@ export const EditProductDashboard = () => {
     const [visibility, setVisibility] = useState(true);
 
     return (
-        <div className="flex-1 flex flex-col min-h-screen bg-[#F8FAFC] font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="flex-1 flex flex-col min-h-screen bg-[#F8FAFC] ">
             {/* TopNavBar Replacement Local Context */}
             <header className="sticky top-0 z-40 bg-white/70 backdrop-blur-md flex justify-between items-center w-full px-8 py-4 shadow-[0px_20px_40px_rgba(16,27,50,0.06)] border-b border-slate-200">
                 <div className="flex items-center gap-4">

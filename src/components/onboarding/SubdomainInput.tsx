@@ -14,7 +14,7 @@ export const SubdomainInput: React.FC<SubdomainInputProps> = ({
   value, onChange, isTaken, isAvailable, isLoading 
 }) => {
   return (
-    <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 ">
       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4 ml-1">Claim Your Identity</label>
       <div className="relative flex items-center group">
         <input 

@@ -18,7 +18,7 @@ interface ThemePickerProps {
 
 export const ThemePicker: React.FC<ThemePickerProps> = ({ options, selectedId, onSelect }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-5xl mx-auto font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-5xl mx-auto ">
       {options.map((theme) => (
         <div 
           key={theme.id}

@@ -13,7 +13,7 @@ export const EditorShell: React.FC<EditorShellProps> = ({ className }) => {
   const [activeDevice, setActiveDevice] = useState<'desktop' | 'mobile'>('mobile');
 
   return (
-    <div className={cn("flex h-[720px] w-full border border-slate-50 rounded-[2.5rem] overflow-hidden bg-white relative font-['Plus_Jakarta_Sans',sans-serif]", className)}>
+    <div className={cn("flex h-[720px] w-full border border-slate-50 rounded-[2.5rem] overflow-hidden bg-white relative ", className)}>
       
       {/* Side Panel */}
       <aside className="w-96 bg-slate-50 border-r border-slate-100 flex flex-col z-0">

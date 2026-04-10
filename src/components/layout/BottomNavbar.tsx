@@ -12,7 +12,9 @@ import {
     AcademicCapIcon,
     Cog6ToothIcon,
     CurrencyDollarIcon,
-    TicketIcon
+    TicketIcon,
+    ChartBarIcon,
+    UserCircleIcon
 } from '@heroicons/react/24/outline';
 
 interface BottomNavItemProps {
@@ -28,7 +30,7 @@ const BottomNavItem: React.FC<BottomNavItemProps> = ({ icon: Icon, label, active
         href={onClick ? undefined : href}
         onClick={onClick}
         className={cn(
-            "flex flex-col items-center justify-center gap-1 min-w-[64px] transition-all relative py-2 font-['Plus_Jakarta_Sans',sans-serif] cursor-pointer",
+            "flex flex-col items-center justify-center gap-1 min-w-[64px] transition-all relative py-2  cursor-pointer",
             active ? "text-primary scale-105" : "text-slate-400 hover:text-slate-600"
         )}
     >
@@ -41,7 +43,7 @@ const BottomNavItem: React.FC<BottomNavItemProps> = ({ icon: Icon, label, active
 );
 
 interface BottomNavbarProps {
-    activePage?: string;
+    activePage?: 'dashboard' | 'analytics' | 'editor' | 'products' | 'orders' | 'wallet' | 'customers' | 'academy' | 'settings' | 'plan-info' | 'profile' | 'users' | 'payouts' | 'plans' | 'tutorials';
     variant?: 'creator' | 'admin';
 }
 
@@ -64,11 +66,14 @@ export const BottomNavbar: React.FC<BottomNavbarProps> = ({
             { icon: WalletIcon, label: "Wallet", href: "/wallet", id: "wallet" },
         ],
         more: [
+            { icon: ChartBarIcon, label: "Analytics", href: "/analytics", id: "analytics" },
             { icon: ArchiveBoxIcon, label: "Products", href: "/products", id: "products" },
             { icon: DocumentTextIcon, label: "Orders", href: "/orders", id: "orders" },
             { icon: UsersIcon, label: "Customers", href: "/customers", id: "customers" },
             { icon: AcademicCapIcon, label: "Academy", href: "/academy", id: "academy" },
-            { icon: Cog6ToothIcon, label: "Settings", href: "/settings", id: "settings" },
+            { icon: UserCircleIcon, label: "Profile", href: "/settings", id: "profile" },
+            { icon: Cog6ToothIcon, label: "Settings", href: "/account-management", id: "settings" },
+            { icon: TicketIcon, label: "Informasi Paket", href: "/plan-info", id: "plan-info" },
         ]
     };
 
@@ -142,7 +147,7 @@ export const BottomNavbar: React.FC<BottomNavbarProps> = ({
             </div>
 
             {/* Main Bottom Navbar */}
-            <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 pb-safe bg-white/90 backdrop-blur-xl border-t border-white shadow-[0_-8px_30px_rgb(0,0,0,0.12)] rounded-t-[2.5rem] font-['Plus_Jakarta_Sans',sans-serif] flex-shrink-0">
+            <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 pb-safe bg-white/90 backdrop-blur-xl border-t border-white shadow-[0_-8px_30px_rgb(0,0,0,0.12)] rounded-t-[2.5rem]  flex-shrink-0">
                 {config.main.map((item) => (
                     <BottomNavItem 
                         key={item.id}

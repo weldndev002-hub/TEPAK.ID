@@ -2,10 +2,11 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { LightSidebar } from '../components/layout/LightSidebar';
 import { LightTopNavbar } from '../components/layout/LightTopNavbar';
-import { AccountManagementDashboard } from '../components/profile/AccountManagementDashboard';
+import { UnifiedSettings } from '../components/settings/UnifiedSettings';
+import { BottomNavbar } from '../components/layout/BottomNavbar';
 ---
 
-<BaseLayout title="Account Management | Tepak.id">
+<BaseLayout title="Account & Payout Settings | Tepak.id">
     <div class="flex min-h-screen bg-slate-50">
         <!-- Sidebar B (Light) -->
         <LightSidebar activePage="settings" client:load />
@@ -16,8 +17,10 @@ import { AccountManagementDashboard } from '../components/profile/AccountManagem
 
             <!-- MAIN WORKSPACE -->
             <main class="flex-1 overflow-y-auto p-10 bg-slate-50">
-                <AccountManagementDashboard client:load />
+                <UnifiedSettings client:load />
             </main>
+            <!-- Bottom Navigation for Mobile -->
+            <BottomNavbar activePage="settings" client:load />
         </div>
     </div>
 </BaseLayout>

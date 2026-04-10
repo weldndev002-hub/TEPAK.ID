@@ -21,7 +21,7 @@ export const SubdomainCheck: React.FC<SubdomainCheckProps> = ({
     const isEmpty = value.trim() === "";
     
     return (
-        <div className={cn("bg-white p-8 rounded-[2rem] border border-slate-100 font-['Plus_Jakarta_Sans',sans-serif]", className)}>
+        <div className={cn("bg-white p-8 rounded-[2rem] border border-slate-100 ", className)}>
             <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3 ml-1">Claim Your URL</label>
             
             <Input 

@@ -57,7 +57,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ className }) => {
   };
 
   return (
-    <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-12 font-['Plus_Jakarta_Sans',sans-serif]", className)}>
+    <div className={cn("grid grid-cols-1 lg:grid-cols-12 gap-12 ", className)}>
         
         {/* Left: Form Area */}
         <div className="lg:col-span-8 space-y-8">

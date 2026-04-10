@@ -1,3 +1,4 @@
+import { PricingFlow } from '../components/billing/PricingFlow';
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Button from '../components/ui/Button';
@@ -11,7 +12,7 @@ import {
     CheckCircleIcon, 
     GlobeAltIcon 
 } from '@heroicons/react/24/outline';
----
+
 
 <BaseLayout title="Orbit Site - Digital Atelier for Modern Creators">
     
@@ -210,11 +211,9 @@ import {
                                     Domain Kustom (.id / .com)
                                 </li>
                             </ul>
-                            <a href="/signup" class="w-full">
-                                <Button variant="primary" size="lg" className="w-full py-5 rounded-2xl bg-white text-primary font-black hover:bg-slate-50 shadow-none border-none">
-                                    Gunakan PRO Sekarang
-                                </Button>
-                            </a>
+                            <div class="w-full">
+                                <PricingFlow client:load />
+                            </div>
                             
                             {/* AMBER GLOW ELEMENTS */}
                             <div class="absolute -bottom-10 -right-10 w-48 h-48 bg-white/10 blur-[80px] rounded-full"></div>

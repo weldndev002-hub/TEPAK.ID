@@ -3,7 +3,7 @@ import { MagnifyingGlassIcon, BellIcon } from '@heroicons/react/24/outline';
 
 export const Header: React.FC = () => {
   return (
-    <header className="fixed top-0 right-0 left-64 h-20 bg-white/80 backdrop-blur-xl flex justify-between items-center px-10 z-40 border-b border-slate-50 font-['Plus_Jakarta_Sans',sans-serif]">
+    <header className="fixed top-0 right-0 left-64 h-20 bg-white/80 backdrop-blur-xl flex justify-between items-center px-10 z-40 border-b border-slate-50 ">
       {/* SEARCH BAR */}
       <div className="flex items-center bg-slate-50/50 rounded-2xl px-5 py-2.5 w-[420px] group focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/10 transition-all border border-slate-100/50 focus-within:border-primary/20 shadow-sm">
         <MagnifyingGlassIcon className="w-5 h-5 text-slate-400 mr-3 group-focus-within:text-primary transition-colors" />

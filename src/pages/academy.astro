@@ -3,8 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { LightSidebar } from '../components/layout/LightSidebar';
 import { LightTopNavbar } from '../components/layout/LightTopNavbar';
 import { AcademyHero } from '../components/academy/AcademyHero';
-import { CategoryFilters } from '../components/academy/CategoryFilters';
-import { TutorialCard } from '../components/academy/TutorialCard';
+import { TutorialsExplorer } from '../components/academy/TutorialsExplorer';
 import { BottomNavbar } from '../components/layout/BottomNavbar';
 import Button from '../components/ui/Button';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
@@ -82,15 +81,8 @@ const tutorials = [
                 <!-- Academy Header Section -->
                 <AcademyHero client:load />
 
-                <!-- Category Filters -->
-                <CategoryFilters client:load />
-
-                <!-- Tutorial Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {tutorials.map((tutorial) => (
-                        <TutorialCard {...tutorial} client:load />
-                    ))}
-                </div>
+                <!-- Tutorials Explorer (Search, Filters, Grid) -->
+                <TutorialsExplorer client:load tutorials={tutorials} />
 
                 <!-- Load More Section -->
                 <div class="mt-16 flex flex-col items-center gap-4">

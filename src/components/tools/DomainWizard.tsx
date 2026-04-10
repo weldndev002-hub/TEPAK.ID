@@ -10,7 +10,7 @@ export interface DomainWizardProps {
 
 export const DomainWizard: React.FC<DomainWizardProps> = ({ className }) => {
   return (
-    <div className={cn("bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm font-['Plus_Jakarta_Sans',sans-serif]", className)}>
+    <div className={cn("bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-sm ", className)}>
         <div className="max-w-2xl mx-auto">
             
             {/* Header */}

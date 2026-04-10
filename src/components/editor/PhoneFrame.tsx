@@ -18,7 +18,7 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({ children, className, the
       theme === 'bold' ? "bg-slate-900 text-white" : 
       theme === 'warm' ? "bg-orange-50 text-orange-950" : 
       "bg-white text-slate-800",
-      "font-['Plus_Jakarta_Sans',sans-serif]",
+      "",
       className
     )}>
       {/* Notch */}

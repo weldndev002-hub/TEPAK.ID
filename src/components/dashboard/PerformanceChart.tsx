@@ -3,7 +3,7 @@ import { ChartBarIcon, PresentationChartLineIcon } from '@heroicons/react/24/out
 
 export const PerformanceChart: React.FC = () => {
     return (
-        <section className="space-y-8 h-full flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
+        <section className="space-y-8 h-full flex flex-col ">
             <div className="flex justify-between items-center">
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Performa Halaman (30 Hari)</h3>
                 <div className="flex gap-2 p-1.5 bg-slate-50 border border-slate-100 rounded-2xl">

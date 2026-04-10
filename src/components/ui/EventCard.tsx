@@ -18,7 +18,7 @@ export const EventCard: React.FC<EventCardProps> = ({
 }) => {
     return (
         <div className={cn(
-            "flex flex-col md:flex-row bg-white rounded-[2.5rem] overflow-hidden p-3 border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-700 group font-['Plus_Jakarta_Sans',sans-serif]",
+            "flex flex-col md:flex-row bg-white rounded-[2.5rem] overflow-hidden p-3 border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-700 group ",
             className
         )}>
             {/* EVENT IMAGE */}

@@ -8,7 +8,7 @@ export interface EventStatsProps {
 
 export const EventStats: React.FC<EventStatsProps> = ({ className }) => {
   return (
-    <div className={cn("grid grid-cols-1 md:grid-cols-3 gap-8 font-['Plus_Jakarta_Sans',sans-serif]", className)}>
+    <div className={cn("grid grid-cols-1 md:grid-cols-3 gap-8 ", className)}>
         
         {/* Total Events */}
         <div className="bg-white p-8 rounded-[2.5rem] border border-slate-50 shadow-sm flex flex-col items-center hover:shadow-2xl hover:shadow-slate-100 transition-all duration-500 group">

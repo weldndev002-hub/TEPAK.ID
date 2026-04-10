@@ -29,7 +29,7 @@ export const CustomerTable: React.FC<CustomerTableProps> = ({ className }) => {
   ];
 
   return (
-    <div className={cn("space-y-6 font-['Plus_Jakarta_Sans',sans-serif]", className)}>
+    <div className={cn("space-y-6 ", className)}>
         
         {/* Header Action Bar */}
         <div className="flex justify-between items-center mb-6 sm:flex-row flex-col gap-6 sm:gap-0">

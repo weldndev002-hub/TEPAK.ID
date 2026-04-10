@@ -9,7 +9,7 @@ import {
 
 export const BannedView = () => {
     return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 ">
             {/* Background Atmosphere */}
             <div className="fixed inset-0 bg-[radial-gradient(circle_at_top,_#fff,_#f1f5f9)] -z-10"></div>
             

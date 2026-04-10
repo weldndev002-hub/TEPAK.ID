@@ -20,7 +20,7 @@ const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, active, href = "#"
   <a 
     href={href}
     className={cn(
-      "flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 mx-2 my-0.5 font-['Plus_Jakarta_Sans',sans-serif]",
+      "flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 mx-2 my-0.5 ",
       active 
         ? "text-white font-bold bg-[#3B82F6] shadow-lg shadow-blue-500/20" 
         : "text-slate-400 hover:text-white hover:bg-white/5 font-medium"
@@ -37,7 +37,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ activePage = 'dashboard' }) => {
   return (
-    <aside className="hidden md:flex flex-col h-screen fixed left-0 top-0 z-50 w-64 bg-[#162138] text-white font-['Plus_Jakarta_Sans',sans-serif] antialiased overflow-hidden border-r border-white/5">
+    <aside className="hidden md:flex flex-col h-screen fixed left-0 top-0 z-50 w-64 bg-[#162138] text-white  antialiased overflow-hidden border-r border-white/5">
       <div className="p-7 mb-4 flex flex-col justify-center">
         <img src="/logo-dark.png" alt="Orbit Site" className="w-32 h-auto" />
         <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mt-3 ml-1">Admin Command Center</p>
