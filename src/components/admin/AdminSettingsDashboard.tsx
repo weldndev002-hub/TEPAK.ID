@@ -334,7 +334,5 @@ export const AdminSettingsDashboard = () => {
 
             {renderTabContent()}
         </div>
-            </div>
-        </div>
     );
 };
