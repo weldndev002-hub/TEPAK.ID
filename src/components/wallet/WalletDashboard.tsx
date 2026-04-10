@@ -16,7 +16,8 @@ import {
     ChevronDownIcon,
     ArrowPathIcon,
     ShieldCheckIcon,
-    XMarkIcon
+    XMarkIcon,
+    ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { SubscriptionProvider, useSubscription } from '../../context/SubscriptionContext';
 
@@ -30,6 +31,7 @@ const WalletDashboardContent = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isBankInfoComplete] = useState(true);
+    const [showBankWarning, setShowBankWarning] = useState(false);
     const minWithdrawal = 50000;
 
     // Fees Configuration
@@ -97,7 +99,8 @@ const WalletDashboardContent = () => {
     }
 
     return (
-        <div className="max-w-7xl w-full mx-auto space-y-8 ">
+        <>
+            <div className="max-w-7xl w-full mx-auto space-y-8 ">
             {/* Page Header */}
             <header className="flex flex-col gap-1">
                 <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase">Dompet & Pendapatan</h1>
@@ -124,8 +127,7 @@ const WalletDashboardContent = () => {
                             disabled={balanceData.available < minWithdrawal}
                             onClick={() => {
                                 if (!isBankInfoComplete) {
-                                    alert("Harap lengkapi informasi bank Anda");
-                                    window.location.href = '/settings/bank-info';
+                                    setShowBankWarning(true);
                                     return;
                                 }
                                 window.location.href='/withdraw';
@@ -368,7 +370,27 @@ const WalletDashboardContent = () => {
             <footer className="py-8 text-center text-slate-300 text-[10px] font-black uppercase tracking-widest">
                 Powered by Tepak.id Digital Solutions © 2024. All Rights Reserved.
             </footer>
-        </div>
+            
+            {/* Bank Info Warning Modal */}
+            {showBankWarning && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-sm rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-8">
+                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-amber-100 mb-4">
+                                <ExclamationTriangleIcon className="w-6 h-6 text-amber-500" />
+                            </div>
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Info Bank Belum Lengkap</h3>
+                            <p className="text-sm text-slate-500 font-medium leading-relaxed">Harap lengkapi informasi bank rekening payout Anda terlebih dahulu sebelum melakukan penarikan saldo.</p>
+                        </div>
+                        <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                            <button className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setShowBankWarning(false)}>Tutup</button>
+                            <button className="px-6 py-2.5 rounded-xl font-black bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 transition-all text-[10px] uppercase tracking-widest" onClick={() => window.location.href='/bank-info'}>Lengkapi Sekarang</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            </div>
+        </>
     );
 };
 

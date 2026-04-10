@@ -7,7 +7,8 @@ import {
     QrCodeIcon, 
     BuildingLibraryIcon, 
     WalletIcon,
-    ExclamationCircleIcon 
+    ExclamationCircleIcon,
+    CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import { z } from 'zod';
 import { DuitkuSimulation } from './DuitkuSimulation';
@@ -48,6 +49,7 @@ export const CheckoutForm: React.FC = () => {
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [isPaymentOpen, setIsPaymentOpen] = useState(false);
     const [orderStatus, setOrderStatus] = useState<'pending' | 'paid' | 'expired'>('pending');
+    const [successModal, setSuccessModal] = useState<{ netIncome: number } | null>(null);
 
     const productPrice = 499000;
     const feePercentage = 5;
@@ -82,7 +84,7 @@ export const CheckoutForm: React.FC = () => {
     const handleSuccess = (netIncome: number) => {
         setOrderStatus('paid');
         setIsPaymentOpen(false);
-        alert(`Terima kasih! Pembayaran berhasil. Rp ${netIncome.toLocaleString('id-ID')} telah dikirim ke kreator.`);
+        setSuccessModal({ netIncome });
     };
 
     return (
@@ -193,6 +195,26 @@ export const CheckoutForm: React.FC = () => {
                 onSuccess={handleSuccess}
                 grossAmount={productPrice + (productPrice * (feePercentage/100))}
             />
+
+            {/* Payment Success Modal */}
+            {successModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-sm rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-8 text-center">
+                            <div className="w-16 h-16 rounded-full flex items-center justify-center bg-emerald-100 mx-auto mb-4">
+                                <CheckCircleIcon className="w-9 h-9 text-emerald-500" />
+                            </div>
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Pembayaran Berhasil!</h3>
+                            <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                Terima kasih! <strong className="text-emerald-600">Rp {successModal.netIncome.toLocaleString('id-ID')}</strong> telah dikirim ke kreator. Link download akan segera dikirim ke email Anda.
+                            </p>
+                        </div>
+                        <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex justify-center">
+                            <button className="px-8 py-2.5 rounded-xl font-black bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 transition-all text-[10px] uppercase tracking-widest" onClick={() => setSuccessModal(null)}>OK, Mengerti</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

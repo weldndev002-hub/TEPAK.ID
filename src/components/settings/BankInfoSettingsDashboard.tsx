@@ -11,6 +11,7 @@ import {
     LockClosedIcon,
     CheckIcon 
 } from '@heroicons/react/24/outline';
+import { cn } from '../../lib/utils';
 
 export const BankInfoSettingsDashboard = () => {
     const [bankData, setBankData] = useState({
@@ -28,6 +29,8 @@ export const BankInfoSettingsDashboard = () => {
 
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [toast, setToast] = useState<string | null>(null);
+    const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000); };
 
     const handleSave = async () => {
         setError(null);
@@ -54,11 +57,16 @@ export const BankInfoSettingsDashboard = () => {
             isVerified: true
         });
 
-        alert("Informasi bank berhasil diperbarui!");
+        showToast('Informasi bank berhasil diperbarui!');
         setLoading(false);
     };
     return (
-        <div className="flex-1 p-8 min-h-screen bg-slate-50 ">
+        <div className="flex-1 p-8 min-h-screen bg-slate-50 relative">
+            {toast && (
+                <div className="fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl text-sm font-bold bg-emerald-500 text-white animate-in slide-in-from-right duration-300">
+                    <CheckCircleIcon className="w-5 h-5 shrink-0" />{toast}
+                </div>
+            )}
             <div className="max-w-4xl mx-auto">
                 {/* Page Header */}
                 <div className="mb-10">

@@ -25,6 +25,7 @@ export const DomainSettingsDashboard = () => {
     const [error, setError] = React.useState('');
     const [isVerifying, setIsVerifying] = React.useState(false);
     const [cooldown, setCooldown] = React.useState(0);
+    const [deleteModal, setDeleteModal] = React.useState(false);
 
     const domainSchema = z.string()
         .regex(/^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/, "Format domain tidak valid, gunakan format: domainku.com")
@@ -247,7 +248,7 @@ export const DomainSettingsDashboard = () => {
                                     <Button 
                                         variant="ghost" 
                                         className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-rose-100 text-rose-500 text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 transition-all shrink-0 active:scale-95"
-                                        onClick={() => { setStatus('idle'); setDomainInput(''); }}
+                                        onClick={() => setDeleteModal(true)}
                                     >
                                         <TrashIcon className="w-4 h-4" />
                                         Delete Domain
@@ -260,6 +261,27 @@ export const DomainSettingsDashboard = () => {
                 </div>
             </div>
         </div>
+
+        {/* Delete Domain Confirm Modal */}
+        {deleteModal && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                <div className="bg-white w-full max-w-sm rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div className="p-8">
+                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-rose-100 mb-4">
+                            <TrashIcon className="w-6 h-6 text-rose-500" />
+                        </div>
+                        <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Delete Domain?</h3>
+                        <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                            Domain <strong className="text-slate-900">{domainInput}</strong> akan dihapus dari akun Anda. Pengunjung tidak lagi bisa mengakses halaman Anda melalui domain ini.
+                        </p>
+                    </div>
+                    <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                        <button className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setDeleteModal(false)}>Cancel</button>
+                        <button className="px-6 py-2.5 rounded-xl font-black bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/20 transition-all text-[10px] uppercase tracking-widest" onClick={() => { setStatus('idle'); setDomainInput(''); setDeleteModal(false); }}>Yes, Delete</button>
+                    </div>
+                </div>
+            </div>
+        )}
     );
 };
 

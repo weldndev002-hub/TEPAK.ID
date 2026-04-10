@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
     BookOpenIcon, 
     PlayCircleIcon, 
     DocumentTextIcon, 
     VideoCameraSlashIcon, 
-    LockClosedIcon 
+    LockClosedIcon,
+    ShieldExclamationIcon
 } from '@heroicons/react/24/outline';
 
 interface ContentViewerProps {
@@ -17,6 +18,7 @@ interface ContentViewerProps {
 export const ContentViewer: React.FC<ContentViewerProps> = ({ 
     title, type, content, buyerEmail = "user@example.com" 
 }) => {
+    const [protectToast, setProtectToast] = useState(false);
     
     useEffect(() => {
         // PREVENT RIGHT CLICK
@@ -28,7 +30,8 @@ export const ContentViewer: React.FC<ContentViewerProps> = ({
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 's' || e.key === 'c' || e.key === 'u')) {
                 e.preventDefault();
-                alert("Proteksi Konten: Fitur ini dinonaktifkan untuk melindungi hak cipta kreator.");
+                setProtectToast(true);
+                setTimeout(() => setProtectToast(false), 3000);
             }
         };
 
@@ -42,7 +45,15 @@ export const ContentViewer: React.FC<ContentViewerProps> = ({
     }, []);
 
     return (
-        <div className="relative min-h-[70vh] bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden select-none ">
+        <div className="relative min-h-[70vh] bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden select-none">
+
+            {/* Content Protection Toast */}
+            {protectToast && (
+                <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-3 px-6 py-3 bg-slate-900/90 backdrop-blur-sm text-white rounded-2xl shadow-2xl text-xs font-black uppercase tracking-widest animate-in fade-in slide-in-from-top duration-200">
+                    <ShieldExclamationIcon className="w-4 h-4 text-amber-400 shrink-0" />
+                    Proteksi Konten Aktif — Fitur ini dinonaktifkan untuk melindungi hak cipta kreator.
+                </div>
+            )}
             
             {/* PRINT PROTECTION CSS */}
             <style dangerouslySetInnerHTML={{ __html: `

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Card } from '../ui/Card';
 import Button from '../ui/Button';
+import { CheckCircleIcon, XCircleIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { cn } from '../../lib/utils';
 
 export const TutorialManagementDashboard = () => {
     const [tutorials, setTutorials] = useState([
@@ -11,6 +13,15 @@ export const TutorialManagementDashboard = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
     const [activeFilter, setActiveFilter] = useState('All');
+    const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
+    const tutorialToDelete = tutorials.find(t => t.id === deleteTarget);
+
+    // Toast
+    const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const showToast = (type: 'success' | 'error', message: string) => {
+        setToast({ type, message });
+        setTimeout(() => setToast(null), 4000);
+    };
 
     // Form State
     const [newTutorial, setNewTutorial] = useState({
@@ -23,7 +34,7 @@ export const TutorialManagementDashboard = () => {
 
     const handleAddTutorial = () => {
         if (!newTutorial.title || !newTutorial.category || !newTutorial.youtubeLink) {
-            alert("Harap lengkapi semua data tutorial!");
+            showToast('error', 'Harap lengkapi semua data tutorial sebelum mempublikasikan.');
             return;
         }
 
@@ -39,13 +50,13 @@ export const TutorialManagementDashboard = () => {
         setTutorials([tutorial, ...tutorials]);
         setIsModalOpen(false);
         setNewTutorial({ title: '', category: '', youtubeLink: '' });
-        alert("Tutorial berhasil dipublikasikan! Kreator dapat melihatnya di Academy.");
+        showToast('success', 'Tutorial berhasil dipublikasikan! Kreator dapat melihatnya di Academy.');
     };
 
-    const handleDelete = (id: number) => {
-        if (confirm("Apakah Anda yakin ingin menghapus tutorial ini?")) {
-            setTutorials(tutorials.filter(t => t.id !== id));
-        }
+    const handleDeleteConfirmed = () => {
+        if (deleteTarget !== null) setTutorials(prev => prev.filter(t => t.id !== deleteTarget));
+        setDeleteTarget(null);
+        showToast('success', 'Tutorial berhasil dihapus dari library.');
     };
 
     const filteredTutorials = activeFilter === 'All' 
@@ -64,6 +75,19 @@ export const TutorialManagementDashboard = () => {
 
     return (
         <div className="w-full">
+            {/* Toast */}
+            {toast && (
+                <div className={cn(
+                    "fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl text-sm font-bold animate-in slide-in-from-right duration-300",
+                    toast.type === 'success' ? "bg-emerald-500 text-white" : "bg-rose-500 text-white"
+                )}>
+                    {toast.type === 'success'
+                        ? <CheckCircleIcon className="w-5 h-5 shrink-0" />
+                        : <XCircleIcon className="w-5 h-5 shrink-0" />
+                    }
+                    {toast.message}
+                </div>
+            )}
             {/* Section Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
                 <div>
@@ -129,7 +153,7 @@ export const TutorialManagementDashboard = () => {
                                     <button onClick={openEditModal} className="p-2 text-slate-400 hover:text-[#465f89] hover:bg-slate-100 rounded-lg transition-colors">
                                         <span className="material-symbols-outlined text-xl">edit_note</span>
                                     </button>
-                                    <button onClick={() => handleDelete(tutorial.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                                    <button onClick={() => setDeleteTarget(tutorial.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
                                         <span className="material-symbols-outlined text-xl">delete_forever</span>
                                     </button>
                                 </div>
@@ -232,8 +256,42 @@ export const TutorialManagementDashboard = () => {
                             >
                                 Cancel
                             </button>
-                            <button className="px-8 py-2.5 rounded-xl bg-[#465f89] text-white font-bold shadow-lg shadow-[#465f89]/20 hover:scale-[1.02] active:scale-95 transition-all">
+                            <button
+                                className="px-8 py-2.5 rounded-xl bg-[#465f89] text-white font-bold shadow-lg shadow-[#465f89]/20 hover:scale-[1.02] active:scale-95 transition-all"
+                                onClick={handleAddTutorial}
+                            >
                                 {modalMode === 'add' ? 'Publish Tutorial' : 'Save Changes'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirm Modal */}
+            {deleteTarget !== null && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-sm rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-8">
+                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-rose-100 mb-4">
+                                <TrashIcon className="w-6 h-6 text-rose-500" />
+                            </div>
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Hapus Tutorial?</h3>
+                            <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                Tutorial <strong className="text-slate-900">"{tutorialToDelete?.title}"</strong> akan dihapus permanen dari Academy. Tindakan ini tidak dapat dibatalkan.
+                            </p>
+                        </div>
+                        <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                            <button
+                                className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest"
+                                onClick={() => setDeleteTarget(null)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="px-6 py-2.5 rounded-xl font-black bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/20 transition-all text-[10px] uppercase tracking-widest"
+                                onClick={handleDeleteConfirmed}
+                            >
+                                Yes, Delete
                             </button>
                         </div>
                     </div>

@@ -12,7 +12,8 @@ import {
     FunnelIcon,
     EllipsisVerticalIcon,
     MagnifyingGlassIcon,
-    FaceFrownIcon 
+    FaceFrownIcon,
+    CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import { CustomerDetailModal } from './CustomerDetailModal';
 import { Input } from '../ui/Input';
@@ -21,6 +22,12 @@ export const CustomersDashboard = () => {
     const [searchTerm, setSearchTerm] = React.useState('');
     const [selectedCustomer, setSelectedCustomer] = React.useState<any>(null);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
+    const [toast, setToast] = React.useState<string | null>(null);
+
+    const showToast = (msg: string) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 4000);
+    };
 
     const customersData = [
         { id: '1', name: 'Michael Smith', email: 'michael.smith@gmail.com', totalSpend: '$245.00', transactions: '12', lastOrder: 'Oct 14, 2023', location: 'Jakarta', status: 'Active' },
@@ -61,7 +68,14 @@ export const CustomersDashboard = () => {
     ];
 
     return (
-        <div className="flex-1 p-8 min-h-screen bg-slate-50 ">
+        <div className="flex-1 p-8 min-h-screen bg-slate-50 relative">
+            {/* Toast Notification */}
+            {toast && (
+                <div className="fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl text-sm font-bold bg-emerald-500 text-white animate-in slide-in-from-right duration-300">
+                    <CheckCircleIcon className="w-5 h-5 shrink-0" />
+                    {toast}
+                </div>
+            )}
             {/* Header Action Area */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10">
                 <div>
@@ -220,12 +234,12 @@ export const CustomersDashboard = () => {
                     itemsPerPage={32} 
                     className="bg-slate-50/30 rounded-b-3xl border-t border-slate-50"
                 />
+            </div>
             <CustomerDetailModal 
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 customer={selectedCustomer}
             />
-            </div>
         </div>
     );
 };

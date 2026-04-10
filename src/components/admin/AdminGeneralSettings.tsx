@@ -4,25 +4,59 @@ import Button from '../ui/Button';
 import AvatarUpload from '../ui/AvatarUpload';
 import { Toggle } from '../ui/Toggle';
 import { z } from 'zod';
+import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import { cn } from '../../lib/utils';
 
 const feeSchema = z.number().min(0, "Fee tidak boleh negatif").max(100, "Fee tidak boleh lebih dari 100%");
 
 export const AdminGeneralSettings = () => {
     const [platformFee, setPlatformFee] = React.useState(5);
     const [feeError, setFeeError] = React.useState<string | null>(null);
+    const [saveConfirm, setSaveConfirm] = React.useState(false);
+    const [discardConfirm, setDiscardConfirm] = React.useState(false);
+
+    // Toast
+    const [toast, setToast] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const showToast = (type: 'success' | 'error', message: string) => {
+        setToast({ type, message });
+        setTimeout(() => setToast(null), 4000);
+    };
 
     const handleSave = () => {
         try {
             feeSchema.parse(platformFee);
             setFeeError(null);
-            alert(`Platform Fee diperbarui menjadi ${platformFee}%. Berlaku untuk semua transaksi baru.`);
+            setSaveConfirm(true);
         } catch (err: any) {
             setFeeError(err.errors[0].message);
         }
     };
 
+    const executeSave = () => {
+        setSaveConfirm(false);
+        showToast('success', `Platform Fee diperbarui menjadi ${platformFee}%. Berlaku untuk semua transaksi baru.`);
+    };
+
+    const executeDiscard = () => {
+        setDiscardConfirm(false);
+        window.location.reload();
+    };
+
     return (
         <div className="w-full">
+            {/* Toast */}
+            {toast && (
+                <div className={cn(
+                    "fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl text-sm font-bold",
+                    toast.type === 'success' ? "bg-emerald-500 text-white" : "bg-rose-500 text-white"
+                )}>
+                    {toast.type === 'success'
+                        ? <CheckCircleIcon className="w-5 h-5 shrink-0" />
+                        : <XCircleIcon className="w-5 h-5 shrink-0" />
+                    }
+                    {toast.message}
+                </div>
+            )}
             {/* Breadcrumb & Sub Nav */}
             <div className="mb-8">
                 <div className="flex items-center gap-2 text-xs font-bold text-[#00458d] tracking-widest uppercase mb-4">
@@ -33,7 +67,7 @@ export const AdminGeneralSettings = () => {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <h2 className="text-3xl font-extrabold text-[#005ab4] tracking-tight">General Settings</h2>
                     <div className="flex gap-3">
-                        <Button variant="ghost" className="bg-slate-50 text-slate-700 hover:bg-slate-100 transition-all text-sm font-semibold border-transparent">
+                        <Button variant="ghost" className="bg-slate-50 text-slate-700 hover:bg-slate-100 transition-all text-sm font-semibold border-transparent" onClick={() => setDiscardConfirm(true)}>
                             Discard Changes
                         </Button>
                         <Button onClick={handleSave} variant="primary" className="bg-[#465f89] text-white hover:shadow-lg hover:shadow-[#465f89]/20 transition-all text-sm font-semibold shadow-sm">
@@ -275,6 +309,46 @@ export const AdminGeneralSettings = () => {
                     </Card>
                 </div>
             </div>
+
+            {/* Save Confirm Modal */}
+            {saveConfirm && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-md rounded-[24px] shadow-2xl overflow-hidden">
+                        <div className="p-8">
+                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-blue-100 mb-4">
+                                <CheckCircleIcon className="w-6 h-6 text-[#005ab4]" />
+                            </div>
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Save All Changes?</h3>
+                            <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                Platform Fee akan diubah menjadi <strong className="text-[#005ab4]">{platformFee}%</strong>. Perubahan ini langsung berlaku untuk semua transaksi baru.
+                            </p>
+                        </div>
+                        <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                            <button className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setSaveConfirm(false)}>Cancel</button>
+                            <button className="px-6 py-2.5 rounded-xl font-black bg-[#465f89] hover:bg-[#3a4f75] text-white shadow-lg shadow-[#465f89]/20 transition-all text-[10px] uppercase tracking-widest" onClick={executeSave}>Yes, Save</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Discard Confirm Modal */}
+            {discardConfirm && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-md rounded-[24px] shadow-2xl overflow-hidden">
+                        <div className="p-8">
+                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-rose-100 mb-4">
+                                <XCircleIcon className="w-6 h-6 text-rose-500" />
+                            </div>
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Discard Changes?</h3>
+                            <p className="text-sm text-slate-500 font-medium leading-relaxed">Semua perubahan yang belum disimpan akan hilang. Tindakan ini tidak dapat dibatalkan.</p>
+                        </div>
+                        <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                            <button className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setDiscardConfirm(false)}>Cancel</button>
+                            <button className="px-6 py-2.5 rounded-xl font-black bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/20 transition-all text-[10px] uppercase tracking-widest" onClick={executeDiscard}>Yes, Discard</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -16,6 +16,7 @@ export const AnalyticsDashboard = () => {
     const [range, setRange] = useState('7d');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [dateError, setDateError] = useState<string | null>(null);
     const [dateRange, setDateRange] = useState({
         start: '2026-04-03',
         end: '2026-04-10'
@@ -50,20 +51,26 @@ export const AnalyticsDashboard = () => {
         }, 800);
     };
 
+    const showDateError = (msg: string) => {
+        setDateError(msg);
+        setTimeout(() => setDateError(null), 3000);
+    };
+
     const handleDateChange = (type: 'start' | 'end', val: string) => {
         const newRange = { ...dateRange, [type]: val };
         
         // Validation: startDate > endDate
         if (type === 'start' && val > newRange.end) {
-            alert("Tanggal awal tidak boleh lebih besar dari tanggal akhir!");
+            showDateError('Tanggal awal tidak boleh lebih besar dari tanggal akhir!');
             return;
         }
         if (type === 'end' && val < newRange.start) {
-            alert("Tanggal akhir tidak boleh lebih kecil dari tanggal awal!");
+            showDateError('Tanggal akhir tidak boleh lebih kecil dari tanggal awal!');
             setDateRange({ ...dateRange, end: dateRange.start });
             return;
         }
 
+        setDateError(null);
         setDateRange(newRange);
         handleRefresh();
     };
@@ -121,6 +128,11 @@ export const AnalyticsDashboard = () => {
                     </Button>
                 </div>
             </div>
+            {dateError && (
+                <div className="flex items-center gap-3 px-5 py-3 bg-amber-50 border border-amber-200 text-amber-700 rounded-2xl text-xs font-bold animate-in slide-in-from-top duration-200">
+                    <ExclamationTriangleIcon className="w-4 h-4 shrink-0" />{dateError}
+                </div>
+            )}
 
             {/* ERROR STATE / BLANK CHART */}
             {error ? (

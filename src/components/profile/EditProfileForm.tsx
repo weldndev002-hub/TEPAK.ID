@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { Textarea } from '../ui/Textarea';
@@ -9,19 +9,39 @@ import {
     VideoCameraIcon, 
     CheckBadgeIcon, 
     BuildingLibraryIcon,
-    PencilSquareIcon
+    PencilSquareIcon,
+    CheckCircleIcon,
+    XCircleIcon
 } from '@heroicons/react/24/outline';
+import { cn } from '../../lib/utils';
 
 export const EditProfileForm = () => {
+    const [saveModal, setSaveModal] = useState(false);
+    const [cancelModal, setCancelModal] = useState(false);
+    const [toast, setToast] = useState<string | null>(null);
+    const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000); };
+
+    const executeSave = () => {
+        setSaveModal(false);
+        showToast('Profile berhasil diperbarui!');
+    };
+
     return (
-        <div className="max-w-5xl mx-auto space-y-10 ">
+        <>
+            <div className="max-w-5xl mx-auto space-y-10">
+            {/* Toast */}
+            {toast && (
+                <div className="fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl text-sm font-bold bg-emerald-500 text-white animate-in slide-in-from-right duration-300">
+                    <CheckCircleIcon className="w-5 h-5 shrink-0" />{toast}
+                </div>
+            )}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-4">
                 <div className="text-center md:text-left">
                     <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2 block">Identity Management</span>
                     <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 uppercase">Edit Profile</h2>
                     <p className="text-slate-500 mt-2 font-medium text-sm">Manage your public presence and personal information.</p>
                 </div>
-                <Button variant="primary" className="shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all font-black px-10 py-5 rounded-2xl text-[11px] uppercase tracking-widest w-full md:w-auto">
+                <Button variant="primary" className="shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all font-black px-10 py-5 rounded-2xl text-[11px] uppercase tracking-widest w-full md:w-auto" onClick={() => setSaveModal(true)}>
                     Save Changes
                 </Button>
             </div>
@@ -201,16 +221,57 @@ export const EditProfileForm = () => {
 
                     {/* Bottom Action Bar */}
                     <div className="pt-6 flex flex-col md:flex-row items-center justify-end gap-6">
-                        <Button variant="ghost" className="text-slate-400 hover:bg-slate-100 px-8 py-4 font-black text-[10px] uppercase tracking-widest rounded-xl transition-all w-full md:w-auto">
+                        <Button variant="ghost" className="text-slate-400 hover:bg-slate-100 px-8 py-4 font-black text-[10px] uppercase tracking-widest rounded-xl transition-all w-full md:w-auto" onClick={() => setCancelModal(true)}>
                             Cancel
                         </Button>
-                        <Button variant="primary" className="shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all px-12 py-5 rounded-2xl font-black text-[11px] uppercase tracking-widest bg-primary text-white w-full md:w-auto">
+                        <Button variant="primary" className="shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all px-12 py-5 rounded-2xl font-black text-[11px] uppercase tracking-widest bg-primary text-white w-full md:w-auto" onClick={() => setSaveModal(true)}>
                             Save Changes
                         </Button>
                     </div>
                 </div>
             </div>
+
+        {/* Save Confirm Modal */}
+        {saveModal && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                <div className="bg-white w-full max-w-md rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div className="p-8">
+                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-blue-100 mb-4">
+                            <CheckCircleIcon className="w-6 h-6 text-[#005ab4]" />
+                        </div>
+                        <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Save Profile Changes?</h3>
+                        <p className="text-sm text-slate-500 font-medium leading-relaxed">Perubahan pada profil publik Anda akan langsung diterapkan. Informasi baru akan terlihat oleh pengunjung halaman Anda.</p>
+                    </div>
+                    <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                        <button className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setSaveModal(false)}>Cancel</button>
+                        <button className="px-6 py-2.5 rounded-xl font-black bg-[#465f89] hover:bg-[#3a4f75] text-white shadow-lg shadow-[#465f89]/20 transition-all text-[10px] uppercase tracking-widest" onClick={executeSave}>Yes, Save</button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* Cancel Confirm Modal */}
+        {cancelModal && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                <div className="bg-white w-full max-w-md rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div className="p-8">
+                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-rose-100 mb-4">
+                            <XCircleIcon className="w-6 h-6 text-rose-500" />
+                        </div>
+                        <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Discard Changes?</h3>
+                        <p className="text-sm text-slate-500 font-medium leading-relaxed">Semua perubahan yang belum disimpan akan dibatalkan. Tindakan ini tidak dapat diurungkan.</p>
+                    </div>
+                    <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                        <button className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setCancelModal(false)}>Keep Editing</button>
+                        <button className="px-6 py-2.5 rounded-xl font-black bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/20 transition-all text-[10px] uppercase tracking-widest" onClick={() => window.location.href='/settings'}>Yes, Discard</button>
+                    </div>
+                </div>
+            </div>
+        )}
         </div>
+    </>
     );
 };
+
+export default EditProfileForm;
 

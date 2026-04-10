@@ -17,6 +17,13 @@ import {
 } from '@heroicons/react/24/outline';
 
 export const OrderDetailDashboard = () => {
+    const [toast, setToast] = React.useState<string | null>(null);
+
+    const showToast = (msg: string) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 4000);
+    };
+
     const timeline = [
         { status: 'Payment Confirmed', time: 'Oct 12, 2023 — 14:20', done: true },
         { status: 'Processing', time: 'Oct 12, 2023 — 14:21', done: true },
@@ -25,7 +32,14 @@ export const OrderDetailDashboard = () => {
     ];
 
     return (
-        <div className="flex-1 flex flex-col min-h-screen bg-[#F8FAFC] ">
+        <div className="flex-1 flex flex-col min-h-screen bg-[#F8FAFC] relative">
+            {/* Toast Notification */}
+            {toast && (
+                <div className="fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl text-sm font-bold bg-emerald-500 text-white animate-in slide-in-from-right duration-300">
+                    <CheckCircleIcon className="w-5 h-5 shrink-0" />
+                    {toast}
+                </div>
+            )}
             {/* Contextual Header */}
             <header className="sticky top-0 z-40 bg-white/70 backdrop-blur-md flex justify-between items-center w-full px-8 py-4 shadow-[0px_20px_40px_rgba(16,27,50,0.06)] border-b border-slate-200">
                 <div className="flex items-center gap-4">
@@ -38,11 +52,17 @@ export const OrderDetailDashboard = () => {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl font-bold text-sm text-slate-600 transition-all">
+                    <button 
+                        className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl font-bold text-sm text-slate-600 transition-all"
+                        onClick={() => showToast("Mempersiapkan invoice untuk dicetak...")}
+                    >
                         <PrinterIcon className="w-4 h-4" />
                         Print Invoice
                     </button>
-                    <button className="flex items-center gap-2 px-5 py-2.5 bg-[#465f89] hover:bg-[#344d77] rounded-xl font-bold text-sm text-white shadow-lg shadow-blue-900/20 active:scale-95 transition-all">
+                    <button 
+                        className="flex items-center gap-2 px-5 py-2.5 bg-[#465f89] hover:bg-[#344d77] rounded-xl font-bold text-sm text-white shadow-lg shadow-blue-900/20 active:scale-95 transition-all"
+                        onClick={() => showToast("Mengekspor data pesanan ke PDF...")}
+                    >
                         <ArrowDownTrayIcon className="w-4 h-4" />
                         Export PDF
                     </button>

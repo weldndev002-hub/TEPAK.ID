@@ -23,9 +23,21 @@ import {
 export const AccountManagementDashboard = () => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [terminateModal, setTerminateModal] = useState(false);
+    const [terminateError, setTerminateError] = useState('');
+
+    const handleTerminate = () => {
+        if (!password) {
+            setTerminateError('Password wajib diisi untuk konfirmasi penghapusan akun.');
+            return;
+        }
+        setTerminateModal(true);
+        setTerminateError('');
+    };
 
     return (
-        <div className="max-w-7xl w-full mx-auto space-y-12 ">
+        <>
+            <div className="max-w-7xl w-full mx-auto space-y-12 ">
             <div className="mb-12">
                 <div className="flex items-center gap-4 mb-6">
                     <a href="/settings" className="w-10 h-10 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-primary transition-all hover:shadow-sm">
@@ -92,12 +104,15 @@ export const AccountManagementDashboard = () => {
                             </div>
 
                             <div className="pt-4 flex flex-col gap-4">
-                                <button className="w-full h-16 bg-rose-600 text-white font-black uppercase text-[11px] tracking-[0.3em] rounded-2xl shadow-xl shadow-rose-600/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+                                <button className="w-full h-16 bg-rose-600 text-white font-black uppercase text-[11px] tracking-[0.3em] rounded-2xl shadow-xl shadow-rose-600/20 hover:scale-[1.02] active:scale-[0.98] transition-all" onClick={handleTerminate}>
                                     Terminate Account Permanently
                                 </button>
                                 <a href="/settings" className="w-full py-4 text-center text-slate-300 font-black text-[10px] uppercase tracking-widest hover:text-slate-600 transition-colors">
-                                    Cancel & Return To Control Panel
+                                    Cancel &amp; Return To Control Panel
                                 </a>
+                                {terminateError && (
+                                    <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest text-center">{terminateError}</p>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -170,7 +185,29 @@ export const AccountManagementDashboard = () => {
                     Consult Support
                 </Button>
             </div>
+
+        {/* Terminate Confirm Modal */}
+        {terminateModal && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                <div className="bg-white w-full max-w-md rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div className="p-8">
+                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-rose-100 mb-4">
+                            <TrashIcon className="w-6 h-6 text-rose-500" />
+                        </div>
+                        <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Terminate Account?</h3>
+                        <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                            Akun Anda akan <strong className="text-rose-600">dihapus secara permanen</strong>. Semua data, halaman, dan riwayat analitik akan hilang. <br /><br />
+                            Tindakan ini <strong className="text-slate-900">tidak dapat dibatalkan</strong>.
+                        </p>
+                    </div>
+                    <div className="px-8 py-5 bg-rose-50 border-t border-rose-100 flex items-center justify-end gap-3">
+                        <button className="px-5 py-2.5 rounded-xl font-black text-slate-600 hover:bg-white transition-all text-[10px] uppercase tracking-widest" onClick={() => setTerminateModal(false)}>Cancel</button>
+                        <button className="px-6 py-2.5 rounded-xl font-black bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-600/20 transition-all text-[10px] uppercase tracking-widest" onClick={() => window.location.href='/logout'}>Terminate Permanently</button>
+                    </div>
+                </div>
+            )}
         </div>
+    </>
     );
 };
 

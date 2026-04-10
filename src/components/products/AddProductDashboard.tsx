@@ -16,18 +16,27 @@ import {
     TagIcon,
     CurrencyDollarIcon,
     BanknotesIcon,
+    CheckCircleIcon,
+    ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import { cn } from '../../lib/utils';
 
 export const AddProductDashboard = () => {
     const [status, setStatus] = useState(true);
     const [visibility, setVisibility] = useState(true);
+    const [isDirty, setIsDirty] = useState(false);
+    const [showDiscardModal, setShowDiscardModal] = useState(false);
+    
+    const handleInputChange = () => {
+        if (!isDirty) setIsDirty(true);
+    };
     const [limitDownload, setLimitDownload] = useState(false);
     const [price, setPrice] = useState<string>('');
     const [productFile, setProductFile] = useState<File | null>(null);
     const [thumbnail, setThumbnail] = useState<string | null>(null);
     const [errors, setErrors] = useState<{ price?: string; file?: string }>({});
     const [isPublishing, setIsPublishing] = useState(false);
+    const [publishConfirm, setPublishConfirm] = useState(false);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -68,12 +77,15 @@ export const AddProductDashboard = () => {
             return;
         }
 
+        // Show confirm modal instead of publishing immediately
+        setPublishConfirm(true);
+    };
+
+    const executePublish = async () => {
+        setPublishConfirm(false);
         setIsPublishing(true);
-        // Simulate Supabase Storage & DB Save
         await new Promise(resolve => setTimeout(resolve, 2000));
-        
         setIsPublishing(false);
-        alert("Produk digital berhasil diterbitkan! File tersimpan di private bucket.");
         window.location.href = '/products';
     };
 
@@ -82,7 +94,16 @@ export const AddProductDashboard = () => {
             {/* Contextual Header */}
             <header className="sticky top-0 z-40 bg-white/70 backdrop-blur-md flex justify-between items-center w-full px-8 py-4 shadow-[0px_20px_40px_rgba(16,27,50,0.06)] border-b border-slate-200">
                 <div className="flex items-center gap-4">
-                    <a href="/products" className="text-slate-500 hover:text-slate-800 transition-colors p-2 rounded-lg hover:bg-slate-100">
+                    <a 
+                        href="/products" 
+                        className="text-slate-500 hover:text-slate-800 transition-colors p-2 rounded-lg hover:bg-slate-100"
+                        onClick={(e) => {
+                            if (isDirty) {
+                                e.preventDefault();
+                                setShowDiscardModal(true);
+                            }
+                        }}
+                    >
                         <ArrowLeftIcon className="w-5 h-5" />
                     </a>
                     <div>
@@ -123,11 +144,19 @@ export const AddProductDashboard = () => {
                                 <div className="space-y-6">
                                     <div>
                                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Product Name <span className="text-red-400">*</span></label>
-                                        <Input type="text" placeholder="e.g. Mastering UI Design for Creators" />
+                                        <Input 
+                                            type="text" 
+                                            placeholder="e.g. Mastering UI Design for Creators" 
+                                            onChange={handleInputChange}
+                                        />
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Short Description <span className="text-red-400">*</span></label>
-                                        <Textarea rows={4} placeholder="Write a compelling product description that highlights the key benefits for buyers..." />
+                                        <Textarea 
+                                            rows={4} 
+                                            placeholder="Write a compelling product description that highlights the key benefits for buyers..." 
+                                            onChange={handleInputChange}
+                                        />
                                     </div>
                                     <div className="grid grid-cols-2 gap-6">
                                         <div>
@@ -241,7 +270,8 @@ export const AddProductDashboard = () => {
                         {/* Right Column */}
                         <div className="space-y-8">
 
-                            {/* Thumbnai                             <Card className="p-6 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
+                            {/* Thumbnail Section */}
+                            <Card className="p-6 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
                                 <div className="flex items-center space-x-3 mb-6">
                                     <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
                                     <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Thumbnail</h3>
@@ -270,7 +300,7 @@ export const AddProductDashboard = () => {
                                     Recommended: 1080x1080px (1:1)
                                 </p>
                             </Card>
-Card>
+                            </Card>
 
                             {/* Settings */}
                             <Card className="p-6 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
@@ -332,6 +362,70 @@ Card>
                     </div>
                 </div>
             </main>
+        </div>
+
+            {/* Publish Confirm Modal */}
+            {publishConfirm && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-md rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-8">
+                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-emerald-100 mb-4">
+                                <CheckCircleIcon className="w-6 h-6 text-emerald-500" />
+                            </div>
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Publish Product?</h3>
+                            <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                Produk <strong className="text-slate-900">{productFile?.name}</strong> akan diterbitkan dan langsung terlihat di toko. File akan disimpan secara aman di private bucket.
+                            </p>
+                        </div>
+                        <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                            <button
+                                className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest"
+                                onClick={() => setPublishConfirm(false)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="px-6 py-2.5 rounded-xl font-black bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 transition-all text-[10px] uppercase tracking-widest flex items-center gap-2"
+                                onClick={executePublish}
+                            >
+                                <CheckCircleIcon className="w-4 h-4" />
+                                Yes, Publish
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Discard Changes Modal */}
+            {showDiscardModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-md rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-8">
+                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-amber-100 mb-4 text-amber-600">
+                                <ExclamationTriangleIcon className="absolute w-6 h-6" /> {/* Note: need to import ExclamationTriangleIcon if not there */}
+                            </div>
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Buang Produk Baru?</h3>
+                            <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                Anda sedang dalam proses membuat produk baru. Jika Anda keluar sekarang, semua data yang sudah diisi akan hilang.
+                            </p>
+                        </div>
+                        <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                            <button 
+                                className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" 
+                                onClick={() => setShowDiscardModal(false)}
+                            >
+                                Lanjut Edit
+                            </button>
+                            <a 
+                                href="/products"
+                                className="px-6 py-2.5 rounded-xl font-black bg-slate-900 text-white shadow-lg transition-all text-[10px] uppercase tracking-widest text-center" 
+                            >
+                                Ya, Buang & Keluar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

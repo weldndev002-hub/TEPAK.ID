@@ -9,13 +9,16 @@ import {
     ChartBarIcon, 
     ChevronDownIcon, 
     PhotoIcon, 
-    QuestionMarkCircleIcon 
+    QuestionMarkCircleIcon,
+    CheckCircleIcon
 } from '@heroicons/react/24/outline';
 
 export const SEOSettingsDashboard = () => {
     const [title, setTitle] = useState('Aditya Pratama - Creative Digital Solutions');
     const [description, setDescription] = useState('Helping brands build stunning digital presence with premium landing pages and creative strategies.');
     const [keywords, setKeywords] = useState('digital creator, landing page, branding, portfolio');
+    const [toast, setToast] = useState<string | null>(null);
+    const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000); };
 
     const sanitizeInput = (val: string) => {
         return val.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gmi, "");
@@ -27,12 +30,16 @@ export const SEOSettingsDashboard = () => {
         
         setTitle(cleanTitle);
         setDescription(cleanDesc);
-        
-        alert("SEO Settings Saved Successfully!");
+        showToast('SEO Settings Saved Successfully!');
     };
 
     return (
-        <div className="w-full p-8 max-w-5xl mx-auto space-y-12 ">
+        <div className="w-full p-8 max-w-5xl mx-auto space-y-12">
+            {toast && (
+                <div className="fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl text-sm font-bold bg-emerald-500 text-white animate-in slide-in-from-right duration-300">
+                    <CheckCircleIcon className="w-5 h-5 shrink-0" />{toast}
+                </div>
+            )}
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>

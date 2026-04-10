@@ -12,25 +12,70 @@ import {
     TrashIcon, 
     PencilSquareIcon, 
     ArrowUpRightIcon, 
-    QuestionMarkCircleIcon 
+    QuestionMarkCircleIcon,
+    ExclamationTriangleIcon,
+    CheckCircleIcon,
+    XMarkIcon
 } from '@heroicons/react/24/outline';
 
 export const EditProductDashboard = () => {
     const [status, setStatus] = useState(true);
     const [visibility, setVisibility] = useState(true);
+    const [isDirty, setIsDirty] = useState(false);
+    const [toast, setToast] = useState<string | null>(null);
+    const [showSaveModal, setShowSaveModal] = useState(false);
+    const [showDiscardModal, setShowDiscardModal] = useState(false);
+    const [showFileDeleteModal, setShowFileDeleteModal] = useState(false);
+
+    const showToast = (msg: string) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 4000);
+    };
+
+    const handleSave = () => {
+        setShowSaveModal(false);
+        setIsDirty(false);
+        showToast("Perubahan produk berhasil disimpan!");
+    };
+
+    const handleBackClick = (e: React.MouseEvent) => {
+        if (isDirty) {
+            e.preventDefault();
+            setShowDiscardModal(true);
+        }
+    };
+
+    const handleInputChange = () => {
+        if (!isDirty) setIsDirty(true);
+    };
 
     return (
-        <div className="flex-1 flex flex-col min-h-screen bg-[#F8FAFC] ">
+        <div className="flex-1 flex flex-col min-h-screen bg-[#F8FAFC] relative">
+            {/* Toast Notification */}
+            {toast && (
+                <div className="fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl text-sm font-bold bg-emerald-500 text-white animate-in slide-in-from-right duration-300">
+                    <CheckCircleIcon className="w-5 h-5 shrink-0" />
+                    {toast}
+                </div>
+            )}
             {/* TopNavBar Replacement Local Context */}
             <header className="sticky top-0 z-40 bg-white/70 backdrop-blur-md flex justify-between items-center w-full px-8 py-4 shadow-[0px_20px_40px_rgba(16,27,50,0.06)] border-b border-slate-200">
                 <div className="flex items-center gap-4">
-                    <a href="/products" className="text-slate-500 hover:text-slate-800 transition-colors p-2 rounded-lg hover:bg-slate-100">
+                    <a 
+                        href="/products" 
+                        className="text-slate-500 hover:text-slate-800 transition-colors p-2 rounded-lg hover:bg-slate-100"
+                        onClick={handleBackClick}
+                    >
                         <ArrowLeftIcon className="w-5 h-5" />
                     </a>
                     <h2 className="text-xl font-extrabold text-[#162138] tracking-tight">Edit Digital Product</h2>
                 </div>
                 <div className="flex items-center space-x-6">
-                    <Button variant="secondary" className="px-8 py-2.5 rounded-full font-bold text-sm shadow-lg shadow-blue-900/30 hover:scale-105 active:scale-95 transition-all bg-[#465f89] hover:bg-[#344d77] text-white">
+                    <Button 
+                        variant="secondary" 
+                        className="px-8 py-2.5 rounded-full font-bold text-sm shadow-lg shadow-blue-900/30 hover:scale-105 active:scale-95 transition-all bg-[#465f89] hover:bg-[#344d77] text-white"
+                        onClick={() => setShowSaveModal(true)}
+                    >
                         Save
                     </Button>
                 </div>
@@ -108,7 +153,10 @@ export const EditProductDashboard = () => {
                                                 <p className="text-[10px] text-slate-500">12.4 MB • Successfully uploaded</p>
                                             </div>
                                         </div>
-                                        <button className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors">
+                                        <button 
+                                            className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                                            onClick={() => setShowFileDeleteModal(true)}
+                                        >
                                             <TrashIcon className="w-5 h-5" />
                                         </button>
                                     </div>
@@ -153,7 +201,13 @@ export const EditProductDashboard = () => {
                                             <p className="text-sm font-bold text-[#005ab4]">Product Status</p>
                                             <p className="text-[10px] text-slate-500">Show product in store</p>
                                         </div>
-                                        <Toggle checked={status} onChange={(e) => setStatus(e.target.checked)} />
+                                        <Toggle 
+                                            checked={status} 
+                                            onChange={(e) => {
+                                                setStatus(e.target.checked);
+                                                handleInputChange();
+                                            }} 
+                                        />
                                     </div>
                                     
                                     <div className="flex items-center justify-between">
@@ -161,7 +215,13 @@ export const EditProductDashboard = () => {
                                             <p className="text-sm font-bold text-[#005ab4]">Public Visibility</p>
                                             <p className="text-[10px] text-slate-500">Searchable on Google</p>
                                         </div>
-                                        <Toggle checked={visibility} onChange={(e) => setVisibility(e.target.checked)} />
+                                        <Toggle 
+                                            checked={visibility} 
+                                            onChange={(e) => {
+                                                setVisibility(e.target.checked);
+                                                handleInputChange();
+                                            }} 
+                                        />
                                     </div>
                                     
                                     <hr className="border-slate-100"/>
@@ -195,6 +255,101 @@ export const EditProductDashboard = () => {
                     </div>
                 </div>
             </main>
+            {/* Save Confirmation Modal */}
+            {showSaveModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-md rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-8 text-center">
+                            <div className="w-16 h-16 bg-blue-50 text-[#005ab4] rounded-full flex items-center justify-center mx-auto mb-6">
+                                <CheckCircleIcon className="w-8 h-8" />
+                            </div>
+                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-2">Simpan Perubahan?</h3>
+                            <p className="text-sm text-slate-500 font-medium leading-relaxed px-4">
+                                Pastikan semua data sudah benar sebelum menyimpan. Perubahan akan segera aktif di toko Anda.
+                            </p>
+                        </div>
+                        <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-center gap-3">
+                            <button 
+                                className="flex-1 py-3 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" 
+                                onClick={() => setShowSaveModal(false)}
+                            >
+                                Periksa Lagi
+                            </button>
+                            <button 
+                                className="flex-1 py-3 rounded-xl font-black bg-[#465f89] hover:bg-[#344d77] text-white shadow-lg shadow-blue-900/20 transition-all text-[10px] uppercase tracking-widest" 
+                                onClick={handleSave}
+                            >
+                                Ya, Simpan
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Discard Changes Modal */}
+            {showDiscardModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-md rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-8">
+                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-amber-100 mb-4 text-amber-600">
+                                <ExclamationTriangleIcon className="w-6 h-6" />
+                            </div>
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Buang Perubahan?</h3>
+                            <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                Anda memiliki perubahan yang belum disimpan. Jika Anda keluar sekarang, perubahan tersebut akan hilang secara permanen.
+                            </p>
+                        </div>
+                        <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                            <button 
+                                className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" 
+                                onClick={() => setShowDiscardModal(false)}
+                            >
+                                Lanjut Edit
+                            </button>
+                            <a 
+                                href="/products"
+                                className="px-6 py-2.5 rounded-xl font-black bg-slate-900 text-white shadow-lg transition-all text-[10px] uppercase tracking-widest text-center" 
+                            >
+                                Ya, Buang & Keluar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* File Delete Confirmation Modal */}
+            {showFileDeleteModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-md rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-8">
+                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-rose-100 mb-4 text-rose-500">
+                                <TrashIcon className="w-6 h-6" />
+                            </div>
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Hapus File Produk?</h3>
+                            <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                Apakah Anda yakin ingin menghapus file <strong className="text-slate-900">"Master_UI_Design_Tailwind_v2.pdf"</strong>? Anda harus mengunggah file baru agar produk tetap dapat diakses oleh pembeli.
+                            </p>
+                        </div>
+                        <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                            <button 
+                                className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" 
+                                onClick={() => setShowFileDeleteModal(false)}
+                            >
+                                Batal
+                            </button>
+                            <button 
+                                className="px-6 py-2.5 rounded-xl font-black bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/20 transition-all text-[10px] uppercase tracking-widest" 
+                                onClick={() => {
+                                    setShowFileDeleteModal(false);
+                                    showToast("File produk berhasil dihapus.");
+                                }}
+                            >
+                                Ya, Hapus File
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
