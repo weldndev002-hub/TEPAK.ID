@@ -13,6 +13,33 @@ import { z } from 'zod';
 import { DuitkuSimulation } from './DuitkuSimulation';
 import { cn } from '../../lib/utils';
 
+const paymentMethods = [
+    { 
+        id: 'qris', 
+        title: 'QRIS (Gopay, OVO, Dana, LinkAja)', 
+        description: 'Bayar instan dengan scan kode QR melalui e-wallet favoritmu.',
+        icon: QrCodeIcon 
+    },
+    { 
+        id: 'va', 
+        title: 'Virtual Account (BNI, BRI, Mandiri)', 
+        description: 'Pembayaran otomatis yang diverifikasi dalam hitungan menit.',
+        icon: BuildingLibraryIcon 
+    },
+    { 
+        id: 'credit', 
+        title: 'Kartu Kredit / Debit', 
+        description: 'Mendukung Visa, Mastercard, dan JCB dengan enkripsi 256-bit.',
+        icon: CreditCardIcon 
+    },
+    { 
+        id: 'ewallet', 
+        title: 'Electronic Wallet Direct', 
+        description: 'Bayar langsung melalui aplikasi ShopeePay atau OVO.',
+        icon: WalletIcon 
+    }
+];
+
 export const CheckoutForm: React.FC = () => {
     const [buyerName, setBuyerName] = useState('');
     const [buyerEmail, setBuyerEmail] = useState('');
