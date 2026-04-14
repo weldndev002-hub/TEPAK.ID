@@ -2,7 +2,11 @@
 /// <reference types="astro/client" />
 
 declare global {
-  interface Locals {
+  namespace App {
+    interface Locals {
+      supabase: import('@supabase/ssr').SupabaseClient;
+      getUser: () => Promise<import('@supabase/supabase-js').User | null>;
+    }
   }
 }
 

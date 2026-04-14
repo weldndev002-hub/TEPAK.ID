@@ -22,54 +22,112 @@ import { cn } from '../../lib/utils';
 export const DomainSettingsDashboard = () => {
     const [domainInput, setDomainInput] = React.useState('');
     const [status, setStatus] = React.useState<'idle' | 'pending' | 'active'>('idle');
+    const [isLoading, setIsLoading] = React.useState(true);
+    const [isSaving, setIsSaving] = React.useState(false);
     const [error, setError] = React.useState('');
-    const [isVerifying, setIsVerifying] = React.useState(false);
-    const [cooldown, setCooldown] = React.useState(0);
+    const [toast, setToast] = React.useState<string | null>(null);
     const [deleteModal, setDeleteModal] = React.useState(false);
+
+    const showToast = (msg: string) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 3000);
+    };
 
     const domainSchema = z.string()
         .regex(/^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/, "Format domain tidak valid, gunakan format: domainku.com")
         .refine(val => !val.startsWith('http'), "Gunakan format domain yang benar, tanpa http/https");
 
-    const handleSaveDomain = () => {
+    React.useEffect(() => {
+        fetchDomain();
+    }, []);
+
+    const fetchDomain = async () => {
+        setIsLoading(true);
+        try {
+            const res = await fetch('/api/settings/domain');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.domain_name) {
+                    setDomainInput(data.domain_name);
+                    setStatus(data.domain_verified ? 'active' : 'pending');
+                } else {
+                    setStatus('idle');
+                }
+            }
+        } catch (err) {
+            console.error('Fetch domain error:', err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleSaveDomain = async () => {
         const result = domainSchema.safeParse(domainInput);
         if (!result.success) {
             setError(result.error.issues[0].message);
             return;
         }
         setError('');
-        setStatus('pending');
-        // Simulated Cloudflare API Call
-        console.log(`Registering ${domainInput} to Cloudflare Custom Hostname...`);
+        setIsSaving(true);
+        try {
+            const res = await fetch('/api/settings/domain', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ domain_name: domainInput })
+            });
+
+            if (res.ok) {
+                setStatus('active'); // Immediate active as per user request
+                showToast('Domain successfully connected!');
+            } else {
+                const err = await res.json();
+                setError(err.error || 'Failed to save domain');
+            }
+        } catch (err) {
+            setError('Connection error');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
-    const handleVerify = async () => {
-        if (cooldown > 0) return;
-        
-        setIsVerifying(true);
-        // Simulate API verification call
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // 30% chance of success for demo purposes
-        const isSuccessful = Math.random() > 0.7;
-        
-        if (isSuccessful) {
-            setStatus('active');
-        } else {
-            setCooldown(30);
+    const handleDelete = async () => {
+        setIsSaving(true);
+        try {
+            const res = await fetch('/api/settings/domain', { method: 'DELETE' });
+            if (res.ok) {
+                setDomainInput('');
+                setStatus('idle');
+                setDeleteModal(false);
+                showToast('Domain removed');
+            }
+        } catch (err) {
+            showToast('Failed to remove domain');
+        } finally {
+            setIsSaving(false);
         }
-        setIsVerifying(false);
     };
 
-    React.useEffect(() => {
-        if (cooldown > 0) {
-            const timer = setInterval(() => setCooldown(c => c - 1), 1000);
-            return () => clearInterval(timer);
-        }
-    }, [cooldown]);
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-slate-50">
+                <div className="flex flex-col items-center gap-4">
+                    <ArrowPathIcon className="w-10 h-10 text-primary animate-spin" />
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loading Settings...</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <>
             <div className="flex-1 p-8 min-h-screen bg-slate-50 ">
+            {/* Toast */}
+            {toast && (
+                <div className="fixed top-6 right-6 z-[200] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl text-[11px] font-black uppercase tracking-widest bg-emerald-500 text-white animate-in slide-in-from-right duration-300">
+                    <CheckCircleIcon className="w-5 h-5" /> {toast}
+                </div>
+            )}
+
             <div className="max-w-5xl mx-auto">
                 
                 {/* Breadcrumbs */}
@@ -98,7 +156,7 @@ export const DomainSettingsDashboard = () => {
                                 <h3 className="font-black text-slate-900 tracking-tight uppercase text-sm">Default Subdomain</h3>
                             </div>
                             <div className="p-4 bg-slate-50 rounded-2xl mb-6 border border-slate-100">
-                                <p className="text-[11px] font-black text-primary break-all uppercase tracking-tight">creatorname.tepak.id</p>
+                                <p className="text-[11px] font-black text-primary break-all uppercase tracking-tight">creator.tepak.id</p>
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
@@ -150,7 +208,7 @@ export const DomainSettingsDashboard = () => {
                                                     setDomainInput(e.target.value.toLowerCase());
                                                     if(error) setError('');
                                                 }}
-                                                disabled={status !== 'idle'}
+                                                disabled={status !== 'idle' || isSaving}
                                             />
                                         </div>
                                         {status === 'idle' && (
@@ -158,6 +216,7 @@ export const DomainSettingsDashboard = () => {
                                                 variant="primary" 
                                                 className="px-8 font-black text-[11px] uppercase tracking-widest shadow-xl shadow-primary/20 rounded-xl"
                                                 onClick={handleSaveDomain}
+                                                isLoading={isSaving}
                                             >
                                                 Save
                                             </Button>
@@ -167,6 +226,7 @@ export const DomainSettingsDashboard = () => {
                                                 variant="ghost" 
                                                 className="px-6 font-black text-[11px] uppercase tracking-widest rounded-xl border border-slate-100"
                                                 onClick={() => { setStatus('idle'); setDomainInput(''); }}
+                                                disabled={isSaving}
                                             >
                                                 Change
                                             </Button>
@@ -176,50 +236,37 @@ export const DomainSettingsDashboard = () => {
                                 </div>
 
                                 {/* DNS Settings Instruction */}
-                                {status === 'pending' && (
-                                    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 animate-in slide-in-from-top-2 duration-300">
-                                        <h4 className="text-[11px] font-black text-slate-900 mb-6 flex items-center gap-2 uppercase tracking-widest">
-                                            <ServerStackIcon className="w-4 h-4 text-primary" />
-                                            Required DNS Settings
-                                        </h4>
-                                        
-                                        <div className="overflow-x-auto bg-white border border-slate-50 rounded-xl overflow-hidden mb-6">
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow className="bg-slate-50/50">
-                                                        <TableHead className="font-black text-[10px] text-slate-400 uppercase tracking-widest px-6">Type</TableHead>
-                                                        <TableHead className="font-black text-[10px] text-slate-400 uppercase tracking-widest px-6">Name/Host</TableHead>
-                                                        <TableHead className="font-black text-[10px] text-slate-400 uppercase tracking-widest px-6">Value</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    <TableRow className="hover:bg-white bg-white">
-                                                        <TableCell className="font-black text-[11px] text-slate-900 px-6 uppercase tracking-tight">CNAME</TableCell>
-                                                        <TableCell className="font-black text-[11px] text-slate-900 px-6 uppercase tracking-tight">@ or www</TableCell>
-                                                        <TableCell className="font-black text-[11px] text-primary px-6 uppercase tracking-tight">custom.tepak.id</TableCell>
-                                                    </TableRow>
-                                                </TableBody>
-                                            </Table>
-                                        </div>
-
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pt-6 border-t border-slate-100">
-                                            <p className="text-[10px] text-slate-400 italic font-medium uppercase tracking-tight">Status: <span className="font-black text-amber-500">PENDING PROPAGATION</span></p>
-                                            <Button 
-                                                variant="outline" 
-                                                className="flex items-center gap-2 px-8 py-3 font-black text-[10px] uppercase tracking-widest rounded-xl transition-all border-slate-100 disabled:opacity-50"
-                                                onClick={handleVerify}
-                                                disabled={isVerifying || cooldown > 0}
-                                            >
-                                                {isVerifying ? (
-                                                    <ArrowPathIcon className="w-4 h-4 animate-spin" />
-                                                ) : (
-                                                    <CheckCircleIcon className="w-4 h-4" />
-                                                )}
-                                                {cooldown > 0 ? `Retry in ${cooldown}s` : 'Check Verification'}
-                                            </Button>
-                                        </div>
+                                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6">
+                                    <h4 className="text-[11px] font-black text-slate-900 mb-6 flex items-center gap-2 uppercase tracking-widest">
+                                        <ServerStackIcon className="w-4 h-4 text-primary" />
+                                        DNS Settings Instructions
+                                    </h4>
+                                    
+                                    <div className="overflow-x-auto bg-white border border-slate-50 rounded-xl overflow-hidden mb-6">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow className="bg-slate-50/50">
+                                                    <TableHead className="font-black text-[10px] text-slate-400 uppercase tracking-widest px-6">Type</TableHead>
+                                                    <TableHead className="font-black text-[10px] text-slate-400 uppercase tracking-widest px-6">Name/Host</TableHead>
+                                                    <TableHead className="font-black text-[10px] text-slate-400 uppercase tracking-widest px-6">Value</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                <TableRow className="hover:bg-white bg-white">
+                                                    <TableCell className="font-black text-[11px] text-slate-900 px-6 uppercase tracking-tight">CNAME</TableCell>
+                                                    <TableCell className="font-black text-[11px] text-slate-900 px-6 uppercase tracking-tight">@ or www</TableCell>
+                                                    <TableCell className="font-black text-[11px] text-primary px-6 uppercase tracking-tight">custom.tepak.id</TableCell>
+                                                </TableRow>
+                                            </TableBody>
+                                        </Table>
                                     </div>
-                                )}
+
+                                    <div className="p-4 bg-primary/5 border border-primary/10 rounded-xl">
+                                        <p className="text-[10px] text-primary font-black uppercase tracking-tight leading-relaxed">
+                                            💡 Harap atur DNS CNAME Anda ke <span className="underline italic">custom.tepak.id</span> agar domain dapat terhubung dengan server kami.
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </Card>
 
@@ -236,7 +283,7 @@ export const DomainSettingsDashboard = () => {
                                             <div className="flex items-center gap-4 mt-2 flex-wrap">
                                                 <span className="flex items-center gap-2 text-[10px] font-black text-emerald-500 uppercase tracking-widest">
                                                     <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                                                    Active
+                                                    Active & Connected
                                                 </span>
                                                 <span className="text-slate-100">•</span>
                                                 <span className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -250,6 +297,7 @@ export const DomainSettingsDashboard = () => {
                                         variant="ghost" 
                                         className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-rose-100 text-rose-500 text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 transition-all shrink-0 active:scale-95"
                                         onClick={() => setDeleteModal(true)}
+                                        disabled={isSaving}
                                     >
                                         <TrashIcon className="w-4 h-4" />
                                         Delete Domain
@@ -278,7 +326,7 @@ export const DomainSettingsDashboard = () => {
                     </div>
                     <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
                         <button className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setDeleteModal(false)}>Cancel</button>
-                        <button className="px-6 py-2.5 rounded-xl font-black bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/20 transition-all text-[10px] uppercase tracking-widest" onClick={() => { setStatus('idle'); setDomainInput(''); setDeleteModal(false); }}>Yes, Delete</button>
+                        <button className="px-6 py-2.5 rounded-xl font-black bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/20 transition-all text-[10px] uppercase tracking-widest" onClick={handleDelete} disabled={isSaving}>Yes, Delete</button>
                     </div>
                 </div>
             </div>

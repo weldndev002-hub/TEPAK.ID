@@ -50,9 +50,48 @@ export const CheckoutForm: React.FC = () => {
     const [isPaymentOpen, setIsPaymentOpen] = useState(false);
     const [orderStatus, setOrderStatus] = useState<'pending' | 'paid' | 'expired'>('pending');
     const [successModal, setSuccessModal] = useState<{ netIncome: number } | null>(null);
+    const [product, setProduct] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const productPrice = 499000;
     const feePercentage = 5;
+
+    // Fetch Product Info if ID exists in URL
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const productId = params.get('product_id');
+        if (productId) {
+            fetchProduct(productId);
+        } else {
+            // Default product if none specified (for demo)
+            setProduct({
+                id: 'demo-product-id',
+                title: 'Mastering No-Code: Professional Edition',
+                price: 499000,
+                merchant_id: 'demo-merchant-id',
+                cover_url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA8uHu8gp3KKfCXG_MbnJzQ4Jj9ZUkrndYcEqZY1YbQDSzaE6nUX1x30Vhksf1XW-EbQw-dbxao5d80CzXzUHFLYzsM4_e4UVuMuA7hIcQIMBWEPNuRO1i7YMG01O1ZRcMh_lrQ_JT-PCl6KTz-ChYC3Eb_p3KR7fuRUAH1C0t_TlQEDpzY7mjTW5ha0G1AM3xKhwIzIYc8BdmyBhTn-1R_Lu3GIqN6n5FxPYGElZdG4nV5iU-0IDQXdO4WtzruigzCLRmAbRlE-lUX'
+            });
+            setIsLoading(false);
+        }
+    }, []);
+
+    const fetchProduct = async (id: string) => {
+        try {
+            const res = await fetch(`/api/public/products/${id}`);
+            if (res.ok) {
+                const data = await res.json();
+                setProduct(data);
+            } else {
+                setErrors({ global: 'Produk tidak ditemukan. Silakan kembali ke halaman profil.' });
+            }
+        } catch (error) {
+            console.error('Error fetching product:', error);
+            setErrors({ global: 'Terjadi kesalahan saat mengambil data produk.' });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const productPrice = product?.price || 0;
 
     // Validation Schema
     const checkoutSchema = z.object({
@@ -62,6 +101,11 @@ export const CheckoutForm: React.FC = () => {
     });
 
     const handleInitiatePayment = () => {
+        if (!product) {
+            setErrors({ global: 'Data produk belum dimuat dengan sempurna.' });
+            return;
+        }
+
         const result = checkoutSchema.safeParse({
             name: buyerName,
             email: buyerEmail,
@@ -81,11 +125,45 @@ export const CheckoutForm: React.FC = () => {
         setIsPaymentOpen(true);
     };
 
-    const handleSuccess = (netIncome: number) => {
-        setOrderStatus('paid');
-        setIsPaymentOpen(false);
-        setSuccessModal({ netIncome });
+    const handleSuccess = async (netIncome: number) => {
+        // Save Order to Database
+        try {
+            const res = await fetch('/api/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    product_id: product.id,
+                    merchant_id: product.merchant_id,
+                    amount: productPrice,
+                    buyer_name: buyerName,
+                    buyer_email: buyerEmail,
+                    buyer_phone: buyerPhone,
+                    payment_method: selectedMethod.toUpperCase(),
+                    status: 'success'
+                })
+            });
+
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || 'Failed to save order');
+            }
+
+            setOrderStatus('paid');
+            setIsPaymentOpen(false);
+            setSuccessModal({ netIncome });
+        } catch (error: any) {
+            console.error('Error saving order:', error);
+            alert(`Pembayaran berhasil, namun: ${error.message}. Silakan hubungi admin.`);
+        }
     };
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col lg:flex-row gap-8 max-w-screen-2xl mx-auto w-full px-8 py-12 ">
@@ -180,10 +258,10 @@ export const CheckoutForm: React.FC = () => {
             {/* RIGHT COLUMN: SIDEBAR */}
             <div className="lg:w-1/3">
                 <OrderSummary 
-                    productTitle="Mastering No-Code: Professional Edition"
+                    productTitle={product?.title || 'Loading...'}
                     productPrice={productPrice}
                     feePercentage={feePercentage}
-                    image="https://lh3.googleusercontent.com/aida-public/AB6AXuA8uHu8gp3KKfCXG_MbnJzQ4Jj9ZUkrndYcEqZY1YbQDSzaE6nUX1x30Vhksf1XW-EbQw-dbxao5d80CzXzUHFLYzsM4_e4UVuMuA7hIcQIMBWEPNuRO1i7YMG01O1ZRcMh_lrQ_JT-PCl6KTz-ChYC3Eb_p3KR7fuRUAH1C0t_TlQEDpzY7mjTW5ha0G1AM3xKhwIzIYc8BdmyBhTn-1R_Lu3GIqN6n5FxPYGElZdG4nV5iU-0IDQXdO4WtzruigzCLRmAbRlE-lUX"
+                    image={product?.cover_url || ''}
                     onPay={handleInitiatePayment}
                     status={orderStatus}
                 />

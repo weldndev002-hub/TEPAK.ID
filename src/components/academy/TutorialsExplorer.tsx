@@ -1,17 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { cn } from '../../lib/utils';
 import { TutorialCard, type TutorialCardProps } from './TutorialCard';
 import { Input } from '../ui/Input';
-import Button from '../ui/Button';
+import { Button } from '../ui/Button';
 import { 
     MagnifyingGlassIcon, 
     VideoCameraIcon,
     ExclamationCircleIcon 
 } from '@heroicons/react/24/outline';
-
-interface TutorialsExplorerProps {
-    tutorials: TutorialCardProps[];
-}
 
 const CATEGORIES = [
     'All',
@@ -24,18 +20,48 @@ const CATEGORIES = [
     'Analytics'
 ];
 
-export const TutorialsExplorer: React.FC<TutorialsExplorerProps> = ({ tutorials }) => {
+export const TutorialsExplorer = () => {
+    const [tutorials, setTutorials] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState('All');
+
+    useEffect(() => {
+        fetchTutorials();
+    }, []);
+
+    const fetchTutorials = async () => {
+        try {
+            const res = await fetch('/api/tutorials');
+            if (res.ok) {
+                const data = await res.json();
+                setTutorials(data);
+            }
+        } catch (error) {
+            console.error('Error fetching tutorials:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const filteredTutorials = useMemo(() => {
         return tutorials.filter(t => {
             const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                                 t.category.toLowerCase().includes(searchTerm.toLowerCase());
+                                 (t.category && t.category.toLowerCase().includes(searchTerm.toLowerCase()));
             const matchesCategory = activeCategory === 'All' || t.category === activeCategory;
             return matchesSearch && matchesCategory;
         });
     }, [searchTerm, activeCategory, tutorials]);
+
+    if (isLoading) {
+        return (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-pulse">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div key={i} className="bg-slate-50 h-80 rounded-[2rem]"></div>
+                ))}
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-10 ">
@@ -85,8 +111,17 @@ export const TutorialsExplorer: React.FC<TutorialsExplorerProps> = ({ tutorials 
             {/* TUTORIAL GRID */}
             {filteredTutorials.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in duration-500">
-                    {filteredTutorials.map((tutorial, idx) => (
-                        <TutorialCard key={idx} {...tutorial} />
+                    {filteredTutorials.map((tutorial) => (
+                        <TutorialCard 
+                            key={tutorial.id} 
+                            title={tutorial.title}
+                            thumbnail={tutorial.thumbnail_url}
+                            duration={tutorial.duration}
+                            category={tutorial.category || 'General'}
+                            views={tutorial.views?.toString() || '0'}
+                            publishedAt={new Date(tutorial.created_at).toLocaleDateString()}
+                            platform={tutorial.platform}
+                        />
                     ))}
                 </div>
             ) : (

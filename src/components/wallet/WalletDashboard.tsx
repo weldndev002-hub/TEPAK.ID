@@ -27,47 +27,48 @@ const Skeleton = ({ className }: { className?: string }) => (
 
 const WalletDashboardContent = () => {
     const { transactions: subscriptionTx, syncStatus } = useSubscription();
-    const [balanceData, setBalanceData] = useState<any>(null);
+    const [withdrawals, setWithdrawals] = useState<any[]>([]);
+    const [recentOrders, setRecentOrders] = useState<any[]>([]);
+    const [balanceData, setBalanceData] = useState<any>({ available: 0, pending: 0, total_net: 0 });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [isBankInfoComplete] = useState(true);
+    const [isBankInfoComplete, setIsBankInfoComplete] = useState(true);
     const [showBankWarning, setShowBankWarning] = useState(false);
     const minWithdrawal = 50000;
 
-    // Fees Configuration
+    // Fees Configuration (Matching backend)
     const PLATFORM_FEE = 0.05; // 5%
-    const PG_FEE = 2500; // Flat Fee
 
     useEffect(() => {
-        // Simulate API Fetch
-        const timer = setTimeout(() => {
-            // Simulated Data from "Backend"
-            const mockTransactions = [
-                { id: 'T1', product: 'Premium Mockup Bundle', gross: 450000, date: '2023-11-10 14:20', status: 'PAID', buyer: 'Ahmad Rifqi' },
-                { id: 'T2', product: 'Design System Pack', gross: 1200000, date: '2023-11-10 11:05', status: 'SUCCESS', buyer: 'Siska Lestari' },
-                { id: 'T3', product: 'UI Icon Set v2.0', gross: 125000, date: '2023-11-09 19:45', status: 'CANCELLED', buyer: 'Bambang Pamungkas' },
-                { id: 'T4', product: 'Web Template v1', gross: 800000, date: '2023-11-08 10:00', status: 'SUCCESS', buyer: 'Doni S.' },
-            ];
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                const [statsRes, withdrawalsRes, ordersRes, bankRes] = await Promise.all([
+                    fetch('/api/wallet/stats'),
+                    fetch('/api/withdrawals'),
+                    fetch('/api/orders'),
+                    fetch('/api/bank-accounts')
+                ]);
 
-            const calculateNet = (gross: number) => Math.floor(gross - (gross * PLATFORM_FEE) - PG_FEE);
+                if (statsRes.ok) setBalanceData(await statsRes.json());
+                if (withdrawalsRes.ok) setWithdrawals(await withdrawalsRes.json());
+                if (ordersRes.ok) setRecentOrders((await ordersRes.json()).slice(0, 5));
+                
+                if (bankRes.ok) {
+                    const bankData = await bankRes.json();
+                    if (!bankData.exists) {
+                        setIsBankInfoComplete(false);
+                    }
+                }
+            } catch (err) {
+                console.error('Wallet Fetch Error:', err);
+                setError("Gagal sinkronisasi data dompet. Silakan coba lagi.");
+            } finally {
+                setLoading(false);
+            }
+        };
 
-            const total = mockTransactions.reduce((acc, curr) => acc + (curr.status !== 'CANCELLED' ? calculateNet(curr.gross) : 0), 0);
-            const available = mockTransactions.reduce((acc, curr) => acc + (curr.status === 'SUCCESS' ? calculateNet(curr.gross) : 0), 0);
-            const pending = mockTransactions.reduce((acc, curr) => acc + (curr.status === 'PAID' ? calculateNet(curr.gross) : 0), 0);
-
-            setBalanceData({
-                total,
-                available,
-                pending,
-                transactions: mockTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-            });
-            setLoading(false);
-            // Example Trigger Error:
-            // setError("Gagal mengambil data saldo, silakan coba lagi nanti");
-            // setLoading(false);
-        }, 1500);
-
-        return () => clearTimeout(timer);
+        fetchData();
     }, []);
 
     if (loading) {
@@ -150,7 +151,7 @@ const WalletDashboardContent = () => {
                     <div>
                         <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mb-2">Total Net Balance</p>
                         <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">
-                            Rp {balanceData.total.toLocaleString('id-ID')}
+                            Rp {(balanceData.total_net || 0).toLocaleString('id-ID')}
                         </h3>
                     </div>
                     <div className="pt-6 mt-6 border-t border-slate-50">
@@ -199,39 +200,27 @@ const WalletDashboardContent = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                <TableRow>
-                                    <TableCell className="text-primary font-black">
-                                        <a href="/withdrawal-details" className="hover:underline">#WD-82910</a>
-                                    </TableCell>
-                                    <TableCell className="text-slate-600 font-bold">Bank BCA</TableCell>
-                                    <TableCell className="text-slate-900 font-black">Rp 2.500.000</TableCell>
-                                    <TableCell className="text-slate-400 text-[11px] font-medium">24 Oct 2023</TableCell>
-                                    <TableCell>
-                                        <Badge variant="success">Berhasil</Badge>
-                                    </TableCell>
-                                </TableRow>
-                                <TableRow>
-                                    <TableCell className="text-primary font-black">
-                                        <a href="/withdrawal-details" className="hover:underline">#WD-82905</a>
-                                    </TableCell>
-                                    <TableCell className="text-slate-600 font-bold">Mandiri</TableCell>
-                                    <TableCell className="text-slate-900 font-black">Rp 1.200.000</TableCell>
-                                    <TableCell className="text-slate-400 text-[11px] font-medium">18 Oct 2023</TableCell>
-                                    <TableCell>
-                                        <Badge variant="success">Berhasil</Badge>
-                                    </TableCell>
-                                </TableRow>
-                                <TableRow>
-                                    <TableCell className="text-primary font-black">
-                                        <a href="/withdrawal-details" className="hover:underline">#WD-82901</a>
-                                    </TableCell>
-                                    <TableCell className="text-slate-600 font-bold">Bank BCA</TableCell>
-                                    <TableCell className="text-slate-900 font-black">Rp 5.000.000</TableCell>
-                                    <TableCell className="text-slate-400 text-[11px] font-medium">12 Oct 2023</TableCell>
-                                    <TableCell>
-                                        <Badge variant="pending">Tertunda</Badge>
-                                    </TableCell>
-                                </TableRow>
+                                {withdrawals.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="text-center py-10 text-slate-400 font-medium italic text-xs uppercase tracking-widest">Belum ada riwayat penarikan</TableCell>
+                                    </TableRow>
+                                ) : withdrawals.map(wd => (
+                                    <TableRow key={wd.id}>
+                                        <TableCell className="text-primary font-black">
+                                            <span className="hover:underline">#{wd.id.substring(0,8).toUpperCase()}</span>
+                                        </TableCell>
+                                        <TableCell className="text-slate-600 font-bold">{wd.bank_accounts?.bank_name || 'Bank'}</TableCell>
+                                        <TableCell className="text-slate-900 font-black">Rp {Number(wd.amount).toLocaleString('id-ID')}</TableCell>
+                                        <TableCell className="text-slate-400 text-[11px] font-medium">
+                                            {new Date(wd.requested_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant={wd.status === 'completed' ? 'success' : wd.status === 'processing' ? 'pending' : 'destructive'}>
+                                                {wd.status === 'completed' ? 'Berhasil' : wd.status === 'processing' ? 'Diproses' : wd.status.toUpperCase()}
+                                            </Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
                             </TableBody>
                         </Table>
                     </div>
@@ -305,7 +294,7 @@ const WalletDashboardContent = () => {
                 </div>
                 
                 <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden min-h-[400px]">
-                        {balanceData.transactions.length === 0 ? (
+                        {recentOrders.length === 0 ? (
                             <div className="flex flex-col items-center justify-center p-24 text-center space-y-4">
                                 <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-200">
                                     <ChartBarIcon className="w-8 h-8" />
@@ -327,34 +316,37 @@ const WalletDashboardContent = () => {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {balanceData.transactions.map((tx: any) => {
-                                        const netAmount = tx.status !== 'CANCELLED' ? Math.floor(tx.gross - (tx.gross * PLATFORM_FEE) - PG_FEE) : 0;
+                                    {recentOrders.map((tx: any) => {
+                                        const netAmount = (tx.status === 'success' || tx.status === 'paid') ? Math.floor(Number(tx.amount) * (1 - PLATFORM_FEE)) : 0;
                                         return (
                                             <TableRow key={tx.id}>
                                                 <TableCell>
                                                     <div className="flex items-center gap-3">
-                                                        <Avatar size="sm" fallback={tx.buyer.substring(0,2)} />
+                                                        <Avatar size="sm" fallback={tx.customers?.name?.substring(0,2).toUpperCase() || 'GS'} />
                                                         <div>
-                                                            <p className="text-slate-900 font-black text-[11px] uppercase tracking-tight">{tx.buyer}</p>
-                                                            <p className="text-[9px] text-slate-400 font-medium lowercase">kreator@tepak.id</p>
+                                                            <p className="text-slate-900 font-black text-[11px] uppercase tracking-tight">{tx.customers?.name || 'Guest User'}</p>
+                                                            <p className="text-[9px] text-slate-400 font-medium lowercase italic leading-none">{tx.customers?.email || 'pembeli@tepak.id'}</p>
                                                         </div>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge variant="ghost" className="font-black">{tx.product}</Badge>
+                                                    <Badge variant="ghost" className="font-black text-[10px] uppercase border-slate-100">{tx.products?.title || 'Produk'}</Badge>
                                                 </TableCell>
-                                                <TableCell className="text-slate-400 text-[10px] font-medium uppercase tracking-tighter italic">{tx.date}</TableCell>
-                                                <TableCell className={cn("text-right font-black text-sm tracking-tight", tx.status === 'CANCELLED' ? 'text-slate-300 line-through' : 'text-emerald-500')}>
-                                                    {tx.status === 'CANCELLED' ? '- ' : '+ '}Rp {netAmount.toLocaleString('id-ID')}
+                                                <TableCell className="text-slate-400 text-[10px] font-medium uppercase tracking-tighter italic">
+                                                    {new Date(tx.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                                                </TableCell>
+                                                <TableCell className={cn("text-right font-black text-sm tracking-tight", (tx.status === 'failed' || tx.status === 'cancelled') ? 'text-slate-300 line-through' : 'text-emerald-500')}>
+                                                    {(tx.status === 'failed' || tx.status === 'cancelled') ? '- ' : '+ '}Rp {netAmount.toLocaleString('id-ID')}
                                                 </TableCell>
                                                 <TableCell className="text-center">
                                                     <Badge 
                                                         variant={
-                                                            tx.status === 'SUCCESS' ? 'success' : 
-                                                            tx.status === 'PAID' ? 'pending' : 'failed'
+                                                            (tx.status === 'SUCCESS' || tx.status === 'success' || tx.status === 'paid') ? 'success' : 
+                                                            tx.status === 'PENDING' || tx.status === 'pending' ? 'pending' : 'failed'
                                                         }
+                                                        className="font-black text-[9px] px-3 py-1 rounded-lg uppercase tracking-widest"
                                                     >
-                                                        {tx.status === 'SUCCESS' ? 'Success' : tx.status === 'PAID' ? 'Pending' : tx.status}
+                                                        {tx.status}
                                                     </Badge>
                                                 </TableCell>
                                             </TableRow>

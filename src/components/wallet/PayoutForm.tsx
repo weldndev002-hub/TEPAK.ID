@@ -8,18 +8,53 @@ export interface PayoutFormProps {
 }
 
 export const PayoutForm: React.FC<PayoutFormProps> = ({ className }) => {
-  const [balance, setBalance] = useState(12450000);
+  const [balance, setBalance] = useState(0);
+  const [bankInfo, setBankInfo] = useState<any>(null);
   const [amount, setAmount] = useState(50000);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [initLoading, setInitLoading] = useState(true);
   const [successModal, setSuccessModal] = useState<{ amount: number; fee: number } | null>(null);
   
   const fee = 5000;
   const minWithdrawal = 50000;
 
+  React.useEffect(() => {
+    const fetchData = async () => {
+        try {
+            const [walletRes, bankRes] = await Promise.all([
+                fetch('/api/wallet/stats'),
+                fetch('/api/bank-accounts')
+            ]);
+            
+            if (walletRes.ok) {
+                const wallet = await walletRes.json();
+                setBalance(wallet.available);
+            }
+            if (bankRes.ok) {
+                const bank = await bankRes.json();
+                if (bank.exists) {
+                    setBankInfo(bank.details);
+                }
+            }
+        } catch (err) {
+            console.error('Failed to fetch payout data:', err);
+        } finally {
+            setInitLoading(false);
+        }
+    };
+    fetchData();
+  }, []);
+
   const handleWithdraw = async () => {
     setError(null);
     setLoading(true);
+
+    if (!bankInfo) {
+        setError("Harap daftarkan rekening bank terlebih dahulu di Pengaturan.");
+        setLoading(false);
+        return;
+    }
 
     if (amount < minWithdrawal) {
         setError(`Minimal penarikan adalah Rp ${minWithdrawal.toLocaleString('id-ID')}`);
@@ -27,19 +62,44 @@ export const PayoutForm: React.FC<PayoutFormProps> = ({ className }) => {
         return;
     }
 
-    const actualBalance = 12450000;
-    if (amount > actualBalance) {
-        setError("Request ditolak: Nominal melebihi saldo aktual Anda.");
+    if (amount + fee > balance) {
+        setError("Saldo tidak mencukupi untuk penarikan dan biaya admin.");
         setLoading(false);
         return;
     }
 
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setBalance(prev => prev - amount);
-    setLoading(false);
-    setSuccessModal({ amount, fee });
+    try {
+        const res = await fetch('/api/wallet/withdraw', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                amount: amount,
+                bankAccountId: bankInfo.id
+            })
+        });
+
+        if (!res.ok) {
+            const data = await res.json();
+            throw new Error(data.error || 'Failed to submit withdrawal');
+        }
+        
+        setBalance(prev => prev - amount - fee);
+        setSuccessModal({ amount, fee });
+    } catch (err: any) {
+        setError(err.message);
+    } finally {
+        setLoading(false);
+    }
   };
+
+  if (initLoading) {
+    return (
+        <div className={cn("max-w-xl mx-auto bg-white p-20 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-4", className)}>
+            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <p className="font-black text-primary uppercase tracking-widest text-xs">Authenticating Wallet...</p>
+        </div>
+    );
+  }
 
   return (
     <>
@@ -64,16 +124,23 @@ export const PayoutForm: React.FC<PayoutFormProps> = ({ className }) => {
                 <div>
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">Destination Bank</label>
                     <div className="flex items-center justify-between p-5 border border-slate-100 rounded-2xl bg-slate-50/50 hover:bg-white hover:border-primary/20 transition-all cursor-pointer group shadow-sm">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-7 bg-white border border-slate-100 rounded-lg flex items-center justify-center font-black text-[9px] text-slate-900 shadow-sm">
-                                BCA
+                        {bankInfo ? (
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-7 bg-white border border-slate-100 rounded-lg flex items-center justify-center font-black text-[9px] text-slate-900 shadow-sm uppercase">
+                                    {bankInfo.bank_name}
+                                </div>
+                                <div>
+                                    <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{bankInfo.bank_name}</p>
+                                    <p className="text-[10px] font-medium text-slate-400 tracking-widest">{bankInfo.account_number} • {bankInfo.account_name}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-xs font-black text-slate-900 uppercase tracking-tight">Bank Central Asia</p>
-                                <p className="text-[10px] font-medium text-slate-400 tracking-widest">8840****21 • BUDI S.</p>
+                        ) : (
+                            <div className="flex items-center gap-4">
+                                <span className="material-symbols-outlined text-rose-500">error</span>
+                                <p className="text-xs font-bold text-rose-500 uppercase tracking-tight">Belum ada rekening bank</p>
                             </div>
-                        </div>
-                        <button className="text-[10px] font-black text-primary uppercase tracking-[0.2em] hover:underline underline-offset-4 pr-1">Change</button>
+                        )}
+                        <a href="/settings" className="text-[10px] font-black text-primary uppercase tracking-[0.2em] hover:underline underline-offset-4 pr-1">Manage</a>
                     </div>
                 </div>
 

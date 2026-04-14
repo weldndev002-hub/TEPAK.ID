@@ -12,7 +12,10 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()],
     ssr: {
-      noExternal: ['@heroicons/react', 'lucide-react', '@supabase/supabase-js']
+      noExternal: ['@heroicons/react', 'lucide-react', '@supabase/supabase-js', '@supabase/ssr', 'react', 'react-dom']
+    },
+    optimizeDeps: {
+      include: ['@heroicons/react/24/outline', 'clsx', 'tailwind-merge']
     }
   },
 

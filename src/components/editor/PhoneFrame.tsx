@@ -9,9 +9,19 @@ interface PhoneFrameProps {
   children?: React.ReactNode;
   className?: string;
   theme?: 'minimal' | 'bold' | 'warm';
+  profileName?: string;
+  profileBio?: string;
+  profileImage?: string;
 }
 
-export const PhoneFrame: React.FC<PhoneFrameProps> = ({ children, className, theme = 'minimal' }) => {
+export const PhoneFrame: React.FC<PhoneFrameProps> = ({ 
+    children, 
+    className, 
+    theme = 'minimal',
+    profileName,
+    profileBio,
+    profileImage
+}) => {
   return (
     <div className={cn(
       "w-[340px] h-[680px] bg-white rounded-[56px] border-[12px] border-slate-900 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.25)] relative overflow-hidden ring-1 ring-slate-800 transition-all duration-1000",
@@ -28,18 +38,20 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({ children, className, the
       
       {/* Mobile Screen Content */}
       <div className="h-full overflow-y-auto no-scrollbar pt-14 px-8 pb-24 relative z-10">
-        <div className="flex flex-col items-center">
+        <div className="flex flex-col items-center text-center">
             <div className={cn(
                 "w-24 h-24 rounded-full mb-6 border-4 border-white shadow-2xl bg-slate-100 overflow-hidden group/avatar cursor-pointer",
                 theme === 'bold' && "border-slate-800 shadow-slate-900/50"
             )}>
                 <img 
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1myVuGIgwq81XmvMT1KbIlWlKCLouKbWS5mVzO8vJvYbYWQiLc7lFoyWFrMLfnyhHlR_yBkJcxX1-A7TDTqS6jIIWe17hHFosbhLn-s5RV19qr6lSLm6lRTK0LBBYXq85kWoVzOEyIC1JH839PewJe9pD2mQG08x7bKTKppWKY4nXAf3W_pD_L8M3Q7vrloGre2PhijR7sCJt0jJ5_kV69u8-K0s_R-t1up3AwO3xxxAW3YsOgtRgYZoYX2lvgeb_6q_rKjGw1JlR" 
+                    src={profileImage || "https://lh3.googleusercontent.com/aida-public/AB6AXuD1myVuGIgwq81XmvMT1KbIlWlKCLouKbWS5mVzO8vJvYbYWQiLc7lFoyWFrMLfnyhHlR_yBkJcxX1-A7TDTqS6jIIWe17hHFosbhLn-s5RV19qr6lSLm6lRTK0LBBYXq85kWoVzOEyIC1JH839PewJe9pD2mQG08x7bKTKppWKY4nXAf3W_pD_L8M3Q7vrloGre2PhijR7sCJt0jJ5_kV69u8-K0s_R-t1up3AwO3xxxAW3YsOgtRgYZoYX2lvgeb_6q_rKjGw1JlR"} 
                     className="w-full h-full object-cover group-hover/avatar:scale-110 transition-transform duration-700" 
                 />
             </div>
-            <h4 className="font-black text-2xl tracking-tighter uppercase">Creator Senja</h4>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 mt-1 italic leading-none">Capture moments, share stories.</p>
+            <h4 className="font-black text-2xl tracking-tighter uppercase line-clamp-1">{profileName || 'Your Name'}</h4>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 mt-2 italic leading-relaxed">
+                {profileBio || 'Capture moments, share stories.'}
+            </p>
             
             <div className="flex gap-6 mt-8">
                 {[1, 2].map((i) => (

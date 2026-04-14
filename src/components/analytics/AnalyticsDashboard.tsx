@@ -38,17 +38,33 @@ export const AnalyticsDashboard = () => {
         ]
     });
 
-    const handleRefresh = () => {
+    const handleRefresh = async () => {
         setIsLoading(true);
         setError(null);
-        // Simulate API Load
-        setTimeout(() => {
-            setIsLoading(false);
-            // Simulate random error 10% of the time for testing blank state
-            if (Math.random() < 0.1) {
-                setError("Gagal memuat agregasi data terkini.");
+        try {
+            const res = await fetch(`/api/analytics/dashboard?range=${range}`);
+            const result = await res.json();
+            
+            if (res.ok) {
+                // Decorate API data with icons and colors for UI
+                const decoratedData = {
+                    ...result,
+                    devices: (result.devices || []).map((d: any) => ({
+                        ...d,
+                        icon: d.type === 'Mobile' ? DevicePhoneMobileIcon : ComputerDesktopIcon,
+                        color: d.type === 'Mobile' ? 'text-primary bg-amber-50' : 'text-blue-600 bg-blue-50'
+                    }))
+                };
+                setData(decoratedData);
+            } else {
+                setError(result.error || "Gagal memuat agregasi data dari server.");
             }
-        }, 800);
+        } catch (err) {
+            console.error('Analytics Error:', err);
+            setError("Gagal menghubungi server analitik.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const showDateError = (msg: string) => {

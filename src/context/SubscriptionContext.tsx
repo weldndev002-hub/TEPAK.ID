@@ -1,92 +1,85 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-type Plan = 'STANDARD' | 'PRO';
+type Plan = 'free' | 'pro' | 'enterprise';
 type Status = 'SUCCESS' | 'PENDING' | 'CANCELED';
-
-interface Transaction {
-    id: string;
-    plan: Plan;
-    amount: string;
-    date: string;
-    status: Status;
-}
 
 interface SubscriptionContextType {
     plan: Plan;
-    expiryDate: string;
+    expiryDate: string | null;
     autoRenewal: boolean;
-    transactions: Transaction[];
-    upgradeToPro: () => void;
+    isLoading: boolean;
+    upgradeToPro: () => Promise<void>;
     cancelSubscription: () => Promise<void>;
-    addTransaction: (id: string, plan: Plan, amount: string, status: Status) => void;
-    updateTransactionStatus: (id: string, status: Status) => void;
-    syncStatus: () => void;
+    refreshStatus: () => Promise<void>;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
 
 export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [plan, setPlan] = useState<Plan>('STANDARD');
-    const [autoRenewal, setAutoRenewal] = useState(true);
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [plan, setPlan] = useState<Plan>('free');
+    const [expiryDate, setExpiryDate] = useState<string | null>(null);
+    const [autoRenewal, setAutoRenewal] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const refreshStatus = async () => {
+        try {
+            const res = await fetch('/api/profile');
+            if (res.ok) {
+                const data = await res.json();
+                const settings = data.settings;
+                if (settings) {
+                    setPlan(settings.plan_status as Plan);
+                    setExpiryDate(settings.plan_expiry);
+                    setAutoRenewal(settings.auto_renewal);
+                }
+            }
+        } catch (err) {
+            console.error('[SubscriptionContext] Failed to fetch status:', err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const savedPlan = localStorage.getItem('user_plan') as Plan;
-        const savedAutoRenew = localStorage.getItem('auto_renewal');
-        const savedTx = localStorage.getItem('billing_history');
-        if (savedPlan) setPlan(savedPlan);
-        if (savedAutoRenew) setAutoRenewal(savedAutoRenew === 'true');
-        if (savedTx) setTransactions(JSON.parse(savedTx));
+        refreshStatus();
     }, []);
 
-    useEffect(() => {
-        localStorage.setItem('user_plan', plan);
-        localStorage.setItem('auto_renewal', String(autoRenewal));
-        localStorage.setItem('billing_history', JSON.stringify(transactions));
-        // Dispatch event for other components
-        window.dispatchEvent(new CustomEvent('plan-updated', { detail: plan }));
-    }, [plan, transactions]);
-
-    const upgradeToPro = () => {
-        setPlan('PRO');
-        setAutoRenewal(true);
+    const upgradeToPro = async () => {
+        setIsLoading(true);
+        try {
+            const res = await fetch('/api/subscription/upgrade', { method: 'POST' });
+            if (!res.ok) throw new Error('Gagal melakukan upgrade');
+            await refreshStatus();
+        } catch (err) {
+            console.error('Upgrade error:', err);
+            throw err;
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const cancelSubscription = async () => {
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        setAutoRenewal(false);
-    };
-
-    const addTransaction = (id: string, plan: Plan, amount: string, status: Status) => {
-        const newTx: Transaction = { id, plan, amount, date: new Date().toLocaleString(), status };
-        setTransactions(prev => [newTx, ...prev]);
-    };
-
-    const updateTransactionStatus = (id: string, status: Status) => {
-        setTransactions(prev => prev.map(tx => tx.id === id ? { ...tx, status } : tx));
-        if (status === 'SUCCESS') setPlan('PRO');
-    };
-
-    const syncStatus = () => {
-        // Simulate cron job: find first pending and resolve it
-        const pending = transactions.find(tx => tx.status === 'PENDING');
-        if (pending) {
-            updateTransactionStatus(pending.id, 'SUCCESS');
+        setIsLoading(true);
+        try {
+            const res = await fetch('/api/subscription/cancel', { method: 'POST' });
+            if (!res.ok) throw new Error('Gagal membatalkan perpanjangan');
+            await refreshStatus();
+        } catch (err) {
+            console.error('Cancel error:', err);
+        } finally {
+            setIsLoading(false);
         }
     };
 
     return (
         <SubscriptionContext.Provider value={{ 
             plan, 
-            expiryDate: '24 November 2024',
+            expiryDate,
             autoRenewal,
-            transactions, 
+            isLoading,
             upgradeToPro, 
             cancelSubscription,
-            addTransaction, 
-            updateTransactionStatus, 
-            syncStatus 
+            refreshStatus
         }}>
             {children}
         </SubscriptionContext.Provider>

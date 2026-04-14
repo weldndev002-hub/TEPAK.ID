@@ -21,6 +21,8 @@ import {
 } from '@heroicons/react/24/outline';
 
 export const ProductsDashboard = () => {
+    const [products, setProducts] = React.useState<any[]>([]);
+    const [isLoading, setIsLoading] = React.useState(true);
     const [deleteModal, setDeleteModal] = React.useState(false);
     const [selectedProduct, setSelectedProduct] = React.useState<any>(null);
     const [toast, setToast] = React.useState<string | null>(null);
@@ -30,21 +32,87 @@ export const ProductsDashboard = () => {
         setTimeout(() => setToast(null), 4000);
     };
 
+    const fetchProducts = async () => {
+        setIsLoading(true);
+        try {
+            const res = await fetch('/api/products');
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setProducts(data);
+            }
+        } catch (error) {
+            console.error('Error fetching products:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const [stats, setStats] = React.useState({ totalSold: 0, totalCustomers: 0 });
+
+    const fetchStats = async () => {
+        try {
+            const [ordersRes, custRes] = await Promise.all([
+                fetch('/api/orders/stats'),
+                fetch('/api/customers')
+            ]);
+            
+            let totalSold = 0;
+            let totalCust = 0;
+
+            if (ordersRes.ok) {
+                const orderData = await ordersRes.json();
+                totalSold = orderData.total_revenue;
+            }
+            if (custRes.ok) {
+                const custData = await custRes.json();
+                totalCust = custData.length;
+            }
+            setStats({ totalSold, totalCustomers: totalCust });
+        } catch (error) {
+            console.error('Error fetching dashboard stats:', error);
+        }
+    };
+
+    React.useEffect(() => {
+        fetchProducts();
+        fetchStats();
+    }, []);
+
+    const formatCurrency = (val: number) => {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
+    };
+
     const handleDeleteClick = (product: any) => {
         setSelectedProduct(product);
         setDeleteModal(true);
     };
 
-    const executeDelete = () => {
-        setDeleteModal(false);
-        showToast(`Produk "${selectedProduct.title}" berhasil dihapus.`);
+    const executeDelete = async () => {
+        if (!selectedProduct) return;
+        
+        try {
+            const res = await fetch(`/api/products/${selectedProduct.id}`, {
+                method: 'DELETE'
+            });
+            
+            if (res.ok) {
+                showToast(`Produk "${selectedProduct.title}" berhasil dihapus.`);
+                fetchProducts();
+            } else {
+                showToast(`Gagal menghapus produk.`);
+            }
+        } catch (error) {
+            showToast(`Kesalahan sistem saat menghapus.`);
+        } finally {
+            setDeleteModal(false);
+        }
     };
 
     const filterTabsData = [
-        { label: 'All', value: 'all' },
-        { label: 'Active', value: 'active' },
-        { label: 'Draft', value: 'draft' },
-        { label: 'Sold Out', value: 'sold_out' },
+        { label: 'Semua', value: 'all' },
+        { label: 'Aktif', value: 'active' },
+        { label: 'Draf', value: 'draft' },
+        { label: 'Habis', value: 'sold_out' },
     ];
     return (
         <div className="flex-1 flex flex-col min-h-screen bg-[#f8f9fb] relative">
@@ -60,12 +128,12 @@ export const ProductsDashboard = () => {
             <div className="px-8 mt-8 pb-12 overflow-y-auto">
                 <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h2 className="text-3xl font-extrabold text-[#005ab4] tracking-tight">Digital Products</h2>
-                        <p className="text-slate-500 mt-1 font-medium">Manage all your digital assets and courses from one place.</p>
+                        <h2 className="text-3xl font-extrabold text-[#005ab4] tracking-tight">Produk Digital</h2>
+                        <p className="text-slate-500 mt-1 font-medium">Kelola semua aset digital dan kursus Anda dari satu tempat.</p>
                     </div>
                     <a href="/add-product" className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-blue-900/20 active:scale-95 transition-transform bg-[#465f89] hover:bg-[#344d77] text-white">
                         <PlusIcon className="w-5 h-5" />
-                        Add Product
+                        Tambah Produk
                     </a>
                 </div>
 
@@ -73,11 +141,9 @@ export const ProductsDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                     <Card className="p-6 flex items-start justify-between">
                         <div>
-                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Total Products</p>
-                            <h3 className="text-4xl font-extrabold text-[#005ab4] leading-tight">12</h3>
-                            <p className="text-xs text-green-600 font-bold mt-2 flex items-center">
-                                <ArrowTrendingUpIcon className="w-4 h-4 mr-1" /> +2 this month
-                            </p>
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Total Produk</p>
+                            <h3 className="text-4xl font-extrabold text-[#005ab4] leading-tight">{products.length}</h3>
+                            <p className="text-xs text-slate-500 font-bold mt-2">Aset Aktif</p>
                         </div>
                         <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
                             <ArchiveBoxIcon className="w-6 h-6" />
@@ -86,11 +152,9 @@ export const ProductsDashboard = () => {
 
                     <Card className="p-6 flex items-start justify-between">
                         <div>
-                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Total Sold</p>
-                            <h3 className="text-4xl font-extrabold text-[#005ab4] leading-tight">$4.2k</h3>
-                            <p className="text-xs text-green-600 font-bold mt-2 flex items-center">
-                                <ArrowTrendingUpIcon className="w-4 h-4 mr-1" /> +15% from last week
-                            </p>
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Total Pendapatan</p>
+                            <h3 className="text-2xl font-extrabold text-[#005ab4] leading-tight">{formatCurrency(stats.totalSold)}</h3>
+                            <p className="text-xs text-emerald-500 font-bold mt-2">Penjualan Terverifikasi</p>
                         </div>
                         <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-green-600">
                             <BanknotesIcon className="w-6 h-6" />
@@ -99,9 +163,9 @@ export const ProductsDashboard = () => {
 
                     <Card className="p-6 flex items-start justify-between">
                         <div>
-                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Total Customers</p>
-                            <h3 className="text-4xl font-extrabold text-[#005ab4] leading-tight">89</h3>
-                            <p className="text-xs text-slate-500 font-bold mt-2">Verified customers</p>
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Total Pelanggan</p>
+                            <h3 className="text-4xl font-extrabold text-[#005ab4] leading-tight">{stats.totalCustomers}</h3>
+                            <p className="text-xs text-slate-500 font-bold mt-2">Pembeli Unik</p>
                         </div>
                         <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600">
                             <UsersIcon className="w-6 h-6" />
@@ -119,151 +183,85 @@ export const ProductsDashboard = () => {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Product</TableHead>
-                                <TableHead>Metrics</TableHead>
-                                <TableHead>Price</TableHead>
+                                <TableHead>Produk</TableHead>
+                                <TableHead className="hidden md:table-cell">Metrik</TableHead>
+                                <TableHead>Harga</TableHead>
                                 <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Action</TableHead>
+                                <TableHead className="text-right">Aksi</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            <TableRow className="group">
-                                <TableCell>
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
-                                            <img alt="E-Book Design" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB7uu6UxFuaXnXuaIyO5j3EjVQgNUBmjEoMhrk44cqOTMWeqeqc1eayA_oq42UxyAniiY0djVt0F7lhy8LCQlRFE7sVxi-HqeFFFbMu0oSKZqcbx3wAafWzgXv1B5zdz5tJP2joWHnyefVsetMoKsGcuNF4N15v5SAP0JhHGwzaEcqalp1TCa1rU2LieciJktEcf99aBzC6ICjMSIYf_LCPMxGLO9ZlUS7TTqpdzWPN42ynZmhHRMAu1L9DlH5aF-_fh9ghiJD5hxPh"/>
-                                        </div>
-                                        <div>
-                                            <a href="/product-detail" className="text-sm font-bold text-[#005ab4] group-hover:text-[#465f89] transition-colors hover:underline">Mastering UI Design for Creators</a>
-                                            <p className="text-xs text-slate-500 font-medium">PDF, 124 Pages</p>
-                                        </div>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex flex-col gap-1">
-                                        <div className="flex items-center text-xs font-medium text-slate-600">
-                                            <EyeIcon className="w-4 h-4 mr-1.5 opacity-60" /> 1,240 views
-                                        </div>
-                                        <div className="flex items-center text-xs font-medium text-slate-600">
-                                            <ShoppingBagIcon className="w-4 h-4 mr-1.5 opacity-60" /> 45 sold
-                                        </div>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <span className="text-sm font-bold text-[#005ab4]">$14.90</span>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge variant="success">Active</Badge>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                        <a href="/edit-product" className="p-2 inline-block text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
-                                            <PencilSquareIcon className="w-5 h-5" />
-                                        </a>
-                                        <button 
-                                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                            onClick={() => handleDeleteClick({ id: 1, title: 'Mastering UI Design for Creators' })}
-                                        >
-                                            <TrashIcon className="w-5 h-5" />
-                                        </button>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-
-                            <TableRow className="group">
-                                <TableCell>
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
-                                            <img alt="Web Template" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUrJvg6hYUipxufaFuot0-TUo-ZqqjI1nre9KfTpgZQJdS45Bef59Z5YPilbfPn8n0SdIv2DCu84EN7pJ8MYhoUlJqcTV4pZ7WtzacfIls8xtl2FN4J8rdih9MOuZ8yegX4II82mMCHZYzDjTlRd2qClwBB05Xc9r0cHB8qKf3gRebvoOqvLAXuxLUmAZbjcoV1yRUrWSnQCrZcH01xYTAVqNpyuScj-vlEs8wzy7unfDivuI0B-OUtBe7e6B7EpaYiJw0VwFdcvv1"/>
-                                        </div>
-                                        <div>
-                                            <a href="/product-detail" className="text-sm font-bold text-[#005ab4] group-hover:text-[#465f89] transition-colors hover:underline">Portfolio Template: Zenith Pro</a>
-                                            <p className="text-xs text-slate-500 font-medium">HTML/React Source</p>
-                                        </div>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex flex-col gap-1">
-                                        <div className="flex items-center text-xs font-medium text-slate-600">
-                                            <EyeIcon className="w-4 h-4 mr-1.5 opacity-60" /> 892 views
-                                        </div>
-                                        <div className="flex items-center text-xs font-medium text-slate-600">
-                                            <ShoppingBagIcon className="w-4 h-4 mr-1.5 opacity-60" /> 12 sold
-                                        </div>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <span className="text-sm font-bold text-[#005ab4]">$29.90</span>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge variant="pending">Draft</Badge>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                        <a href="/edit-product" className="p-2 inline-block text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
-                                            <PencilSquareIcon className="w-5 h-5" />
-                                        </a>
-                                        <button 
-                                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                            onClick={() => handleDeleteClick({ id: 2, title: 'Portfolio Template: Zenith Pro' })}
-                                        >
-                                            <TrashIcon className="w-5 h-5" />
-                                        </button>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-
-                            <TableRow className="group">
-                                <TableCell>
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
-                                            <img alt="Video Course" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCx_jW_O6wmHNZtjt0psQRBdBxAsAEkzBRoIMZs1DKE57TqeY_0ZXZV7zEiv4ZN2FcF7UKQg9Ar8wC4vcpi8U9uz7beiyacFdCjsT4X1VlENz6KNrcqaXSk2QsI86SnpdF4b0NpjaHc1mwQyizh2LUuxn7mOjd97esTawARAe12pAtv6lyL8zSrE6shX-8srjaaywK8BkTjBZWjvdSr2pZQX62bTOhiWbVFU8j_P8CqzaPaNIARuNSFFaUWcmCYae05nftAmEyCoyrZ"/>
-                                        </div>
-                                        <div>
-                                            <a href="/product-detail" className="text-sm font-bold text-[#005ab4] group-hover:text-[#465f89] transition-colors hover:underline">Social Media Strategy Bundle</a>
-                                            <p className="text-xs text-slate-500 font-medium">Video &amp; Checklist</p>
-                                        </div>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex flex-col gap-1">
-                                        <div className="flex items-center text-xs font-medium text-slate-600">
-                                            <EyeIcon className="w-4 h-4 mr-1.5 opacity-60" /> 3,450 views
-                                        </div>
-                                        <div className="flex items-center text-xs font-medium text-slate-600">
-                                            <ShoppingBagIcon className="w-4 h-4 mr-1.5 opacity-60" /> 132 sold
-                                        </div>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <span className="text-sm font-bold text-[#005ab4]">$45.00</span>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge variant="success">Active</Badge>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                        <a href="/edit-product" className="p-2 inline-block text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
-                                            <PencilSquareIcon className="w-5 h-5" />
-                                        </a>
-                                        <button 
-                                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                            onClick={() => handleDeleteClick({ id: 3, title: 'Social Media Strategy Bundle' })}
-                                        >
-                                            <TrashIcon className="w-5 h-5" />
-                                        </button>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
+                            {isLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="text-center py-20 text-slate-400 font-bold uppercase tracking-widest text-xs">Memuat Produk...</TableCell>
+                                </TableRow>
+                            ) : products.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="text-center py-20 text-slate-400 font-bold uppercase tracking-widest text-xs">Produk tidak ditemukan. Mulai dengan menambah satu!</TableCell>
+                                </TableRow>
+                            ) : (
+                                products.map((product) => (
+                                    <TableRow key={product.id} className="group">
+                                        <TableCell>
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
+                                                    <img 
+                                                        alt={product.title} 
+                                                        className="w-full h-full object-cover" 
+                                                        src={product.cover_url || "https://images.unsplash.com/photo-1544006659-f0b21f04cb1b?w=400&h=400&fit=crop"}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <a href={`/product-detail?id=${product.id}`} className="text-sm font-bold text-[#005ab4] group-hover:text-[#465f89] transition-colors hover:underline line-clamp-1">{product.title}</a>
+                                                    <p className="text-xs text-slate-500 font-medium uppercase tracking-tighter">{product.type}</p>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="hidden md:table-cell">
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center text-xs font-medium text-slate-600">
+                                                    <EyeIcon className="w-4 h-4 mr-1.5 opacity-60" /> 0 dilihat
+                                                </div>
+                                                <div className="flex items-center text-xs font-medium text-slate-600">
+                                                    <ShoppingBagIcon className="w-4 h-4 mr-1.5 opacity-60" /> {product.sold_count || 0} terjual
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <span className="text-sm font-bold text-[#005ab4]">
+                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(product.price)}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant={product.status === 'published' ? 'success' : 'pending'}>
+                                                {product.status === 'published' ? 'Aktif' : 'Draf'}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <a href={`/edit-product?id=${product.id}`} className="p-2 inline-block text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                                                    <PencilSquareIcon className="w-5 h-5" />
+                                                </a>
+                                                <button 
+                                                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                    onClick={() => handleDeleteClick(product)}
+                                                >
+                                                    <TrashIcon className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
                         </TableBody>
                     </Table>
                     
                     {/* Pagination */}
                     <Pagination 
                         currentPage={1} 
-                        totalPages={3} 
-                        totalItems={12} 
-                        itemsPerPage={3}
+                        totalPages={1} 
+                        totalItems={products.length} 
+                        itemsPerPage={10}
                         className="rounded-b-none border-t border-slate-100" 
                     />
                 </Card>

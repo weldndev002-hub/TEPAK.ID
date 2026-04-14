@@ -5,15 +5,14 @@ import { CheckCircleIcon, XCircleIcon, TrashIcon } from '@heroicons/react/24/out
 import { cn } from '../../lib/utils';
 
 export const TutorialManagementDashboard = () => {
-    const [tutorials, setTutorials] = useState([
-        { id: 1, title: 'Mastering the Dashboard Essentials', category: 'Onboarding', description: 'Learn how to navigate your main workspace and optimize your daily workflow efficiency.', duration: '12:45', thumbnail: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBX3r7Ma9baEeQhmOwKu7GCvhYMIpFeHuicGhtYcLOkT_0aGWOKNrbrCNLa8qyGxtASuOW2CJvl9dnmE9P6IlcdeL3WKHzbkFt5obM-to1XzsUVTfdp91YCmea_RLzewLubULhs3K0KlWYFZCpPKuV-Tblo0la4I4y-OizLr0zq2aPrJnHJwcPW9L4wUCeLx3iXqLok6Wq0n9w4eySlEeS0pa0DJ5yO_CzNQtQk-BLC_YOMrEI_ocrsr7fHXR_vsogz_IPyQP-6NZuE' },
-        { id: 2, title: 'Advanced Analytics for Content Growth', category: 'Marketing', description: 'Deep dive into data interpretation to understand your audience behavior and scale reach.', duration: '08:20', thumbnail: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDqH3YIkdtU63Uih63nUdkQ1uvlT8Co6qg5jTIif-TqADv439Hr0k3Irb8zuDJHiLGtIuwfkb5u8KNNjQBSKwL8wP_x75iScAxA4FxRwr7PPCox1mHb8-mSYwkexq4VdhRL-In5XZCc0aVbHjmDsTgb93tUjbwOTJqtiOzBlWKT-6uSxmVKakjKHes2SjOQieQyZsv3uW5SOXkQ2vWh0Jq-uDu4tLEaPYrkVfi9Y13FZuL4FLTbdInK21moWGs6uLtrNh3lStruFPb4' },
-        { id: 3, title: 'Optimizing Your Payout Settings', category: 'Monetization', description: 'Step-by-step guide to configuring your bank accounts and tracking transaction history.', duration: '05:15', thumbnail: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBGHB-09Nx_-g5m3Sze_KEM5Ca8qw6B3cpWLa4ad9-NbWZQscdAgmWL3WWi5B3cRZhlSswsqgpb31ix3F90tolXFTV1_D1g53icCmuSRGKlL00UWjHPWWfa3wzEYj5qRYalhHGiKUHvBWsiSmZDuPVFC2_5KQimuQp67nKKRaO2HlAqAh7lUTi16ILrfY5yCKXZ5-kvD9ocuEV4cWT2RGWWH3DkZRO628abTaNRz5XNahJHGvYvvj_TZwUpmD342ocKIThjJOFqgSpz' }
-    ]);
+    const [tutorials, setTutorials] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [activeFilter, setActiveFilter] = useState('All');
-    const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const tutorialToDelete = tutorials.find(t => t.id === deleteTarget);
 
     // Toast
@@ -23,11 +22,31 @@ export const TutorialManagementDashboard = () => {
         setTimeout(() => setToast(null), 4000);
     };
 
+    const fetchTutorials = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/admin/tutorials');
+            if (res.ok) {
+                const data = await res.json();
+                setTutorials(data);
+            }
+        } catch (err) {
+            console.error('Fetch tutorials error:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        fetchTutorials();
+    }, []);
+
     // Form State
     const [newTutorial, setNewTutorial] = useState({
         title: '',
         category: '',
-        youtubeLink: '',
+        video_url: '',
+        description: '',
     });
     const [isDirty, setIsDirty] = useState(false);
     const [showSaveConfirm, setShowSaveConfirm] = useState(false);
@@ -35,28 +54,59 @@ export const TutorialManagementDashboard = () => {
 
     const categories = ['All', 'Onboarding', 'Marketing', 'Monetization', 'Advanced Tools'];
 
-    const handleAddTutorial = () => {
-        if (!newTutorial.title || !newTutorial.category || !newTutorial.youtubeLink) {
-            showToast('error', 'Harap lengkapi semua data tutorial sebelum mempublikasikan.');
+    // YouTube Helper
+    const getYouTubeId = (url: string) => {
+        if (!url) return null;
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    };
+
+    const previewThumbnail = getYouTubeId(newTutorial.video_url) 
+        ? `https://img.youtube.com/vi/${getYouTubeId(newTutorial.video_url)}/maxresdefault.jpg`
+        : null;
+
+    const handleAddTutorial = async () => {
+        if (!newTutorial.title || !newTutorial.category || !newTutorial.video_url) {
+            showToast('error', 'Harap lengkapi formulir sebelum mempublikasikan.');
             setShowSaveConfirm(false);
             return;
         }
 
-        const tutorial = {
-            id: Date.now(),
-            title: newTutorial.title,
-            category: newTutorial.category,
-            description: "Video tutorial baru yang diunggah oleh Admin.",
-            duration: "Self-paced",
-            thumbnail: "https://lh3.googleusercontent.com/aida-public/AB6AXuD8Ha_c9uw2xRRy41qNLcBZee4unv_9eG7SauD40C776cJAUOUL0lJ2uzuZunhwEL8cWRiw8oIkn945Vb-fsFk5gPYBnjrinSDkkhZoqJufZ-8E5Fl-7UhSOtVVftmf3VA8aorucnzPbvRAtytrKeRlNeSZtvnhpTwkJZVT-N-wu1B5hEv1UkpaVF-41nHrbEk0AxoVxNME4DMNLmRUzYOl_8fN1z9D-6rdsUHcTmG-Vkyjkd-6dw93PKP4FCZkc1XTNtALAJvGItGm"
-        };
+        setIsSubmitting(true);
+        try {
+            const payload = {
+                id: modalMode === 'edit' ? editingId : undefined,
+                title: newTutorial.title,
+                category: newTutorial.category,
+                video_url: newTutorial.video_url,
+                description: newTutorial.description,
+                status: 'published'
+            };
 
-        setTutorials([tutorial, ...tutorials]);
-        setIsModalOpen(false);
-        setNewTutorial({ title: '', category: '', youtubeLink: '' });
-        setIsDirty(false);
-        setShowSaveConfirm(false);
-        showToast('success', 'Tutorial berhasil dipublikasikan! Kreator dapat melihatnya di Academy.');
+            const res = await fetch('/api/admin/tutorials', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                await fetchTutorials();
+                setIsModalOpen(false);
+                setNewTutorial({ title: '', category: '', video_url: '', description: '' });
+                setIsDirty(false);
+                setShowSaveConfirm(false);
+                showToast('success', modalMode === 'add' ? 'Tutorial berhasil dipublikasikan!' : 'Tutorial berhasil diperbarui!');
+            } else {
+                const errData = await res.json();
+                showToast('error', `Gagal: ${errData.error || 'Server Error'}`);
+            }
+        } catch (err) {
+            showToast('error', 'Koneksi ke server terputus.');
+        } finally {
+            setIsSubmitting(false);
+            setShowSaveConfirm(false);
+        }
     };
 
     const handleCancel = () => {
@@ -67,10 +117,25 @@ export const TutorialManagementDashboard = () => {
         }
     };
 
-    const handleDeleteConfirmed = () => {
-        if (deleteTarget !== null) setTutorials(prev => prev.filter(t => t.id !== deleteTarget));
-        setDeleteTarget(null);
-        showToast('success', 'Tutorial berhasil dihapus dari library.');
+    const handleDeleteConfirmed = async () => {
+        if (!deleteTarget) return;
+        setIsSubmitting(true);
+        try {
+            const res = await fetch(`/api/admin/tutorials/${deleteTarget}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                await fetchTutorials();
+                showToast('success', 'Tutorial berhasil dihapus dari library.');
+            } else {
+                showToast('error', 'Gagal menghapus tutorial.');
+            }
+        } catch (err) {
+            showToast('error', 'Koneksi gagal.');
+        } finally {
+            setIsSubmitting(false);
+            setDeleteTarget(null);
+        }
     };
 
     const filteredTutorials = activeFilter === 'All' 
@@ -79,16 +144,25 @@ export const TutorialManagementDashboard = () => {
 
     const openAddModal = () => {
         setModalMode('add');
+        setEditingId(null);
+        setNewTutorial({ title: '', category: '', video_url: '', description: '' });
         setIsModalOpen(true);
     };
 
-    const openEditModal = () => {
+    const openEditModal = (tutorial: any) => {
         setModalMode('edit');
+        setEditingId(tutorial.id);
+        setNewTutorial({
+            title: tutorial.title,
+            category: tutorial.category,
+            video_url: tutorial.video_url || '',
+            description: tutorial.description || '',
+        });
         setIsModalOpen(true);
     };
 
     return (
-        <div className="w-full">
+        <div className="w-full pb-20">
             {/* Toast */}
             {toast && (
                 <div className={cn(
@@ -105,70 +179,75 @@ export const TutorialManagementDashboard = () => {
             {/* Section Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
                 <div>
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-blue-900 bg-blue-100 px-3 py-1 rounded-full mb-3 inline-block">Management Console</span>
-                    <h2 className="text-4xl font-black text-[#005ab4] tracking-tight">Tutorial Library</h2>
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#005ab4] bg-blue-50 px-3 py-1 rounded-full mb-3 inline-block border border-blue-100/50">Management Console</span>
+                    <h2 className="text-4xl font-black text-[#001b3e] tracking-tight">Tutorial Library</h2>
                     <p className="text-slate-500 mt-2 max-w-lg">Manage educational content and video guides for the creator ecosystem.</p>
                 </div>
                 <Button 
                     variant="primary" 
-                    className="bg-[#465f89] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-xl shadow-[#465f89]/20 hover:scale-[1.02] active:scale-95 transition-all"
+                    className="bg-[#005ab4] hover:bg-[#00458d] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-xl shadow-blue-500/20 hover:scale-[1.02] active:scale-95 transition-all"
                     onClick={openAddModal}
                 >
-                    <span className="material-symbols-outlined">add</span>
-                    <span>Add Tutorial</span>
+                    <span className="material-symbols-outlined font-bold">add</span>
+                    <span>Add New Tutorial</span>
                 </Button>
             </div>
 
             {/* Filter Bar */}
-            <div className="bg-white p-2 rounded-2xl mb-8 flex flex-wrap items-center gap-2 shadow-sm border border-slate-100">
+            <div className="bg-white/80 backdrop-blur-md p-2 rounded-2xl mb-8 flex flex-wrap items-center gap-2 shadow-sm border border-slate-100 sticky top-20 z-10">
                 {categories.map(cat => (
                     <button 
                         key={cat}
                         onClick={() => setActiveFilter(cat)}
-                        className={`px-5 py-2 rounded-xl font-bold text-sm transition-all ${activeFilter === cat ? 'bg-[#005ab4] text-white' : 'bg-transparent hover:bg-slate-50 text-slate-500'}`}
+                        className={`px-5 py-2.5 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all ${activeFilter === cat ? 'bg-[#005ab4] text-white shadow-lg shadow-blue-500/20' : 'bg-transparent hover:bg-slate-50 text-slate-500'}`}
                     >
                         {cat} {cat === 'All' ? `(${tutorials.length})` : `(${tutorials.filter(t => t.category === cat).length})`}
                     </button>
                 ))}
                 
                 <div className="ml-auto pr-2">
-                    <button className="flex items-center gap-2 text-slate-500 text-sm font-medium hover:text-[#005ab4]">
-                        <span className="material-symbols-outlined text-lg">filter_list</span>
-                        <span>Sort by Newest</span>
+                    <button className="flex items-center gap-2 text-slate-400 text-[10px] font-black uppercase tracking-widest hover:text-[#005ab4] transition-colors">
+                        <span className="material-symbols-outlined text-lg">sort</span>
+                        <span>Sort by Date</span>
                     </button>
                 </div>
             </div>
 
             {/* Tutorial Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {filteredTutorials.map((tutorial) => (
-                    <div key={tutorial.id} className="group bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-blue-50">
+                {loading ? (
+                    <div className="col-span-full py-24 text-center flex flex-col items-center gap-4">
+                        <div className="w-12 h-12 border-4 border-[#005ab4] border-t-transparent rounded-full animate-spin"></div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Synchronizing Library...</p>
+                    </div>
+                ) : filteredTutorials.map((tutorial) => (
+                    <div key={tutorial.id} className="group bg-white rounded-[2rem] overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-slate-100 flex flex-col">
                         <div className="relative aspect-video overflow-hidden">
-                            <img className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={tutorial.title} src={tutorial.thumbnail} />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/30 shadow-xl">
-                                    <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>play_arrow</span>
+                            <img className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={tutorial.title} src={tutorial.thumbnail_url || 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=1074&auto=format&fit=crop'} />
+                            <div className="absolute inset-0 bg-[#001b3e]/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer" onClick={() => window.open(tutorial.video_url, '_blank')}>
+                                <div className="w-16 h-16 bg-white/10 backdrop-blur-xl rounded-full flex items-center justify-center text-white border border-white/20 shadow-2xl transform scale-50 group-hover:scale-100 transition-transform duration-500">
+                                    <span className="material-symbols-outlined text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>play_arrow</span>
                                 </div>
                             </div>
-                            <span className="absolute top-4 left-4 bg-white px-3 py-1 rounded-full text-[10px] font-black text-[#005ab4] uppercase tracking-widest shadow-sm border border-blue-50">
+                            <span className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-[9px] font-black text-[#005ab4] uppercase tracking-widest shadow-sm border border-white/20">
                                 {tutorial.category}
                             </span>
                         </div>
-                        <div className="p-6">
-                            <h3 className="text-lg font-black text-[#005ab4] mb-2 leading-tight uppercase tracking-tight">{tutorial.title}</h3>
-                            <p className="text-xs text-slate-500 mb-6 line-clamp-2 font-medium leading-relaxed">{tutorial.description}</p>
+                        <div className="p-8 flex flex-col flex-grow">
+                            <h3 className="text-lg font-black text-[#001b3e] mb-3 leading-tight tracking-tight line-clamp-2">{tutorial.title}</h3>
+                            <p className="text-xs text-slate-500 mb-8 line-clamp-2 font-medium leading-relaxed">{tutorial.description || "Video panduan resmi untuk membantu Anda memaksimalkan potensi Tepak.ID."}</p>
                             
-                            <div className="flex items-center justify-between pt-4 border-t border-slate-50">
-                                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                    <span className="material-symbols-outlined text-sm">schedule</span>
-                                    <span>{tutorial.duration}</span>
+                            <div className="flex items-center justify-between mt-auto pt-6 border-t border-slate-50">
+                                <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                    <span className="material-symbols-outlined text-base">timer</span>
+                                    <span>{tutorial.duration || "0:00"}</span>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <button onClick={openEditModal} className="p-2 text-slate-400 hover:text-[#465f89] hover:bg-slate-100 rounded-lg transition-colors">
-                                        <span className="material-symbols-outlined text-xl">edit_note</span>
+                                <div className="flex items-center gap-1">
+                                    <button onClick={() => openEditModal(tutorial)} className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-[#005ab4] hover:bg-blue-50 rounded-xl transition-all">
+                                        <span className="material-symbols-outlined text-xl">edit</span>
                                     </button>
-                                    <button onClick={() => setDeleteTarget(tutorial.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                                        <span className="material-symbols-outlined text-xl">delete_forever</span>
+                                    <button onClick={() => setDeleteTarget(tutorial.id)} className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
+                                        <span className="material-symbols-outlined text-xl">delete</span>
                                     </button>
                                 </div>
                             </div>
@@ -176,46 +255,49 @@ export const TutorialManagementDashboard = () => {
                     </div>
                 ))}
 
-                {filteredTutorials.length === 0 && (
-                    <div className="col-span-full py-20 text-center bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200">
-                        <span className="material-symbols-outlined text-6xl text-slate-300 mb-4">video_library</span>
-                        <h3 className="text-xl font-bold text-slate-500 tracking-tight">Belum Ada Video Tutorial</h3>
-                        <p className="text-sm text-slate-400">Silakan tambahkan video baru untuk kategori ini.</p>
+                {(!loading && filteredTutorials.length === 0) && (
+                    <div className="col-span-full py-32 text-center bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
+                        <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
+                            <span className="material-symbols-outlined text-4xl text-slate-300">video_library</span>
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-900 tracking-tight mb-2">Tutorial Empty</h3>
+                        <p className="text-sm text-slate-400 max-w-xs mx-auto font-medium">Belum ada video di kategori ini. Mulai dengan menambahkan panduan baru.</p>
                     </div>
                 )}
             </div>
 
-            {/* Add Tutorial Modal */}
+            {/* Add/Edit Tutorial Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[#005ab4]/40 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-[#001b3e]/60 backdrop-blur-md animate-in fade-in duration-300" onClick={handleCancel} />
+                    <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 slide-in-from-bottom duration-500">
                         {/* Modal Header */}
-                        <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
+                        <div className="px-10 py-8 border-b border-slate-50 flex items-center justify-between bg-white sticky top-0 z-20">
                             <div>
-                                <h2 className="text-2xl font-black text-[#005ab4]">
-                                    {modalMode === 'add' ? 'Add Tutorial' : 'Edit Tutorial'}
+                                <h2 className="text-2xl font-black text-[#001b3e] tracking-tight">
+                                    {modalMode === 'add' ? 'Publish Tutorial' : 'Modify Content'}
                                 </h2>
-                                <p className="text-sm text-slate-500">
-                                    {modalMode === 'add' ? 'Create and publish a new video guide' : 'Update the details for this video guide'}
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                                    {modalMode === 'add' ? 'Populate creator education library' : 'Update metadata and configuration'}
                                 </p>
                             </div>
                             <button 
-                                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-                                onClick={() => setIsModalOpen(false)}
+                                className="w-10 h-10 flex items-center justify-center hover:bg-slate-50 rounded-full transition-colors text-slate-400"
+                                onClick={handleCancel}
                             >
                                 <span className="material-symbols-outlined">close</span>
                             </button>
                         </div>
 
                         {/* Modal Body (Scrollable) */}
-                        <div className="p-8 overflow-y-auto space-y-6">
+                        <div className="p-10 overflow-y-auto space-y-8">
                              {/* Title & Category Row */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-[#001b3e] uppercase tracking-wider">Tutorial Title</label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Tutorial Title</label>
                                     <input 
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#005ab4]/20 outline-none transition-all font-medium" 
-                                        placeholder="e.g. Setting Up Your Profile" 
+                                        className="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-bold text-[#001b3e] placeholder:text-slate-300" 
+                                        placeholder="e.g. Getting Started Guide" 
                                         type="text" 
                                         value={newTutorial.title}
                                         onChange={(e) => {
@@ -224,10 +306,10 @@ export const TutorialManagementDashboard = () => {
                                         }}
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-[#001b3e] uppercase tracking-wider">Category</label>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Category</label>
                                     <select 
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#005ab4]/20 outline-none transition-all font-medium"
+                                        className="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-bold text-[#001b3e]"
                                         value={newTutorial.category}
                                         onChange={(e) => {
                                             setNewTutorial({...newTutorial, category: e.target.value});
@@ -243,47 +325,66 @@ export const TutorialManagementDashboard = () => {
                             </div>
 
                             {/* YouTube Link */}
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-[#001b3e] uppercase tracking-wider">YouTube Video Link</label>
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">YouTube Video URL</label>
                                 <div className="relative">
-                                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">link</span>
+                                    <span className="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-slate-300">link</span>
                                     <input 
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-[#005ab4]/20 outline-none transition-all font-medium" 
+                                        className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-16 pr-6 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-bold text-[#001b3e] placeholder:text-slate-300" 
                                         placeholder="https://youtube.com/watch?v=..." 
                                         type="text" 
-                                        value={newTutorial.youtubeLink}
+                                        value={newTutorial.video_url}
                                         onChange={(e) => {
-                                            setNewTutorial({...newTutorial, youtubeLink: e.target.value});
+                                            setNewTutorial({...newTutorial, video_url: e.target.value});
                                             setIsDirty(true);
                                         }}
                                     />
                                 </div>
                             </div>
 
-                            {/* Live Preview */}
+                            {/* Description */}
                             <div className="space-y-3">
-                                <label className="text-xs font-bold text-[#001b3e] uppercase tracking-wider">Live Preview</label>
-                                <div className="aspect-video rounded-2xl bg-slate-50 border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400">
-                                    <span className="material-symbols-outlined text-4xl mb-2">smart_display</span>
-                                    <p className="text-sm font-medium">Video preview will appear here</p>
-                                    <p className="text-[10px] opacity-60">Paste a valid URL above to generate thumbnail</p>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Short Description</label>
+                                <textarea 
+                                    className="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-medium text-[#001b3e] h-28 resize-none placeholder:text-slate-300"
+                                    placeholder="Briefly explain what creators will learn in this video..."
+                                    value={newTutorial.description}
+                                    onChange={(e) => {
+                                        setNewTutorial({...newTutorial, description: e.target.value});
+                                        setIsDirty(true);
+                                    }}
+                                />
+                            </div>
+
+                            {/* Live Preview / Thumbnail */}
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Thumbnail Preview</label>
+                                <div className="aspect-video rounded-3xl bg-slate-50 border-2 border-dashed border-slate-100 flex flex-col items-center justify-center overflow-hidden">
+                                    {previewThumbnail ? (
+                                        <img src={previewThumbnail} className="w-full h-full object-cover animate-in fade-in duration-700" alt="Preview" />
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center text-slate-300 group">
+                                            <span className="material-symbols-outlined text-5xl mb-3 transition-transform group-hover:scale-110 duration-500">smart_display</span>
+                                            <p className="text-[10px] font-bold uppercase tracking-widest">Awaiting valid link...</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                        <div className="px-10 py-8 bg-slate-50/50 border-t border-slate-50 flex items-center justify-end gap-4">
                             <button 
-                                className="px-6 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-all"
+                                className="px-8 py-3 rounded-xl font-black text-[10px] text-slate-400 uppercase tracking-widest hover:bg-slate-100 transition-all"
                                 onClick={handleCancel}
                             >
-                                Cancel
+                                Discard
                             </button>
                             <button
-                                className="px-8 py-2.5 rounded-xl bg-[#465f89] text-white font-bold shadow-lg shadow-[#465f89]/20 hover:scale-[1.02] active:scale-95 transition-all"
+                                className="px-10 py-3 rounded-xl bg-[#001b3e] text-white font-black text-[10px] uppercase tracking-widest shadow-xl shadow-blue-900/20 hover:scale-[1.05] active:scale-95 transition-all"
                                 onClick={() => setShowSaveConfirm(true)}
                             >
-                                {modalMode === 'add' ? 'Publish Tutorial' : 'Save Changes'}
+                                {modalMode === 'add' ? 'Add to Library' : 'Save Changes'}
                             </button>
                         </div>
                     </div>
@@ -292,20 +393,28 @@ export const TutorialManagementDashboard = () => {
 
             {/* Save Confirmation Modal */}
             {showSaveConfirm && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-sm rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <div className="p-8 text-center">
-                            <div className="w-16 h-16 rounded-full flex items-center justify-center bg-emerald-100 mx-auto mb-4">
-                                <CheckCircleIcon className="w-9 h-9 text-emerald-500" />
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-[#001b3e]/40 backdrop-blur-sm animate-in fade-in" onClick={() => setShowSaveConfirm(false)} />
+                    <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-10 text-center">
+                            <div className="w-20 h-20 rounded-3xl flex items-center justify-center bg-emerald-50 mx-auto mb-6">
+                                <CheckCircleIcon className="w-10 h-10 text-emerald-500" />
                             </div>
-                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Publikasikan Tutorial?</h3>
-                            <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                                Pastikan semua informasi sudah benar. Tutorial akan langsung dapat diakses oleh seluruh Kreator.
+                            <h3 className="text-xl font-black text-[#001b3e] tracking-tight mb-3">Publish Changes?</h3>
+                            <p className="text-xs text-slate-400 font-medium leading-relaxed">
+                                Content will be immediately visible to all creators in their Dashboard Academy.
                             </p>
                         </div>
-                        <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
-                            <button className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setShowSaveConfirm(false)}>Kembali</button>
-                            <button className="px-6 py-2.5 rounded-xl font-black bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 transition-all text-[10px] uppercase tracking-widest" onClick={handleAddTutorial}>Ya, Publikasikan</button>
+                        <div className="px-8 py-6 bg-slate-50/50 border-t border-slate-50 flex items-center justify-end gap-3">
+                            <button className="flex-1 px-5 py-3 rounded-xl font-black text-slate-400 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setShowSaveConfirm(false)}>Review</button>
+                             <button 
+                                className="flex-1 px-5 py-3 rounded-xl font-black bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 transition-all text-[10px] uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2" 
+                                onClick={handleAddTutorial}
+                                disabled={isSubmitting}
+                            >
+                                {isSubmitting && <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                                {isSubmitting ? 'Processing...' : 'Confirm'}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -313,20 +422,21 @@ export const TutorialManagementDashboard = () => {
 
             {/* Discard Changes Modal */}
             {showDiscardConfirm && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-sm rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <div className="p-8 text-center">
-                            <div className="w-16 h-16 rounded-full flex items-center justify-center bg-amber-100 mx-auto mb-4">
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-[#001b3e]/40 backdrop-blur-sm animate-in fade-in" onClick={() => setShowDiscardConfirm(false)} />
+                    <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-10 text-center">
+                            <div className="w-20 h-20 rounded-3xl flex items-center justify-center bg-amber-50 mx-auto mb-6">
                                 <span className="material-symbols-outlined text-amber-500 text-4xl">warning</span>
                             </div>
-                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Batalkan Perubahan?</h3>
-                            <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                                Anda memiliki perubahan yang belum disimpan. Semua input akan hilang jika Anda terus membatalkan.
+                            <h3 className="text-xl font-black text-[#001b3e] tracking-tight mb-3">Unsaved Data</h3>
+                            <p className="text-xs text-slate-400 font-medium leading-relaxed">
+                                You have unsaved changes. Closing this will discard everything you've entered.
                             </p>
                         </div>
-                        <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
-                            <button className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setShowDiscardConfirm(false)}>Batal</button>
-                            <button className="px-6 py-2.5 rounded-xl font-black bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20 transition-all text-[10px] uppercase tracking-widest" onClick={() => { setIsModalOpen(false); setShowDiscardConfirm(false); setIsDirty(false); }}>Ya, Buang</button>
+                        <div className="px-8 py-6 bg-slate-50/50 border-t border-slate-50 flex items-center justify-end gap-3">
+                            <button className="flex-1 px-5 py-3 rounded-xl font-black text-slate-400 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setShowDiscardConfirm(false)}>Keep Editing</button>
+                            <button className="flex-1 px-5 py-3 rounded-xl font-black bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20 transition-all text-[10px] uppercase tracking-widest" onClick={() => { setIsModalOpen(false); setShowDiscardConfirm(false); setIsDirty(false); }}>Discard All</button>
                         </div>
                     </div>
                 </div>
@@ -334,29 +444,32 @@ export const TutorialManagementDashboard = () => {
 
             {/* Delete Confirm Modal */}
             {deleteTarget !== null && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-sm rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <div className="p-8">
-                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-rose-100 mb-4">
-                                <TrashIcon className="w-6 h-6 text-rose-500" />
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-[#001b3e]/40 backdrop-blur-sm animate-in fade-in" onClick={() => setDeleteTarget(null)} />
+                    <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-10">
+                            <div className="w-16 h-16 rounded-[1.5rem] flex items-center justify-center bg-rose-50 mb-6">
+                                <TrashIcon className="w-8 h-8 text-rose-500" />
                             </div>
-                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Hapus Tutorial?</h3>
-                            <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                                Tutorial <strong className="text-slate-900">"{tutorialToDelete?.title}"</strong> akan dihapus permanen dari Academy. Tindakan ini tidak dapat dibatalkan.
+                            <h3 className="text-xl font-black text-[#001b3e] tracking-tight mb-3">Archive Tutorial?</h3>
+                            <p className="text-xs text-slate-400 font-medium leading-relaxed">
+                                This action will permanently remove <strong className="text-[#001b3e]">"{tutorialToDelete?.title}"</strong> from the creator library.
                             </p>
                         </div>
-                        <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                        <div className="px-8 py-6 bg-slate-50/50 border-t border-slate-50 flex items-center justify-end gap-3">
                             <button
-                                className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest"
+                                className="flex-1 px-5 py-3 rounded-xl font-black text-slate-400 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest"
                                 onClick={() => setDeleteTarget(null)}
                             >
                                 Cancel
                             </button>
-                            <button
-                                className="px-6 py-2.5 rounded-xl font-black bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/20 transition-all text-[10px] uppercase tracking-widest"
+                             <button
+                                className="flex-1 px-5 py-3 rounded-xl font-black bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/20 transition-all text-[10px] uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 onClick={handleDeleteConfirmed}
+                                disabled={isSubmitting}
                             >
-                                Yes, Delete
+                                {isSubmitting && <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                                {isSubmitting ? 'Deleting...' : 'Yes, Delete'}
                             </button>
                         </div>
                     </div>

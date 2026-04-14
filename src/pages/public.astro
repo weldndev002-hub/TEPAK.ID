@@ -12,59 +12,135 @@ import {
     EnvelopeIcon,
     GlobeAltIcon
 } from '@heroicons/react/24/solid';
+import { AnalyticsTracker } from '../components/analytics/AnalyticsTracker';
+import { getServerClient } from '../lib/supabase';
 
-/**
- * MOCK JSONB DATA FROM SUPABASE
- * (Simulating the 'page_config' and 'features_config' requirement)
- */
-const page_config = {
-    profile: {
-        name: "Santi Nusantara",
-        bio: "Membantu kreator Indonesia membangun brand digital yang bermakna. Designer, Educator, & Digital Strategist.",
-        avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuAqV1zxjaeYU4PqjHJ3aHlRH0Cet90XlqjfaBq_QX8rbhfInOCt9lXOMBVY6Wh0QS_a3NuhaPLVkomBJtp7niS0RLZ3KzmwQn9B0CUz5lmx600R69GfqNvQuJ2OLVZgYSP-PAuQbg_vdZJXlRnEw9VT2YgjEz-hQnQdrm6MVyR_Q1MfIQFyZsjvJCfSs9v3DavHdHii5JdEsEsQFPvEIqu0DLN0XlkOPYdoTLopXeoKM_myV2p8wuR6koPzdDYrVjEkU_3UA27WyGEJ",
-        is_verified: true,
-        socials: [
-            { icon: CameraIcon, url: "#" },
-            { icon: PlayCircleIcon, url: "#" },
-            { icon: EnvelopeIcon, url: "#" },
-            { icon: GlobeAltIcon, url: "#" }
-        ]
-    },
-    action_links: [
-        { 
-            title: "Konsultasi Kreatif (1-on-1)", 
-            icon: VideoCameraIcon, 
-            url: "#",
-            theme: "bg-[#0873df]" 
-        },
-        { 
-            title: "Workshop Branding Intensif", 
-            icon: AcademicCapIcon, 
-            url: "#",
-            theme: "bg-[#0873df]" 
+// 1. Detect Hostname & Identity
+const hostname = Astro.url.hostname;
+const { cookies } = Astro;
+const supabase = getServerClient(cookies, Astro.request);
+
+// Priority identity mapping:
+// - Custom Domain (e.g., mysite.com)
+// - Subdomain (e.g., user.tepak.id)
+// - Fallback for Dev/Main Site Testing via URL Search Params (e.g., localhost:4321/?u=acep)
+
+const urlParams = Astro.url.searchParams;
+const testUsername = urlParams.get('u');
+
+let merchantData = null;
+let products = [];
+let queryError = null;
+
+try {
+    // A. Detect based on Custom Domain first (if it's not a tepak.id subdomain)
+    const isMainDomain = hostname.includes('tepak.id') || hostname === 'localhost' || hostname === '127.0.0.1';
+    
+    let userQuery = supabase.from('user_settings').select('*, profiles(*)');
+    
+    if (!isMainDomain) {
+        // Search by Custom Domain
+        const { data, error } = await userQuery.eq('domain_name', hostname).eq('domain_verified', true).single();
+        if (data) merchantData = data;
+    } else {
+        // Search by Subdomain or Test Param
+        const subdomain = hostname.split('.')[0];
+        const identifier = (isMainDomain && subdomain !== 'tepak' && subdomain !== 'localhost') ? subdomain : testUsername;
+        
+        if (identifier) {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*, user_settings(*)')
+                .eq('username', identifier)
+                .single();
+            
+            if (data) {
+                // Formatting into a unified merchant object
+                merchantData = {
+                    ...data.user_settings,
+                    profiles: {
+                        id: data.id,
+                        full_name: data.full_name,
+                        username: data.username,
+                        avatar_url: data.avatar_url,
+                        bio: data.bio
+                    }
+                };
+            }
         }
-    ],
-    products: [
-        {
-            title: "The Creator Blueprint (E-Book)",
-            price: "Rp 149rb",
-            description: "Panduan lengkap membangun personal brand dari nol hingga menghasilkan pendapatan konsisten.",
-            image: "https://lh3.googleusercontent.com/aida-public/AB6AXuCjjyluzSxIJ5m-78CwTFr1titoEU8JGT-PqmwcEF-21PHJ6cqH04cc3__Q37EJcF_rDYTOGM8loDPhEI5dF3mUKBzumESfBpcChiPS50-YTG33SduZrSvcaCOUwzjQkC3G808320Q3u9LUzcgQCziaSC6it3Uyi5Gw24ZA67TP36T3gJasAxoblawtCJnAOAdNfh5PFa2P9gPHYimVHxiuuN-MNrEX86JMagD4hQ-at05QqRa29rEoSu8qcRVDTEpxUqdQOt4V6G-x"
-        },
-        {
-            title: "Cinematic Urban Presets",
-            price: "Rp 89rb",
-            description: "12 preset Lightroom kustom untuk memberikan nuansa premium pada foto konten media sosial Anda.",
-            image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAr07NKIXEP2HaT46rcrRfslmZae_DeX5iXM36noVPM6sa3cSqe7EOf6qXgBXY7SUatW22NE0QJZn97uJ0CVU4rP-bxhKGm9nOfCwt_VqEDRCX93WcxM6TEYfmMQwlHocS6MUk-88gjjKUm96CjXjG9_70H2LAvwYtq47kCg2ahlBeH67N81JDi2M96RqXBwX0yoF4j7ua9QgOhJf2naT9YT-m5fW7BH01YotLgDs8Wt3BDEXouZB3DHQpjJEZrOi8oxSD7OvlkcJKNh"
-        }
-    ]
+    }
+
+    // B. If merchant found, fetch their products
+    if (merchantData) {
+        const { data: productList } = await supabase
+            .from('products')
+            .select('*')
+            .eq('merchant_id', merchantData.user_id || merchantData.profiles.id)
+            .eq('status', 'published')
+            .order('created_at', { ascending: false });
+        
+        products = productList || [];
+    }
+} catch (err) {
+    console.error('[Public Page Error]', err);
+    queryError = err;
+}
+
+// 404 / Not Found / Banned Handling
+if (!merchantData && !testUsername) {
+    return Astro.redirect('/');
+}
+
+// Map the data to the UI structure (Dynamic from Database)
+const profile = {
+    name: merchantData?.profiles?.full_name || "Merchant",
+    username: merchantData?.profiles?.username || "merchant",
+    bio: merchantData?.profiles?.bio || "Welcome to my digital store.",
+    avatar: merchantData?.profiles?.avatar_url || "https://images.unsplash.com/photo-1544006659-f0b21f04cb1b?w=400&h=400&fit=crop",
+    is_verified: true,
 };
 
-// Mock status for demonstration
-const is_banned = false;
+// SEO Config
+const seo = {
+    title: merchantData?.user_settings?.seo_title || `${profile.name} | tepak.id Ecosystem`,
+    description: merchantData?.user_settings?.seo_description || profile.bio
+};
+
+// Dynamic Social Links
+const socials = [
+    { 
+        icon: CameraIcon, 
+        url: merchantData?.profiles?.instagram_url ? (merchantData.profiles.instagram_url.startsWith('http') ? merchantData.profiles.instagram_url : `https://instagram.com/${merchantData.profiles.instagram_url.replace('@', '')}`) : null 
+    },
+    { 
+        icon: GlobeAltIcon, 
+        url: merchantData?.profiles?.twitter_url ? (merchantData.profiles.twitter_url.startsWith('http') ? merchantData.profiles.twitter_url : `https://twitter.com/${merchantData.profiles.twitter_url.replace('@', '')}`) : null 
+    },
+    { 
+        icon: PlayCircleIcon, 
+        url: merchantData?.profiles?.youtube_url ? (merchantData.profiles.youtube_url.startsWith('http') ? merchantData.profiles.youtube_url : `https://youtube.com/${merchantData.profiles.youtube_url}`) : null 
+    },
+    { 
+        icon: EnvelopeIcon, 
+        url: merchantData?.profiles?.phone ? `https://wa.me/${merchantData.profiles.phone.replace(/[^0-9]/g, '')}` : null 
+    }
+].filter(s => s.url);
+
+// Map the products into UI format
+const formatted_products = products.map(p => ({
+    id: p.id,
+    title: p.title,
+    price: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p.price),
+    description: p.description,
+    image: p.cover_url || "https://images.unsplash.com/photo-1544006659-f0b21f04cb1b?w=400&h=400&fit=crop"
+}));
+
+const is_banned = merchantData?.plan_status === 'banned' || merchantData?.profiles?.is_banned;
+const merchant_id = merchantData?.user_id || merchantData?.profiles?.id;
 ---
 
-<BaseLayout title={`${page_config.profile.name} | tepak.id Ecosystem`}>
+<BaseLayout title={seo.title} description={seo.description}>
+    <AnalyticsTracker client:only="react" merchantId={merchant_id || "00000000-0000-0000-0000-000000000000"} />
     <div class="min-h-screen bg-[#F8F9FB] text-[#191C1E] font-['Funnel_Display',sans-serif] antialiased">
         
         <main class="pt-20 pb-20 max-w-4xl mx-auto px-6">
@@ -91,44 +167,29 @@ const is_banned = false;
                             <div class="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-white shadow-sm bg-white">
                                 <img 
                                     class="w-full h-full object-cover" 
-                                    src={page_config.profile.avatar} 
-                                    alt={page_config.profile.name}
+                                    src={profile.avatar} 
+                                    alt={profile.name}
                                 />
                             </div>
-                            {page_config.profile.is_verified && (
+                            {profile.is_verified && (
                                 <div class="absolute bottom-2 right-2 bg-[#465f89] text-white p-1.5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
                                     <CheckBadgeIcon className="w-4 h-4" />
                                 </div>
                             )}
                         </div>
-                        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tighter text-[#005ab4] mb-3">{page_config.profile.name}</h1>
+                        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tighter text-[#005ab4] mb-3">{profile.name}</h1>
                         <p class="text-[#414753] max-w-lg leading-relaxed text-lg mb-8">
-                            {page_config.profile.bio}
+                            {profile.bio}
                         </p>
 
                         {/* Social Links */}
                         <div class="flex gap-4 mb-12">
-                            {page_config.profile.socials.map((social) => (
-                                <a href={social.url} class="w-12 h-12 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-[#0873df] hover:text-white transition-all duration-300">
+                            {socials.map((social) => (
+                                <a href={social.url} target="_blank" rel="noopener noreferrer" class="w-12 h-12 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-[#0873df] hover:text-white transition-all duration-300">
                                     <social.icon className="w-6 h-6" />
                                 </a>
                             ))}
                         </div>
-                    </section>
-
-                    {/* Main Action Links */}
-                    <section class="space-y-4 mb-20" id="portfolio">
-                        {page_config.action_links.map((link) => (
-                            <a href={link.url} class={`flex items-center justify-between group w-full p-8 rounded-3xl ${link.theme} text-white hover:brightness-95 transition-all duration-300 shadow-lg shadow-blue-500/10`}>
-                                <div class="flex items-center gap-6">
-                                    <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-md">
-                                        <link.icon className="w-6 h-6" />
-                                    </div>
-                                    <span class="text-lg font-bold tracking-tight">{link.title}</span>
-                                </div>
-                                <ArrowRightIcon className="w-6 h-6 transform group-hover:translate-x-1 transition-transform" />
-                            </a>
-                        ))}
                     </section>
 
                     {/* Digital Products Section */}
@@ -141,7 +202,7 @@ const is_banned = false;
                             <a class="text-[#465f89] font-bold text-sm hover:underline" href="#">Lihat Semua</a>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            {page_config.products.map((product) => (
+                            {formatted_products.map((product) => (
                                 <ProductCard 
                                     image={product.image}
                                     title={product.title}
@@ -154,6 +215,7 @@ const is_banned = false;
                 </>
             )}
         </main>
+
 
         {/* Footer */}
         <footer class="w-full py-20 bg-white border-t border-slate-100">

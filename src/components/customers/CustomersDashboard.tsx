@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../ui/Card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/Table';
 import { Button } from '../ui/Button';
@@ -15,37 +15,84 @@ import {
     FaceFrownIcon,
     CheckCircleIcon
 } from '@heroicons/react/24/outline';
-import { CustomerDetailModal } from './CustomerDetailModal';
 import { Input } from '../ui/Input';
 
 export const CustomersDashboard = () => {
-    const [searchTerm, setSearchTerm] = React.useState('');
-    const [selectedCustomer, setSelectedCustomer] = React.useState<any>(null);
-    const [isModalOpen, setIsModalOpen] = React.useState(false);
-    const [toast, setToast] = React.useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [customers, setCustomers] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [stats, setStats] = useState<any>(null);
+    const [toast, setToast] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
     const showToast = (msg: string) => {
         setToast(msg);
         setTimeout(() => setToast(null), 4000);
     };
 
-    const customersData = [
-        { id: '1', name: 'Michael Smith', email: 'michael.smith@gmail.com', totalSpend: '$245.00', transactions: '12', lastOrder: 'Oct 14, 2023', location: 'Jakarta', status: 'Active' },
-        { id: '2', name: 'Sarah Johnson', email: 'sarah.j@outlook.com', totalSpend: '$112.00', transactions: '5', lastOrder: 'Oct 12, 2023', location: 'Bandung', status: 'Pending' },
-        { id: '3', name: 'Andrew Davis', email: 'andrew.d@tepak.id', totalSpend: '$89.00', transactions: '3', lastOrder: 'Oct 10, 2023', location: 'Surabaya', status: 'Active' },
-        { id: '4', name: 'Linda Chen', email: 'linda.chen@gmail.com', totalSpend: '$456.00', transactions: '28', lastOrder: 'Oct 08, 2023', location: 'Medan', status: 'Active' },
-    ];
+    useEffect(() => {
+        fetchCustomers();
+        fetchStats();
+    }, []);
 
-    const filteredCustomers = customersData.filter(customer => 
-        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.status.toLowerCase().includes(searchTerm.toLowerCase())
+    const fetchStats = async () => {
+        try {
+            const res = await fetch('/api/orders/stats');
+            if (res.ok) {
+                const data = await res.json();
+                setStats(data);
+            }
+        } catch (error) {
+            console.error('Error fetching stats:', error);
+        }
+    };
+
+    const fetchCustomers = async () => {
+        try {
+            const res = await fetch('/api/customers');
+            if (res.ok) {
+                const data = await res.json();
+                setCustomers(data);
+            }
+        } catch (error) {
+            console.error('Error fetching customers:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const formatCurrency = (val: number) => {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val);
+    };
+
+    const filteredCustomers = customers.filter(customer => 
+        customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const handleDeleteCustomer = async (id: string, name: string) => {
+        if (!confirm(`Apakah Anda yakin ingin menghapus pelanggan "${name}"? Data pesanan akan tetap ada namun tidak lagi terhubung ke pelanggan ini.`)) return;
+        
+        setIsDeleting(id);
+        try {
+            const res = await fetch(`/api/customers/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                showToast(`Pelanggan ${name} berhasil dihapus`);
+                setCustomers(customers.filter(c => c.id !== id));
+            } else {
+                alert('Gagal menghapus pelanggan');
+            }
+        } catch (error) {
+            console.error('Error deleting customer:', error);
+            alert('Terjadi kesalahan saat menghapus pelanggan');
+        } finally {
+            setIsDeleting(null);
+        }
+    };
+
     const handleExportCSV = () => {
-        const headers = ["ID", "Name", "Email", "Total Spend", "Transactions", "Last Order", "Location", "Status"];
-        const rows = filteredCustomers.map(c => [c.id, c.name, c.email, c.totalSpend, c.transactions, c.lastOrder, c.location, c.status]);
+        const headers = ["ID", "Name", "Email", "Location", "Status"];
+        const rows = filteredCustomers.map(c => [c.id, c.name, c.email, 'Indonesia', 'Active']);
         
         let csvContent = "data:text/csv;charset=utf-8," 
             + headers.join(",") + "\n"
@@ -104,11 +151,11 @@ export const CustomersDashboard = () => {
                         <div className="w-12 h-12 bg-primary/5 rounded-2xl flex items-center justify-center text-primary">
                             <UsersIcon className="w-6 h-6" />
                         </div>
-                        <span className="text-emerald-500 text-[10px] font-black bg-emerald-50 px-2 py-1 rounded-lg uppercase tracking-wider">+12%</span>
+                        <span className="text-emerald-500 text-[10px] font-black bg-emerald-50 px-2 py-1 rounded-lg uppercase tracking-wider">LIVE</span>
                     </div>
                     <div>
                         <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Total Customers</p>
-                        <h3 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">128</h3>
+                        <h3 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">{customers.length}</h3>
                     </div>
                 </Card>
 
@@ -118,25 +165,29 @@ export const CustomersDashboard = () => {
                         <div className="w-12 h-12 bg-primary/5 rounded-2xl flex items-center justify-center text-primary">
                             <BanknotesIcon className="w-6 h-6" />
                         </div>
-                        <span className="text-emerald-500 text-[10px] font-black bg-emerald-50 px-2 py-1 rounded-lg uppercase tracking-wider">+8.4%</span>
+                        <span className="text-emerald-500 text-[10px] font-black bg-emerald-50 px-2 py-1 rounded-lg uppercase tracking-wider">LTV</span>
                     </div>
                     <div>
-                        <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Total LTV</p>
-                        <h3 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">$24.5<span className="text-xl">k</span></h3>
+                        <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Total Lifetime Value</p>
+                        <h3 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">
+                            {stats ? formatCurrency(stats.total_revenue) : '...'}
+                        </h3>
                     </div>
                 </Card>
 
-                {/* Avg. Belanja */}
+                {/* Growth Rate */}
                 <Card className="p-8 shadow-sm flex flex-col justify-between h-44 border-slate-100 rounded-3xl">
                     <div className="flex justify-between items-start">
                         <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500">
                             <ChartBarIcon className="w-6 h-6" />
                         </div>
-                        <span className="text-rose-500 text-[10px] font-black bg-rose-50 px-2 py-1 rounded-lg uppercase tracking-wider">-2.1%</span>
+                        <span className="text-amber-500 text-[10px] font-black bg-amber-50 px-2 py-1 rounded-lg uppercase tracking-wider">HEALTH</span>
                     </div>
                     <div>
-                        <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Avg. Spend</p>
-                        <h3 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">$191</h3>
+                        <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Successful Orders</p>
+                        <h3 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">
+                            {stats ? stats.successful_orders : '...'}
+                        </h3>
                     </div>
                 </Card>
             </div>
@@ -147,17 +198,12 @@ export const CustomersDashboard = () => {
                     <h4 className="font-black text-slate-900 uppercase tracking-tight text-sm">Recent Customers List</h4>
                     <div className="flex items-center gap-4 w-full sm:w-auto">
                         <Input 
-                            placeholder="Search name, location, or email..." 
+                            placeholder="Search name or email..." 
                             className="h-10 text-xs w-full sm:w-64"
                             iconLeft={MagnifyingGlassIcon}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
-                        <div className="flex items-center gap-2">
-                            <button className="p-2 hover:bg-slate-50 rounded-xl transition-colors text-slate-400">
-                                <FunnelIcon className="w-5 h-5" />
-                            </button>
-                        </div>
                     </div>
                 </div>
 
@@ -166,25 +212,27 @@ export const CustomersDashboard = () => {
                         <TableHeader>
                             <TableRow className="bg-slate-50/30">
                                 <TableHead className="px-8 font-black text-slate-400 uppercase tracking-widest text-[10px]">Customer</TableHead>
-                                <TableHead className="px-8 font-black text-slate-400 uppercase tracking-widest text-[10px]">Total Spend</TableHead>
-                                <TableHead className="px-8 font-black text-slate-400 uppercase tracking-widest text-[10px] text-center">Transactions</TableHead>
-                                <TableHead className="px-8 font-black text-slate-400 uppercase tracking-widest text-[10px]">Last Order</TableHead>
+                                <TableHead className="px-8 font-black text-slate-400 uppercase tracking-widest text-[10px]">Location</TableHead>
+                                <TableHead className="px-8 font-black text-slate-400 uppercase tracking-widest text-[10px]">Date Joined</TableHead>
                                 <TableHead className="px-8 font-black text-slate-400 uppercase tracking-widest text-[10px] text-right">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredCustomers.length > 0 ? filteredCustomers.map((customer) => (
+                            {isLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="py-20 text-center">
+                                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                                    </TableCell>
+                                </TableRow>
+                            ) : filteredCustomers.length > 0 ? filteredCustomers.map((customer) => (
                                 <TableRow key={customer.id} className="cursor-pointer group hover:bg-slate-50/50 transition-colors">
                                     <TableCell 
                                         className="px-8 py-5"
-                                        onClick={() => {
-                                            setSelectedCustomer(customer);
-                                            setIsModalOpen(true);
-                                        }}
+                                        onClick={() => window.location.href = `/customer-detail?id=${customer.id}`}
                                     >
                                         <div className="flex items-center gap-4">
                                             <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-black text-slate-400 text-xs text-center">
-                                                {customer.name.split(' ').map((n: string) => n[0]).join('')}
+                                                {customer.name?.charAt(0) || 'C'}
                                             </div>
                                             <div>
                                                 <p className="text-sm font-black text-slate-900 group-hover:text-primary transition-colors uppercase tracking-tight">{customer.name}</p>
@@ -192,31 +240,36 @@ export const CustomersDashboard = () => {
                                             </div>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="px-8 font-black text-slate-900">{customer.totalSpend}</TableCell>
-                                    <TableCell className="px-8 text-center">
-                                        <span className="bg-slate-100 px-3 py-1 rounded-full text-[10px] font-black text-primary uppercase">{customer.transactions}</span>
-                                    </TableCell>
-                                    <TableCell className="px-8 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{customer.lastOrder}</TableCell>
+                                    <TableCell className="px-8 font-black text-slate-400 text-[10px] uppercase">Indonesia</TableCell>
+                                    <TableCell className="px-8 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">{new Date(customer.created_at).toLocaleDateString()}</TableCell>
                                     <TableCell className="px-8 text-right">
-                                        <button 
-                                            onClick={() => {
-                                                setSelectedCustomer(customer);
-                                                setIsModalOpen(true);
-                                            }}
-                                            className="text-[10px] font-black text-primary hover:underline transition-all uppercase tracking-widest"
-                                        >
-                                            VIEW DETAIL
-                                        </button>
+                                        <div className="flex items-center justify-end gap-3">
+                                            <a 
+                                                href={`/customer-detail?id=${customer.id}`}
+                                                className="text-[10px] font-black text-primary hover:underline transition-all uppercase tracking-widest"
+                                            >
+                                                VIEW
+                                            </a>
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteCustomer(customer.id, customer.name);
+                                                }}
+                                                disabled={isDeleting === customer.id}
+                                                className="text-[10px] font-black text-rose-500 hover:text-rose-700 transition-all uppercase tracking-widest disabled:opacity-50"
+                                            >
+                                                {isDeleting === customer.id ? '...' : 'HAPUS'}
+                                            </button>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             )) : (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="py-20 text-center">
+                                    <TableCell colSpan={4} className="py-20 text-center">
                                         <div className="flex flex-col items-center gap-4 opacity-40">
                                             <FaceFrownIcon className="w-12 h-12" />
                                             <div>
                                                 <p className="font-black text-slate-900 uppercase tracking-widest">Tidak ada data pelanggan ditemukan</p>
-                                                <p className="text-xs font-medium uppercase mt-1">Coba kata kunci lain atau bersihkan pencarian</p>
                                             </div>
                                         </div>
                                     </TableCell>
@@ -229,17 +282,12 @@ export const CustomersDashboard = () => {
                 {/* Pagination */}
                 <Pagination 
                     currentPage={1} 
-                    totalPages={4} 
-                    totalItems={128} 
-                    itemsPerPage={32} 
+                    totalPages={1} 
+                    totalItems={filteredCustomers.length} 
+                    itemsPerPage={50} 
                     className="bg-slate-50/30 rounded-b-3xl border-t border-slate-50"
                 />
             </div>
-            <CustomerDetailModal 
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                customer={selectedCustomer}
-            />
         </div>
     );
 };

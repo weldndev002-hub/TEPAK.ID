@@ -12,15 +12,73 @@ import {
     LockClosedIcon
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleIconSolid, XCircleIcon as XCircleIconSolid } from '@heroicons/react/24/solid';
+import { supabase } from '../../lib/supabase';
+import { cn } from '../../lib/utils';
 
 export const ResetPasswordForm = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    // Password Strength Logic
+    const criteria = {
+        length: password.length >= 8,
+        uppercase: /[A-Z]/.test(password),
+        number: /[0-9]/.test(password),
+        special: /[^A-Za-z0-9]/.test(password),
+    };
+
+    const strengthScore = Object.values(criteria).filter(Boolean).length;
+    
+    const getStrengthLabel = () => {
+        if (password.length === 0) return { label: 'Kosong', color: 'text-slate-400', bg: 'bg-slate-50' };
+        if (strengthScore <= 1) return { label: 'Sangat Lemah', color: 'text-rose-600', bg: 'bg-rose-50' };
+        if (strengthScore === 2) return { label: 'Lemah', color: 'text-orange-600', bg: 'bg-orange-50' };
+        if (strengthScore === 3) return { label: 'Sedang', color: 'text-amber-600', bg: 'bg-amber-50' };
+        if (strengthScore === 4) return { label: 'Kuat', color: 'text-emerald-600', bg: 'bg-emerald-50' };
+        return { label: 'Kosong', color: 'text-slate-400', bg: 'bg-slate-50' };
+    };
+
+    const { label, color, bg } = getStrengthLabel();
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsSuccess(true);
+        setError('');
+
+        if (password !== confirmPassword) {
+            setError('Konfirmasi password tidak cocok');
+            return;
+        }
+
+        if (password.length < 8) {
+            setError('Password minimal 8 karakter');
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            const { error: updateError } = await supabase.auth.updateUser({
+                password: password
+            });
+
+            if (updateError) {
+                setError(updateError.message);
+            } else {
+                // Logout agar user harus login manual sesuai permintaan
+                await supabase.auth.signOut();
+                setIsSuccess(true);
+            }
+        } catch (err: any) {
+            setError('Terjadi kesalahan sistem. Silakan coba lagi.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     if (isSuccess) {
@@ -119,42 +177,52 @@ export const ResetPasswordForm = () => {
                             placeholder="Minimal 8 karakter"
                             iconLeft={LockClosedIcon}
                             className="h-16 rounded-2xl border-slate-100 bg-slate-50/50 shadow-inner"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
                             iconRight={
                                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-slate-300 hover:text-primary transition-all p-1">
                                     {showPassword ? <EyeSlashIcon className="w-6 h-6" /> : <EyeIcon className="w-6 h-6" />}
                                 </button>
                             }
                         />
+                        {error && (
+                            <p className="text-rose-500 text-[10px] font-black uppercase tracking-widest ml-1 mt-2">
+                                {error}
+                            </p>
+                        )}
                     </div>
 
                     {/* Password Strength Indicator */}
                     <div className="space-y-4">
                         <div className="flex gap-2">
-                            <div className="h-1.5 flex-1 rounded-full bg-rose-500"></div> {/* Segment 1 */}
-                            <div className="h-1.5 flex-1 rounded-full bg-amber-500"></div> {/* Segment 2 */}
-                            <div className="h-1.5 flex-1 rounded-full bg-yellow-500"></div> {/* Segment 3 */}
-                            <div className="h-1.5 flex-1 rounded-full bg-slate-100"></div> {/* Segment 4 */}
+                            <div className={cn("h-1.5 flex-1 rounded-full transition-all duration-300", strengthScore >= 1 ? "bg-rose-500" : "bg-slate-100")}></div>
+                            <div className={cn("h-1.5 flex-1 rounded-full transition-all duration-300", strengthScore >= 2 ? "bg-orange-500" : "bg-slate-100")}></div>
+                            <div className={cn("h-1.5 flex-1 rounded-full transition-all duration-300", strengthScore >= 3 ? "bg-amber-500" : "bg-slate-100")}></div>
+                            <div className={cn("h-1.5 flex-1 rounded-full transition-all duration-300", strengthScore >= 4 ? "bg-emerald-500" : "bg-slate-100")}></div>
                         </div>
                         <div className="flex justify-between items-center">
-                            <span className="text-[10px] font-black text-yellow-600 uppercase tracking-[0.3em] bg-yellow-50 px-3 py-1 rounded-lg">Kuat</span>
+                            <span className={cn("text-[10px] font-black uppercase tracking-[0.3em] px-3 py-1 rounded-lg transition-all", color, bg)}>
+                                {label}
+                            </span>
                         </div>
                         
                         {/* Criteria List */}
                         <ul className="grid grid-cols-1 gap-y-3 pt-2">
-                            <li className="flex items-center gap-3 text-[10px] text-emerald-600 font-black uppercase tracking-widest">
-                                <CheckCircleIconSolid className="w-4 h-4" />
+                            <li className={cn("flex items-center gap-3 text-[10px] font-black uppercase tracking-widest transition-all", criteria.length ? "text-emerald-600" : "text-slate-400 opacity-40")}>
+                                {criteria.length ? <CheckCircleIconSolid className="w-4 h-4" /> : <XCircleIconSolid className="w-4 h-4" />}
                                 Minimal 8 karakter
                             </li>
-                            <li className="flex items-center gap-3 text-[10px] text-emerald-600 font-black uppercase tracking-widest">
-                                <CheckCircleIconSolid className="w-4 h-4" />
+                            <li className={cn("flex items-center gap-3 text-[10px] font-black uppercase tracking-widest transition-all", criteria.uppercase ? "text-emerald-600" : "text-slate-400 opacity-40")}>
+                                {criteria.uppercase ? <CheckCircleIconSolid className="w-4 h-4" /> : <XCircleIconSolid className="w-4 h-4" />}
                                 Mengandung huruf besar
                             </li>
-                            <li className="flex items-center gap-3 text-[10px] text-slate-400 font-black uppercase tracking-widest opacity-40">
-                                <XCircleIconSolid className="w-4 h-4" />
+                            <li className={cn("flex items-center gap-3 text-[10px] font-black uppercase tracking-widest transition-all", criteria.number ? "text-emerald-600" : "text-slate-400 opacity-40")}>
+                                {criteria.number ? <CheckCircleIconSolid className="w-4 h-4" /> : <XCircleIconSolid className="w-4 h-4" />}
                                 Mengandung angka
                             </li>
-                            <li className="flex items-center gap-3 text-[10px] text-slate-400 font-black uppercase tracking-widest opacity-40">
-                                <XCircleIconSolid className="w-4 h-4" />
+                            <li className={cn("flex items-center gap-3 text-[10px] font-black uppercase tracking-widest transition-all", criteria.special ? "text-emerald-600" : "text-slate-400 opacity-40")}>
+                                {criteria.special ? <CheckCircleIconSolid className="w-4 h-4" /> : <XCircleIconSolid className="w-4 h-4" />}
                                 Mengandung karakter khusus
                             </li>
                         </ul>
@@ -169,6 +237,9 @@ export const ResetPasswordForm = () => {
                             type={showConfirm ? "text" : "password"}
                             iconLeft={LockClosedIcon}
                             className="h-16 rounded-2xl border-slate-100 bg-slate-50/50 shadow-inner"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            required
                             iconRight={
                                 <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="text-slate-300 hover:text-primary transition-all p-1">
                                     {showConfirm ? <EyeSlashIcon className="w-6 h-6" /> : <EyeIcon className="w-6 h-6" />}
@@ -178,7 +249,7 @@ export const ResetPasswordForm = () => {
                     </div>
 
                     {/* Submit Button */}
-                    <Button variant="primary" className="w-full h-16 text-[11px] font-black uppercase tracking-[0.3em] rounded-[1.5rem] shadow-2xl shadow-primary/20 bg-slate-900" type="submit">
+                    <Button variant="primary" className="w-full h-16 text-[11px] font-black uppercase tracking-[0.3em] rounded-[1.5rem] shadow-2xl shadow-primary/20 bg-slate-900" type="submit" isLoading={isLoading}>
                         Simpan Password Baru
                     </Button>
                 </form>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '../../lib/utils';
 
 export interface AnalyticsChartProps {
@@ -13,15 +13,36 @@ export const AnalyticsChart: React.FC<AnalyticsChartProps> = ({
   className 
 }) => {
   const [activeTab, setActiveTab] = useState<'views' | 'clicks' | 'sales'>('views');
+  const [data, setData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Dummy data arrays to simulate chart switching
-  const chartData = {
-      views: [66, 50, 75, 40, 60, 100, 80],
-      clicks: [40, 30, 45, 60, 50, 70, 90],
-      sales: [20, 40, 30, 80, 60, 50, 100]
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch('/api/analytics/dashboard?range=7d');
+        if (res.ok) {
+          const result = await res.json();
+          setData(result.time_series);
+        }
+      } catch (err) {
+        console.error('Chart Data Error:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
-  const currentData = chartData[activeTab];
+  // Use API data or fallback to zeros
+  const currentData = data ? data[activeTab] : [0, 0, 0, 0, 0, 0, 0];
+  const labels = data ? data.labels : ['...', '...', '...', '...', '...', '...', '...'];
+  
+  // Find max for scaling
+  const maxValue = Math.max(...currentData, 1);
+
+  if (isLoading) {
+    return <div className={cn("bg-white p-8 rounded-2xl shadow-sm border border-slate-100 animate-pulse h-80 flex items-center justify-center text-slate-300 font-bold uppercase text-xs tracking-widest", className)}>Loading Chart...</div>;
+  }
 
   return (
     <div className={cn("bg-white p-8 rounded-2xl shadow-sm border border-slate-100", className)}>
@@ -62,29 +83,26 @@ export const AnalyticsChart: React.FC<AnalyticsChartProps> = ({
         </div>
       </div>
 
-      {/* Pseudo-Chart Base using Flex Heights */}
-      <div className="relative h-64 w-full flex items-end gap-1">
-          {currentData.map((val, index) => (
+      {/* Real-time Chart using Flex Heights */}
+      <div className="relative h-64 w-full flex items-end gap-1.5 md:gap-3">
+          {currentData.map((val: number, index: number) => (
              <div 
                 key={`${activeTab}-${index}`} 
                 className="w-full bg-primary/10 border-t-4 border-primary rounded-t-lg relative group transition-all duration-500 hover:bg-primary/20"
-                style={{ height: `${val}%` }}
+                style={{ height: `${(val / maxValue) * 100}%`, minHeight: val > 0 ? '4px' : '2px' }}
              >
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-slate-900 text-white text-[10px] px-2 py-1 rounded shadow-lg transition-opacity font-bold">
-                    {val * 12}
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-slate-900 text-white text-[10px] px-2 py-1 rounded shadow-lg transition-opacity font-bold whitespace-nowrap z-20">
+                    {activeTab === 'sales' ? `Rp ${val.toLocaleString()}` : `${val} ${activeTab}`}
                 </div>
              </div>
           ))}
       </div>
       
-      {/* Chart X-Axis Labels */}
-      <div className="flex justify-between mt-4 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-        <span>MAY 01</span>
-        <span className="hidden sm:inline">MAY 07</span>
-        <span>MAY 14</span>
-        <span className="hidden sm:inline">MAY 21</span>
-        <span>MAY 28</span>
-        <span>JUN 01</span>
+      {/* Dynamic X-Axis Labels */}
+      <div className="flex justify-between mt-4 text-[9px] text-slate-400 font-bold uppercase tracking-wider overflow-hidden">
+        {labels.map((label: string, i: number) => (
+            <span key={i} className={cn(labels.length > 10 && i % 4 !== 0 ? 'hidden md:inline' : '')}>{label}</span>
+        ))}
       </div>
     </div>
   );

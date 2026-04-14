@@ -19,6 +19,7 @@ import {
     CheckCircleIcon,
     ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
+import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
 
 export const AddProductDashboard = () => {
@@ -35,8 +36,12 @@ export const AddProductDashboard = () => {
     const [productFile, setProductFile] = useState<File | null>(null);
     const [thumbnail, setThumbnail] = useState<string | null>(null);
     const [errors, setErrors] = useState<{ price?: string; file?: string }>({});
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [category, setCategory] = useState('');
     const [isPublishing, setIsPublishing] = useState(false);
     const [publishConfirm, setPublishConfirm] = useState(false);
+    const [previewImages, setPreviewImages] = useState<{ id: string; file: File; url: string }[]>([]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -52,18 +57,40 @@ export const AddProductDashboard = () => {
 
         setErrors(prev => ({ ...prev, file: undefined }));
         setProductFile(file);
+        setIsDirty(true);
     };
 
     const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             setThumbnail(URL.createObjectURL(file));
+            setIsDirty(true);
         }
+    };
+
+    const handlePreviewImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files) return;
+
+        const newImages = Array.from(files).map(file => ({
+            id: Math.random().toString(36).substring(7),
+            file,
+            url: URL.createObjectURL(file)
+        }));
+
+        setPreviewImages(prev => [...prev, ...newImages]);
+        setIsDirty(true);
+    };
+
+    const removePreviewImage = (id: string) => {
+        setPreviewImages(prev => prev.filter(img => img.id !== id));
+        setIsDirty(true);
     };
 
     const handlePublish = async () => {
         const newErrors: any = {};
         
+        if (!title) newErrors.title = "Nama produk wajib diisi";
         if (Number(price) < 10000) {
             newErrors.price = "Harga minimal adalah Rp 10.000";
         }
@@ -81,12 +108,76 @@ export const AddProductDashboard = () => {
         setPublishConfirm(true);
     };
 
+    const uploadFile = async (file: File, path: string) => {
+        const { data, error } = await supabase.storage
+            .from('media-produk')
+            .upload(path, file, { upsert: true });
+        
+        if (error) throw error;
+        
+        const { data: { publicUrl } } = supabase.storage
+            .from('media-produk')
+            .getPublicUrl(data.path);
+            
+        return publicUrl;
+    };
+
     const executePublish = async () => {
         setPublishConfirm(false);
         setIsPublishing(true);
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        setIsPublishing(false);
-        window.location.href = '/products';
+        
+        try {
+            const timestamp = Date.now();
+            let cover_url = '';
+            let file_url = '';
+
+            // 1. Upload Thumbnail jika ada
+            const thumbInput = document.getElementById('thumbnail-file') as HTMLInputElement;
+            if (thumbInput?.files?.[0]) {
+                const thumbFile = thumbInput.files[0];
+                const ext = thumbFile.name.split('.').pop();
+                cover_url = await uploadFile(thumbFile, `thumbnails/${timestamp}.${ext}`);
+            }
+
+            // 2. Upload Preview Images (Gallery)
+            const previewUrls = await Promise.all(
+                previewImages.map(async (img, idx) => {
+                    const ext = img.file.name.split('.').pop();
+                    return await uploadFile(img.file, `previews/${timestamp}_${idx}.${ext}`);
+                })
+            );
+
+            // 3. Upload Product File
+            if (productFile) {
+                const ext = productFile.name.split('.').pop();
+                file_url = await uploadFile(productFile, `assets/${timestamp}.${ext}`);
+            }
+
+            // 4. Save to Database via API
+            const res = await fetch('/api/products', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title,
+                    description,
+                    price: Number(price),
+                    type: category || 'digital',
+                    status: status ? 'published' : 'draft',
+                    cover_url,
+                    file_url,
+                    preview_urls: previewUrls
+                })
+            });
+
+            if (!res.ok) throw new Error('Gagal menyimpan ke database');
+
+            setIsPublishing(false);
+            window.location.href = '/products';
+        } catch (error: any) {
+            console.error('Publish error:', error);
+            setErrors(prev => ({ ...prev, system: error.message }));
+            setIsPublishing(false);
+        }
     };
 
     return (
@@ -108,13 +199,13 @@ export const AddProductDashboard = () => {
                         <ArrowLeftIcon className="w-5 h-5" />
                     </a>
                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-0.5">Products</p>
-                        <h2 className="text-xl font-extrabold text-[#162138] tracking-tight">Add New Product</h2>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-0.5">Produk</p>
+                        <h2 className="text-xl font-extrabold text-[#162138] tracking-tight">Tambah Produk Baru</h2>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
                     <Button variant="outline" className="px-6 py-2.5 rounded-xl font-bold text-sm text-slate-600 border-slate-200 hover:bg-slate-50">
-                        Save as Draft
+                        Simpan sebagai Draf
                     </Button>
                     <Button 
                         variant="secondary" 
@@ -123,7 +214,7 @@ export const AddProductDashboard = () => {
                         disabled={isPublishing}
                     >
                         <PlusCircleIcon className="w-4 h-4" />
-                        {isPublishing ? 'Publishing...' : 'Publish Product'}
+                        {isPublishing ? 'Menerbitkan...' : 'Terbitkan Produk'}
                     </Button>
                 </div>
             </header>
@@ -140,36 +231,52 @@ export const AddProductDashboard = () => {
                             <Card className="p-8 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
                                 <div className="flex items-center space-x-3 mb-8">
                                     <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Product Information</h3>
+                                    <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Informasi Produk</h3>
                                 </div>
                                 <div className="space-y-6">
+                                    {errors.system && (
+                                        <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-[10px] font-black uppercase tracking-widest animate-in fade-in slide-in-from-top-2">
+                                            <ExclamationTriangleIcon className="w-5 h-5" />
+                                            {errors.system}
+                                        </div>
+                                    )}
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Product Name <span className="text-red-400">*</span></label>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nama Produk <span className="text-red-400">*</span></label>
                                         <Input 
                                             type="text" 
                                             placeholder="e.g. Mastering UI Design for Creators" 
-                                            onChange={handleInputChange}
+                                            value={title}
+                                            onChange={(e) => {
+                                                setTitle(e.target.value);
+                                                handleInputChange();
+                                            }}
+                                            hasError={!!errors.title}
                                         />
+                                        {errors.title && <p className="text-[10px] font-black text-rose-500 uppercase mt-2">{errors.title}</p>}
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Short Description <span className="text-red-400">*</span></label>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Deskripsi Singkat <span className="text-red-400">*</span></label>
                                         <Textarea 
                                             rows={4} 
-                                            placeholder="Write a compelling product description that highlights the key benefits for buyers..." 
-                                            onChange={handleInputChange}
+                                            placeholder="Tulis deskripsi produk yang menarik untuk calon pembeli..." 
+                                            value={description}
+                                            onChange={(e) => {
+                                                setDescription(e.target.value);
+                                                handleInputChange();
+                                            }}
                                         />
                                     </div>
                                     <div className="grid grid-cols-2 gap-6">
                                         <div>
-                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Category <span className="text-red-400">*</span></label>
-                                            <Select>
-                                                <option value="">— Select Category —</option>
-                                                <option>E-Book</option>
-                                                <option>Online Course</option>
-                                                <option>Design Assets</option>
-                                                <option>Software / Plugin</option>
-                                                <option>Video Bundle</option>
-                                                <option>Templates</option>
+                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Kategori <span className="text-red-400">*</span></label>
+                                            <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+                                                <option value="">— Pilih Kategori —</option>
+                                                <option value="ebook">E-Book</option>
+                                                <option value="course">Kursus Online</option>
+                                                <option value="assets">Asset Desain</option>
+                                                <option value="software">Software / Plugin</option>
+                                                <option value="video">Bundle Video</option>
+                                                <option value="templates">Template</option>
                                             </Select>
                                         </div>
                                         <div>
@@ -182,7 +289,7 @@ export const AddProductDashboard = () => {
                                     </div>
                                     <div className="grid grid-cols-2 gap-6">
                                         <div>
-                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Price (IDR) <span className="text-red-400">*</span></label>
+                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Harga (IDR) <span className="text-red-400">*</span></label>
                                             <div className="relative">
                                                 <BanknotesIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                                 <Input 
@@ -199,10 +306,10 @@ export const AddProductDashboard = () => {
                                             {errors.price && <p className="text-[10px] font-black text-rose-500 uppercase mt-2">{errors.price}</p>}
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Discount Price</label>
+                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Harga Diskon</label>
                                             <div className="relative">
                                                 <BanknotesIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                                <Input type="number" placeholder="Optional" className="pl-9" />
+                                                <Input type="number" placeholder="Opsional" className="pl-9" />
                                             </div>
                                         </div>
                                     </div>
@@ -213,7 +320,7 @@ export const AddProductDashboard = () => {
                             <Card className="p-8 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
                                 <div className="flex items-center space-x-3 mb-8">
                                     <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Digital Product File</h3>
+                                    <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">File Produk Digital</h3>
                                 </div>
                                 <div 
                                     className={cn(
@@ -233,16 +340,16 @@ export const AddProductDashboard = () => {
                                         <CloudArrowUpIcon className={cn("w-8 h-8", errors.file ? "text-rose-500" : "text-[#465f89]")} />
                                     </div>
                                     <p className={cn("text-sm font-bold mb-1", errors.file ? "text-rose-600" : "text-[#005ab4]")}>
-                                        {productFile ? productFile.name : "Drag and drop your product file here"}
+                                        {productFile ? productFile.name : "Tarik dan lepas file produk Anda di sini"}
                                     </p>
-                                    <p className="text-xs text-slate-400 mb-6">{productFile ? `${(productFile.size / (1024 * 1024)).toFixed(2)} MB` : "PDF, ZIP, MP4, MP3, PNG — Max 25MB"}</p>
+                                    <p className="text-xs text-slate-400 mb-6">{productFile ? `${(productFile.size / (1024 * 1024)).toFixed(2)} MB` : "PDF, ZIP, MP4, MP3, PNG — Maksimal 25MB"}</p>
                                     <Button variant="outline" className="px-6 py-2 rounded-xl text-xs hover:bg-white border-slate-200 font-bold">
-                                        {productFile ? "Change File" : "Browse Files"}
+                                        {productFile ? "Ganti File" : "Pilih File"}
                                     </Button>
                                     {errors.file && <p className="text-[10px] font-black text-rose-500 uppercase mt-4">{errors.file}</p>}
                                 </div>
                                 <p className="text-[10px] text-slate-400 mt-4 text-center font-medium leading-relaxed">
-                                    Your file is stored securely in our private bucket and only shared with verified buyers after payment.
+                                    File Anda disimpan dengan aman di bucket privat dan hanya dibagikan kepada pembeli yang terverifikasi setelah pembayaran.
                                 </p>
                             </Card>
 
@@ -251,19 +358,43 @@ export const AddProductDashboard = () => {
                                 <div className="flex items-center justify-between mb-8">
                                     <div className="flex items-center space-x-3">
                                         <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                        <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Preview Images</h3>
+                                        <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Gambar Preview</h3>
                                     </div>
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">0 / 5 Images</span>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{previewImages.length} / 8 Gambar</span>
                                 </div>
-                                <div className="grid grid-cols-3 gap-4">
-                                    {[1, 2, 3].map((i) => (
-                                        <div key={i} className="aspect-video rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center gap-2 hover:border-[#465f89]/60 hover:bg-blue-50/20 transition-all cursor-pointer group">
-                                            <PhotoIcon className="w-8 h-8 text-slate-300 group-hover:text-[#465f89]/60 transition-colors" />
-                                            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-wider group-hover:text-[#465f89]/60">Add Image</p>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {previewImages.map((img) => (
+                                        <div key={img.id} className="relative aspect-video rounded-xl overflow-hidden group/item shadow-sm border border-slate-100">
+                                            <img src={img.url} className="w-full h-full object-cover transition-transform group-hover/item:scale-110" alt="Preview" />
+                                            <div className="absolute inset-0 bg-rose-500/80 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center justify-center">
+                                                <button 
+                                                    onClick={() => removePreviewImage(img.id)}
+                                                    className="p-2 bg-white rounded-lg text-rose-500 shadow-xl active:scale-90 transition-transform"
+                                                >
+                                                    <TrashIcon className="w-5 h-5" />
+                                                </button>
+                                            </div>
                                         </div>
                                     ))}
+                                    {previewImages.length < 8 && (
+                                        <div 
+                                            className="aspect-video rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center gap-2 hover:border-[#465f89]/60 hover:bg-blue-50/20 transition-all cursor-pointer group"
+                                            onClick={() => document.getElementById('gallery-files')?.click()}
+                                        >
+                                            <PhotoIcon className="w-6 h-6 text-slate-300 group-hover:text-[#465f89]/60 transition-colors" />
+                                            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-wider group-hover:text-[#465f89]/60">Tambah Gambar</p>
+                                        </div>
+                                    )}
+                                    <input 
+                                        type="file" 
+                                        id="gallery-files" 
+                                        className="hidden" 
+                                        multiple 
+                                        onChange={handlePreviewImagesChange}
+                                        accept="image/*"
+                                    />
                                 </div>
-                                <p className="text-[10px] text-slate-400 mt-4 font-medium">Recommended: 1280x720px (16:9), JPG or PNG.</p>
+                                <p className="text-[10px] text-slate-400 mt-4 font-medium italic">Anda bisa mengunggah hingga 8 gambar preview. Format: JPG, PNG. (Min. 1 gambar disarankan)</p>
                             </Card>
 
                         </div>
@@ -289,16 +420,21 @@ export const AddProductDashboard = () => {
                                         accept="image/*"
                                     />
                                     {thumbnail ? (
-                                        <img src={thumbnail} className="w-full h-full object-cover" alt="Thumbnail Preview" />
+                                        <div className="relative w-full h-full group/thumb">
+                                            <img src={thumbnail} className="w-full h-full object-cover transition-transform duration-500 group-hover/thumb:scale-105" alt="Thumbnail Preview" />
+                                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center">
+                                                <div className="bg-white/90 backdrop-blur-sm text-slate-900 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg">Change Image</div>
+                                            </div>
+                                        </div>
                                     ) : (
                                         <>
                                             <PhotoIcon className="w-10 h-10 text-slate-300 group-hover:text-[#465f89]/50 transition-colors" />
-                                            <p className="text-xs font-bold text-slate-400">Click to upload thumbnail</p>
+                                            <p className="text-xs font-bold text-slate-400">Klik untuk upload thumbnail</p>
                                         </>
                                     )}
                                 </div>
                                 <p className="text-[10px] text-slate-400 leading-relaxed text-center font-medium italic">
-                                    Recommended: 1080x1080px (1:1)
+                                    Rekomendasi: 1080x1080px (1:1)
                                 </p>
                             </Card>
 
@@ -306,38 +442,38 @@ export const AddProductDashboard = () => {
                             <Card className="p-6 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
                                 <div className="flex items-center space-x-3 mb-8">
                                     <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Settings</h3>
+                                    <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Pengaturan</h3>
                                 </div>
                                 <div className="space-y-6">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <p className="text-sm font-bold text-[#005ab4]">Publish Immediately</p>
-                                            <p className="text-[10px] text-slate-500">Visible in store right away</p>
+                                            <p className="text-sm font-bold text-[#005ab4]">Terbitkan Segera</p>
+                                            <p className="text-[10px] text-slate-500">Langsung terlihat di toko</p>
                                         </div>
                                         <Toggle checked={status} onChange={(e) => setStatus(e.target.checked)} />
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <p className="text-sm font-bold text-[#005ab4]">Public Visibility</p>
-                                            <p className="text-[10px] text-slate-500">Searchable on public store</p>
+                                            <p className="text-sm font-bold text-[#005ab4]">Visibilitas Publik</p>
+                                            <p className="text-[10px] text-slate-500">Dapat dicari di toko publik</p>
                                         </div>
                                         <Toggle checked={visibility} onChange={(e) => setVisibility(e.target.checked)} />
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <p className="text-sm font-bold text-[#005ab4]">Limit Downloads</p>
-                                            <p className="text-[10px] text-slate-500">Set max download count</p>
+                                            <p className="text-sm font-bold text-[#005ab4]">Batasi Unduhan</p>
+                                            <p className="text-[10px] text-slate-500">Atur jumlah maksimal unduhan</p>
                                         </div>
                                         <Toggle checked={limitDownload} onChange={(e) => setLimitDownload(e.target.checked)} />
                                     </div>
                                     <hr className="border-slate-100" />
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Download Link Expiry</label>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Kedaluwarsa Link Download</label>
                                         <Select className="font-bold">
-                                            <option>Forever (No Expiry)</option>
-                                            <option>24 Hours</option>
-                                            <option>7 Days</option>
-                                            <option>30 Days</option>
+                                            <option>Selamanya (Tanpa Batas)</option>
+                                            <option>24 Jam</option>
+                                            <option>7 Hari</option>
+                                            <option>30 Hari</option>
                                         </Select>
                                     </div>
                                 </div>
@@ -346,12 +482,12 @@ export const AddProductDashboard = () => {
                             {/* Help Card */}
                             <div className="p-6 bg-gradient-to-br from-[#0873df] to-[#005ab4] rounded-2xl text-white overflow-hidden relative shadow-lg shadow-blue-500/20">
                                 <div className="relative z-10">
-                                    <h4 className="font-bold text-sm mb-2">Need Help?</h4>
+                                    <h4 className="font-bold text-sm mb-2">Butuh Bantuan?</h4>
                                     <p className="text-xs text-blue-200 mb-4 leading-relaxed">
-                                        Learn how to create high-converting product listings in our Help Center.
+                                        Pelajari cara membuat listing produk dengan konversi tinggi di Pusat Bantuan kami.
                                     </p>
                                     <a className="inline-flex items-center text-white text-xs font-bold hover:underline" href="#">
-                                        Read Creator Guide
+                                        Baca Panduan Kreator
                                         <ArrowUpRightIcon className="w-4 h-4 ml-1" />
                                     </a>
                                 </div>

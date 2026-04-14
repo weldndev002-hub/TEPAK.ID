@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { supabase } from '../../lib/supabase';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
@@ -19,23 +20,159 @@ import {
 } from '@heroicons/react/24/outline';
 
 export const EditProductDashboard = () => {
+    // States for data
+    const [id, setId] = useState<string | null>(null);
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [price, setPrice] = useState('');
+    const [category, setCategory] = useState('');
     const [status, setStatus] = useState(true);
     const [visibility, setVisibility] = useState(true);
+    const [coverUrl, setCoverUrl] = useState('');
+    const [fileUrl, setFileUrl] = useState('');
+    const [fileName, setFileName] = useState('');
+    const [previewImages, setPreviewImages] = useState<{ id: string; file?: File; url: string }[]>([]);
+    
+    // UI States
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
     const [isDirty, setIsDirty] = useState(false);
     const [toast, setToast] = useState<string | null>(null);
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [showDiscardModal, setShowDiscardModal] = useState(false);
     const [showFileDeleteModal, setShowFileDeleteModal] = useState(false);
+    const [errors, setErrors] = useState<{ system?: string }>({});
 
     const showToast = (msg: string) => {
         setToast(msg);
         setTimeout(() => setToast(null), 4000);
     };
 
-    const handleSave = () => {
+    // Load Data
+    React.useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id');
+        if (productId) {
+            setId(productId);
+            fetchProduct(productId);
+        }
+    }, []);
+
+    const fetchProduct = async (productId: string) => {
+        setIsLoading(true);
+        try {
+            const res = await fetch(`/api/products/${productId}`);
+            if (!res.ok) throw new Error('Gagal mengambil data produk');
+            const data = await res.json();
+            
+            setTitle(data.title || '');
+            setDescription(data.description || '');
+            setPrice(data.price?.toString() || '');
+            setCategory(data.type || '');
+            setStatus(data.status === 'published');
+            setCoverUrl(data.cover_url || '');
+            setFileUrl(data.file_url || '');
+            
+            // Populate preview images
+            if (data.preview_urls && Array.isArray(data.preview_urls)) {
+                setPreviewImages(data.preview_urls.map((url: string) => ({
+                    id: Math.random().toString(36).substring(7),
+                    url
+                })));
+            }
+            
+            // Extract filename from URL (if it's a Supabase URL)
+            if (data.file_url) {
+                const parts = data.file_url.split('/');
+                setFileName(parts[parts.length - 1] || 'Digital Asset');
+            }
+        } catch (error: any) {
+            setErrors({ system: error.message });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const uploadFile = async (file: File, path: string) => {
+        const { data, error } = await supabase.storage
+            .from('media-produk')
+            .upload(path, file, { upsert: true });
+        
+        if (error) throw error;
+        
+        const { data: { publicUrl } } = supabase.storage
+            .from('media-produk')
+            .getPublicUrl(data.path);
+            
+        return publicUrl;
+    };
+
+    const handleSave = async () => {
         setShowSaveModal(false);
-        setIsDirty(false);
-        showToast("Perubahan produk berhasil disimpan!");
+        setIsSaving(true);
+        
+        try {
+            const timestamp = Date.now();
+            let final_cover_url = coverUrl;
+            let final_file_url = fileUrl;
+
+            // 1. Check if new thumbnail uploaded
+            const thumbInput = document.getElementById('thumbnail-file') as HTMLInputElement;
+            if (thumbInput?.files?.[0]) {
+                const thumbFile = thumbInput.files[0];
+                const ext = thumbFile.name.split('.').pop();
+                final_cover_url = await uploadFile(thumbFile, `thumbnails/${timestamp}.${ext}`);
+            }
+
+            // 2. Check if new asset file uploaded
+            const fileInput = document.getElementById('product-file') as HTMLInputElement;
+            if (fileInput?.files?.[0]) {
+                const productFile = fileInput.files[0];
+                const ext = productFile.name.split('.').pop();
+                final_file_url = await uploadFile(productFile, `assets/${timestamp}.${ext}`);
+            }
+
+            // 3. Process Preview Images
+            const finalPreviewUrls = await Promise.all(
+                previewImages.map(async (img, idx) => {
+                    if (img.file) {
+                        // It's a new file, upload it
+                        const ext = img.file.name.split('.').pop();
+                        return await uploadFile(img.file, `previews/${timestamp}_${idx}.${ext}`);
+                    }
+                    return img.url; // It's an existing URL
+                })
+            );
+
+            // 4. Update Database via API
+            const res = await fetch(`/api/products/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title,
+                    description,
+                    price: Number(price),
+                    type: category || 'digital',
+                    status: status ? 'published' : 'draft',
+                    cover_url: final_cover_url,
+                    file_url: final_file_url,
+                    preview_urls: finalPreviewUrls
+                })
+            });
+
+            if (!res.ok) throw new Error('Gagal memperbarui produk');
+
+            setIsDirty(false);
+            showToast("Perubahan produk berhasil disimpan!");
+            setTimeout(() => {
+                window.location.href = '/products';
+            }, 1000);
+        } catch (error: any) {
+            console.error('Update error:', error);
+            setErrors({ system: error.message });
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleBackClick = (e: React.MouseEvent) => {
@@ -48,6 +185,36 @@ export const EditProductDashboard = () => {
     const handleInputChange = () => {
         if (!isDirty) setIsDirty(true);
     };
+
+    const handlePreviewImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files) return;
+
+        const newImages = Array.from(files).map(file => ({
+            id: Math.random().toString(36).substring(7),
+            file,
+            url: URL.createObjectURL(file)
+        }));
+
+        setPreviewImages(prev => [...prev, ...newImages]);
+        setIsDirty(true);
+    };
+
+    const removePreviewImage = (id: string) => {
+        setPreviewImages(prev => prev.filter(img => img.id !== id));
+        setIsDirty(true);
+    };
+
+    if (isLoading) {
+        return (
+            <div className="flex-1 flex items-center justify-center min-h-screen bg-[#F8FAFC]">
+                <div className="text-center group">
+                    <div className="w-16 h-16 border-4 border-[#005ab4] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-xs font-black text-[#005ab4] uppercase tracking-widest">Loading Data...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex-1 flex flex-col min-h-screen bg-[#F8FAFC] relative">
@@ -68,16 +235,31 @@ export const EditProductDashboard = () => {
                     >
                         <ArrowLeftIcon className="w-5 h-5" />
                     </a>
-                    <h2 className="text-xl font-extrabold text-[#162138] tracking-tight">Edit Digital Product</h2>
+                    <h2 className="text-xl font-extrabold text-[#162138] tracking-tight">Edit Produk Digital</h2>
                 </div>
-                <div className="flex items-center space-x-6">
+                <div className="flex items-center space-x-3">
                     <Button 
                         variant="secondary" 
-                        className="px-8 py-2.5 rounded-full font-bold text-sm shadow-lg shadow-blue-900/30 hover:scale-105 active:scale-95 transition-all bg-[#465f89] hover:bg-[#344d77] text-white"
+                        className="px-8 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-blue-900/30 hover:scale-105 active:scale-95 transition-all bg-[#465f89] hover:bg-[#344d77] text-white"
                         onClick={() => setShowSaveModal(true)}
                     >
-                        Save
+                        Simpan Perubahan
                     </Button>
+                    <button 
+                        onClick={async () => {
+                            if (window.confirm('Hapus produk ini secara permanen?')) {
+                                try {
+                                    await fetch(`/api/products/${id}`, { method: 'DELETE' });
+                                    window.location.href = '/products';
+                                } catch (err) {
+                                    alert('Gagal menghapus produk');
+                                }
+                            }
+                        }}
+                        className="p-2.5 text-red-500 hover:bg-red-50 border border-red-100 rounded-xl transition-colors"
+                    >
+                        <TrashIcon className="w-5 h-5" />
+                    </button>
                 </div>
             </header>
 
@@ -93,33 +275,67 @@ export const EditProductDashboard = () => {
                             <Card className="p-8 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
                                 <div className="flex items-center space-x-3 mb-8">
                                     <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Product Information</h3>
+                                    <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Informasi Produk</h3>
                                 </div>
                                 
                                 <div className="space-y-6">
+                                    {errors.system && (
+                                        <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-[10px] font-black uppercase tracking-widest animate-in fade-in slide-in-from-top-2">
+                                            <ExclamationTriangleIcon className="w-5 h-5" />
+                                            {errors.system}
+                                        </div>
+                                    )}
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Product Name</label>
-                                        <Input type="text" defaultValue="Ebook: Master UI Design with Tailwind" />
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nama Produk</label>
+                                        <Input 
+                                            type="text" 
+                                            value={title} 
+                                            onChange={(e) => {
+                                                setTitle(e.target.value);
+                                                handleInputChange();
+                                            }}
+                                        />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Description</label>
-                                        <Textarea rows={5} defaultValue="Complete step-by-step guide to mastering modern interface design using the Tailwind CSS framework. Suitable for beginners to intermediates." />
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Deskripsi</label>
+                                        <Textarea 
+                                            rows={5} 
+                                            value={description} 
+                                            onChange={(e) => {
+                                                setDescription(e.target.value);
+                                                handleInputChange();
+                                            }}
+                                        />
                                     </div>
                                     <div className="grid grid-cols-2 gap-6">
                                         <div>
-                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Category</label>
-                                            <Select>
-                                                <option>E-Book</option>
-                                                <option>Online Course</option>
-                                                <option>Design Assets</option>
-                                                <option>Software</option>
+                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Kategori</label>
+                                            <Select value={category} onChange={(e) => {
+                                                setCategory(e.target.value);
+                                                handleInputChange();
+                                            }}>
+                                               <option value="">— Pilih Kategori —</option>
+                                               <option value="ebook">E-Book</option>
+                                               <option value="course">Kursus Online</option>
+                                               <option value="assets">Asset Desain</option>
+                                               <option value="software">Software / Plugin</option>
+                                               <option value="video">Bundle Video</option>
+                                               <option value="templates">Template</option>
                                             </Select>
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Price (USD)</label>
+                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Harga (IDR)</label>
                                             <div className="relative">
-                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">$</span>
-                                                <Input type="text" defaultValue="24.90" className="pl-8" />
+                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">Rp</span>
+                                                <Input 
+                                                    type="number" 
+                                                    value={price} 
+                                                    onChange={(e) => {
+                                                        setPrice(e.target.value);
+                                                        handleInputChange();
+                                                    }}
+                                                    className="pl-10" 
+                                                />
                                             </div>
                                         </div>
                                     </div>
@@ -130,16 +346,28 @@ export const EditProductDashboard = () => {
                             <Card className="p-8 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
                                 <div className="flex items-center space-x-3 mb-8">
                                     <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Digital Product File</h3>
+                                    <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">File Produk Digital</h3>
                                 </div>
                                 
-                                <div className="border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50 p-10 text-center group hover:border-[#465f89]/50 transition-all cursor-pointer">
+                                <div className="border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50 p-10 text-center group hover:border-[#465f89]/50 transition-all cursor-pointer relative">
+                                    <input 
+                                        type="file" 
+                                        id="product-file"
+                                        className="absolute inset-0 opacity-0 cursor-pointer" 
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                setFileName(file.name);
+                                                handleInputChange();
+                                            }
+                                        }}
+                                    />
                                     <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm mb-4 group-hover:scale-110 transition-transform">
                                         <CloudArrowUpIcon className="w-8 h-8 text-[#465f89]" />
                                     </div>
-                                    <p className="text-sm font-bold text-[#005ab4] mb-1">Drag and drop file here</p>
-                                    <p className="text-xs text-slate-500 mb-6">Maximum file size 500MB (PDF, ZIP, MP4)</p>
-                                    <Button variant="outline" className="px-6 py-2 rounded-full text-xs hover:bg-slate-100 border-slate-300">Select File</Button>
+                                    <p className="text-sm font-bold text-[#005ab4] mb-1">Tarik dan lepas file di sini</p>
+                                    <p className="text-xs text-slate-500 mb-6">Maksimal ukuran file 500MB (PDF, ZIP, MP4)</p>
+                                    <Button variant="outline" className="px-6 py-2 rounded-full text-xs hover:bg-slate-100 border-slate-300 pointer-events-none">Pilih File</Button>
                                 </div>
                                 
                                 <div className="mt-6 space-y-3">
@@ -149,18 +377,67 @@ export const EditProductDashboard = () => {
                                                 <DocumentIcon className="w-5 h-5" />
                                             </div>
                                             <div className="ml-4">
-                                                <p className="text-xs font-bold text-[#005ab4]">Master_UI_Design_Tailwind_v2.pdf</p>
-                                                <p className="text-[10px] text-slate-500">12.4 MB • Successfully uploaded</p>
+                                                <p className="text-xs font-bold text-[#005ab4] truncate max-w-[200px]">{fileName || 'Belum ada file terpilih'}</p>
+                                                <p className="text-[10px] text-slate-500">Asset siap digunakan</p>
                                             </div>
                                         </div>
-                                        <button 
-                                            className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"
-                                            onClick={() => setShowFileDeleteModal(true)}
-                                        >
-                                            <TrashIcon className="w-5 h-5" />
-                                        </button>
+                                        {fileName && (
+                                            <button 
+                                                className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                                                onClick={() => setShowFileDeleteModal(true)}
+                                            >
+                                                <TrashIcon className="w-5 h-5" />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
+                            </Card>
+
+                            {/* Preview Images Gallery Section */}
+                            <Card className="p-8 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
+                                <div className="flex items-center justify-between mb-8">
+                                    <div className="flex items-center space-x-3">
+                                        <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
+                                        <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Galeri Gambar Preview</h3>
+                                    </div>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{previewImages.length} / 8 Foto</span>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {previewImages.map((img) => (
+                                        <div key={img.id} className="relative aspect-video rounded-xl overflow-hidden group/item shadow-sm border border-slate-100">
+                                            <img src={img.url} className="w-full h-full object-cover transition-transform group-hover/item:scale-110" alt="Preview" />
+                                            <div className="absolute inset-0 bg-rose-500/80 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center justify-center">
+                                                <button 
+                                                    onClick={() => removePreviewImage(img.id)}
+                                                    className="p-2 bg-white rounded-lg text-rose-500 shadow-xl active:scale-90 transition-transform"
+                                                >
+                                                    <TrashIcon className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    
+                                    {previewImages.length < 8 && (
+                                        <div 
+                                            className="aspect-video rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center gap-2 hover:border-[#465f89]/60 hover:bg-blue-50/20 transition-all cursor-pointer group"
+                                            onClick={() => document.getElementById('gallery-files-edit')?.click()}
+                                        >
+                                            <CloudArrowUpIcon className="w-6 h-6 text-slate-300 group-hover:text-[#465f89]/60 transition-colors" />
+                                            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-wider group-hover:text-[#465f89]/60">Tambah Foto</p>
+                                        </div>
+                                    )}
+                                    
+                                    <input 
+                                        type="file" 
+                                        id="gallery-files-edit" 
+                                        className="hidden" 
+                                        multiple 
+                                        onChange={handlePreviewImagesChange}
+                                        accept="image/*"
+                                    />
+                                </div>
+                                <p className="text-[10px] text-slate-400 mt-4 font-medium italic italic">Galeri ini akan ditampilkan kepada calon pembeli sebagai preview produk.</p>
                             </Card>
 
                         </div>
@@ -174,16 +451,34 @@ export const EditProductDashboard = () => {
                                     <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
                                     <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Thumbnail</h3>
                                 </div>
-                                <div className="relative group aspect-square rounded-2xl overflow-hidden bg-slate-50 mb-4">
+                                <div 
+                                    className="relative group aspect-square rounded-2xl overflow-hidden bg-slate-50 mb-4 cursor-pointer"
+                                    onClick={() => document.getElementById('thumbnail-file')?.click()}
+                                >
                                     <img 
                                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
-                                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuCFFfO0u3ABzaB5B6QVhNOFAv9wmpw2FE2IXeDpmfjmvxHPhy39x-T7Pzl9pxTZBSfuehl-5mcwrRoczZ9UohNhPnjIKHJswbQIU235Vv_OQDsYKjPkCaqhMD8u5BCxI6c_qTEf4HCdeL9HXok2xC_WaAlnM8Oz2BENBYgIPvorFlJEY6J-m2PET-FsOXaApOH1RTasb6E5KDXjLel-5WYiHgGxbax7lGpMQEUfLaVtnPnHdPMx_ZxXcPV6PeKHaebSt1QAWXI_Ii7K" alt="Thumbnail" />
-                                <div className="absolute inset-0 bg-[#005ab4]/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
-                                        <button className="bg-white text-[#005ab4] px-4 py-2 rounded-full text-xs font-bold flex items-center shadow-lg active:scale-95 transition-all">
+                                        src={coverUrl || "https://images.unsplash.com/photo-1544006659-f0b21f04cb1b?w=400&h=400&fit=crop"} 
+                                        alt="Thumbnail" 
+                                    />
+                                    <div className="absolute inset-0 bg-[#005ab4]/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+                                        <div className="bg-white text-[#005ab4] px-4 py-2 rounded-full text-xs font-bold flex items-center shadow-lg active:scale-95 transition-all">
                                             <PencilSquareIcon className="w-4 h-4 mr-2" />
-                                            Change Image
-                                        </button>
+                                            Ganti Gambar
+                                        </div>
                                     </div>
+                                    <input 
+                                        type="file" 
+                                        id="thumbnail-file"
+                                        className="hidden" 
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                setCoverUrl(URL.createObjectURL(file));
+                                                handleInputChange();
+                                            }
+                                        }}
+                                        accept="image/*"
+                                    />
                                 </div>
                                 <p className="text-[10px] text-slate-500 leading-relaxed text-center italic font-medium">Recommended size: 1080x1080px (1:1)</p>
                             </Card>
@@ -192,14 +487,14 @@ export const EditProductDashboard = () => {
                             <Card className="p-6 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
                                 <div className="flex items-center space-x-3 mb-8">
                                     <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Settings</h3>
+                                    <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Pengaturan</h3>
                                 </div>
                                 <div className="space-y-6">
                                     
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <p className="text-sm font-bold text-[#005ab4]">Product Status</p>
-                                            <p className="text-[10px] text-slate-500">Show product in store</p>
+                                            <p className="text-sm font-bold text-[#005ab4]">Status Produk</p>
+                                            <p className="text-[10px] text-slate-500">Tampilkan produk di toko</p>
                                         </div>
                                         <Toggle 
                                             checked={status} 
@@ -212,8 +507,8 @@ export const EditProductDashboard = () => {
                                     
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <p className="text-sm font-bold text-[#005ab4]">Public Visibility</p>
-                                            <p className="text-[10px] text-slate-500">Searchable on Google</p>
+                                            <p className="text-sm font-bold text-[#005ab4]">Visibilitas Publik</p>
+                                            <p className="text-[10px] text-slate-500">Dapat dicari di Google</p>
                                         </div>
                                         <Toggle 
                                             checked={visibility} 
@@ -227,12 +522,12 @@ export const EditProductDashboard = () => {
                                     <hr className="border-slate-100"/>
                                     
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Download Link Expiry</label>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Kedaluwarsa Link Download</label>
                                         <Select className="font-bold">
-                                            <option>Forever (No Expiry)</option>
-                                            <option>24 Hours</option>
-                                            <option>7 Days</option>
-                                            <option>30 Days</option>
+                                            <option>Selamanya (Tanpa Batas)</option>
+                                            <option>24 Jam</option>
+                                            <option>7 Hari</option>
+                                            <option>30 Hari</option>
                                         </Select>
                                     </div>
                                 </div>
@@ -241,10 +536,10 @@ export const EditProductDashboard = () => {
                             {/* Quick Actions */}
                             <div className="p-6 bg-[#0873df] rounded-2xl text-white overflow-hidden relative shadow-lg shadow-blue-500/10">
                                 <div className="relative z-10">
-                                    <h4 className="font-bold text-sm mb-2">Need Help?</h4>
-                                    <p className="text-xs text-blue-200 mb-4 leading-relaxed">Learn how to optimize your digital product sales in our Help Center.</p>
+                                    <h4 className="font-bold text-sm mb-2">Butuh Bantuan?</h4>
+                                    <p className="text-xs text-blue-200 mb-4 leading-relaxed">Pelajari cara mengoptimalkan penjualan produk digital Anda di Pusat Bantuan kami.</p>
                                     <a className="inline-flex items-center text-white text-xs font-bold hover:underline" href="#">
-                                        Read Guide 
+                                        Baca Panduan 
                                         <ArrowUpRightIcon className="w-4 h-4 ml-1" />
                                     </a>
                                 </div>
@@ -276,10 +571,11 @@ export const EditProductDashboard = () => {
                                 Periksa Lagi
                             </button>
                             <button 
-                                className="flex-1 py-3 rounded-xl font-black bg-[#465f89] hover:bg-[#344d77] text-white shadow-lg shadow-blue-900/20 transition-all text-[10px] uppercase tracking-widest" 
+                                className="flex-1 py-3 rounded-xl font-black bg-[#465f89] hover:bg-[#344d77] text-white shadow-lg shadow-blue-900/20 transition-all text-[10px] uppercase tracking-widest disabled:opacity-50" 
                                 onClick={handleSave}
+                                disabled={isSaving}
                             >
-                                Ya, Simpan
+                                {isSaving ? 'Menyimpan...' : 'Ya, Simpan'}
                             </button>
                         </div>
                     </div>
@@ -327,7 +623,7 @@ export const EditProductDashboard = () => {
                             </div>
                             <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Hapus File Produk?</h3>
                             <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                                Apakah Anda yakin ingin menghapus file <strong className="text-slate-900">"Master_UI_Design_Tailwind_v2.pdf"</strong>? Anda harus mengunggah file baru agar produk tetap dapat diakses oleh pembeli.
+                                Apakah Anda yakin ingin menghapus file <strong className="text-slate-900">"{fileName}"</strong>? Anda harus mengunggah file baru agar produk tetap dapat diakses oleh pembeli.
                             </p>
                         </div>
                         <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
@@ -340,7 +636,10 @@ export const EditProductDashboard = () => {
                             <button 
                                 className="px-6 py-2.5 rounded-xl font-black bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/20 transition-all text-[10px] uppercase tracking-widest" 
                                 onClick={() => {
+                                    setFileUrl('');
+                                    setFileName('');
                                     setShowFileDeleteModal(false);
+                                    setIsDirty(true);
                                     showToast("File produk berhasil dihapus.");
                                 }}
                             >

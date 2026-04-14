@@ -35,7 +35,7 @@ export const ProductAccessGate = () => {
             <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-8 ">
                 <div className="text-center space-y-4">
                     <ArrowPathIcon className="w-12 h-12 text-primary animate-spin mx-auto" />
-                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Verifying Access...</p>
+                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Memverifikasi Akses...</p>
                 </div>
             </div>
         );
@@ -49,17 +49,17 @@ export const ProductAccessGate = () => {
                         <ShieldExclamationIcon className="w-10 h-10" />
                     </div>
                     <div className="space-y-2">
-                        <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Access Denied</h2>
+                        <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Akses Ditolak</h2>
                         <p className="text-sm font-medium text-slate-500 leading-relaxed">
                             Anda tidak bisa mengakses tautan. Silahkan hubungi kreator.
                         </p>
                     </div>
                     <div className="pt-4 flex flex-col gap-3">
                         <Button variant="outline" className="w-full py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest border-slate-200">
-                            Back to Home
+                            Kembali ke Beranda
                         </Button>
                         <Button className="w-full bg-rose-500 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-rose-600">
-                            Contact Support
+                            Hubungi Dukungan
                         </Button>
                     </div>
                 </Card>
@@ -79,7 +79,7 @@ export const ProductAccessGate = () => {
                         <h1 className="text-white font-black text-sm uppercase tracking-tight">Mastering UI Design Guide.pdf</h1>
                         <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-[9px] font-black text-emerald-400 uppercase tracking-[0.15em] flex items-center gap-1">
-                                <LockClosedIcon className="w-3 h-3" /> Encrypted Access
+                                <LockClosedIcon className="w-3 h-3" /> Akses Terenkripsi
                             </span>
                             <span className="text-white/20 text-[9px]">•</span>
                             <span className="text-[9px] font-medium text-white/40 uppercase tracking-widest italic">{VALID_EMAIL}</span>
@@ -91,7 +91,7 @@ export const ProductAccessGate = () => {
                         <ArrowPathIcon className="w-5 h-5" />
                     </button>
                     <Button variant="primary" className="bg-white text-slate-900 hover:bg-slate-100 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">
-                        Download Original
+                        Unduh File Asli
                     </Button>
                 </div>
             </header>
@@ -113,7 +113,7 @@ export const ProductAccessGate = () => {
             {/* Floating Security Banner */}
             <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-md border border-white/10 px-6 py-3 rounded-2xl flex items-center gap-4 text-white hover:bg-white/20 transition-all cursor-default select-none shadow-2xl">
                 <ShieldExclamationIcon className="w-4 h-4 text-emerald-400" />
-                <p className="text-[9px] font-black uppercase tracking-widest opacity-80">This document is protected with Dynamic Watermark & Forensic Tracking</p>
+                <p className="text-[9px] font-black uppercase tracking-widest opacity-80">Dokumen ini dilindungi dengan Watermark Dinamis & Pelacakan Forensik</p>
             </div>
         </div>
     );

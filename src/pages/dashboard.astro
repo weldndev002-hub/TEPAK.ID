@@ -2,7 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { LightSidebar } from '../components/layout/LightSidebar';
 import { LightTopNavbar } from '../components/layout/LightTopNavbar';
-import { StatCard } from '../components/dashboard/StatCard';
+import { IntegratedStatsGrid } from '../components/dashboard/IntegratedStatsGrid';
 import { AnalyticsChart } from '../components/dashboard/AnalyticsChart';
 import { DeviceBreakdown } from '../components/dashboard/DeviceBreakdown';
 import { BrowserPerformance } from '../components/dashboard/BrowserPerformance';
@@ -21,34 +21,6 @@ import {
   ShareIcon
 } from '@heroicons/react/24/outline';
 
-// Initial metrics (simulated)
-const userStats = {
-  views: 0,
-  clicks: 0,
-  conversionRate: "0%",
-  revenue: "Rp 0"
-};
-
-const topMetrics = [
-  { 
-    title: "Total Views", 
-    value: userStats.views, 
-    icon: EyeIcon, 
-    colorTheme: "tertiary" as const,
-    isEmpty: userStats.views === 0,
-    emptyMessage: "Mulai bagikan tautan Anda!"
-  },
-  { 
-    title: "Total Clicks", 
-    value: userStats.clicks, 
-    icon: CursorArrowRaysIcon, 
-    colorTheme: "primary" as const,
-    isEmpty: userStats.clicks === 0,
-    emptyMessage: "Kreativitas menunggu klik pertama."
-  },
-  { title: "Conversation Rate", value: userStats.conversionRate, icon: ClockIcon, colorTheme: "slate" as const },
-  { title: "Total Revenue", value: userStats.revenue, icon: CurrencyDollarIcon, colorTheme: "green" as const }
-];
 ---
 
 <BaseLayout title="Atelier Dashboard — Real-time Pulse">
@@ -78,12 +50,8 @@ const topMetrics = [
                     </div>
                 </div>
 
-                {/* Top Row: Metrics */}
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    {topMetrics.map((metric) => (
-                        <StatCard {...metric} client:load />
-                    ))}
-                </div>
+                {/* Top Row: Metrics (Real-time) */}
+                <IntegratedStatsGrid client:load />
 
                 <!-- Middle Section: Main Chart & Device Breakdown -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">

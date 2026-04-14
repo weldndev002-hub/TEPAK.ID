@@ -80,27 +80,25 @@ const ALL_BLOCKS = [
 ];
 
 export const PlanManagementDashboard = () => {
+    const [plans, setPlans] = React.useState<any[]>([]);
+    const [subStats, setSubStats] = React.useState<any>({ free: 0, pro: 0, enterprise: 0 });
+    const [loading, setLoading] = React.useState(true);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const [saveConfirm, setSaveConfirm] = React.useState(false);
     const [discardConfirm, setDiscardConfirm] = React.useState(false);
 
     // New plan modal state
     const [newPlan, setNewPlan] = React.useState({
+        id: '',
         name: '',
         badge: '',
-        priceMonthly: '',
-        priceYearly: '',
+        price_monthly: 0,
+        price_yearly: 0,
         description: '',
-        selectedFeatures: [] as string[],
-        selectedBlocks: [] as string[],
+        features: [] as string[],
+        config: { allowed_blocks: [] as string[] },
     });
 
-    const [prices, setPrices] = React.useState({
-        standardMonthly: 0,
-        standardYearly: 0,
-        proMonthly: 29,
-        proYearly: 290
-    });
     const [errors, setErrors] = React.useState<Record<string, string>>({});
 
     // Toast
@@ -110,61 +108,102 @@ export const PlanManagementDashboard = () => {
         setTimeout(() => setToast(null), 4000);
     };
 
-    const priceSchema = z.number({ 
-        invalid_type_error: "Price must be a number",
-        required_error: "Required"
-    }).nonnegative("Must be 0 or greater").finite();
-
-    const handlePriceChange = (key: keyof typeof prices, value: string) => {
-        const numVal = parseFloat(value);
-        const result = priceSchema.safeParse(numVal);
-        
-        if (!result.success) {
-            setErrors(prev => ({ ...prev, [key]: result.error.issues[0].message }));
-        } else {
-            setErrors(prev => {
-                const newErrors = { ...prev };
-                delete newErrors[key];
-                return newErrors;
-            });
-            setPrices(prev => ({ ...prev, [key]: numVal }));
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [plansRes, statsRes] = await Promise.all([
+                fetch('/api/admin/plans'),
+                fetch('/api/admin/subscriptions')
+            ]);
+            if (plansRes.ok) {
+                const data = await plansRes.json();
+                setPlans(data);
+            }
+            if (statsRes.ok) {
+                const stats = await statsRes.json();
+                setSubStats(stats);
+            }
+        } catch (err) {
+            console.error('Failed to fetch plan data:', err);
+        } finally {
+            setLoading(false);
         }
+    };
+
+    React.useEffect(() => {
+        fetchData();
+    }, []);
+
+    const handlePriceChange = (planId: string, type: 'price_monthly' | 'price_yearly', value: string) => {
+        const numVal = parseFloat(value);
+        if (isNaN(numVal)) return;
+
+        setPlans(prev => prev.map(p => p.id === planId ? { ...p, [type]: numVal } : p));
+    };
+
+    const handleFeatureToggle = (planId: string, feature: string) => {
+        setPlans(prev => prev.map(p => {
+            if (p.id !== planId) return p;
+            const features = p.features || [];
+            return {
+                ...p,
+                features: features.includes(feature)
+                    ? features.filter((f: string) => f !== feature)
+                    : [...features, feature]
+            };
+        }));
     };
 
     const handleSaveChanges = () => {
-        if (Object.keys(errors).length > 0) {
-            showToast('error', 'Please fix validation errors before saving.');
-            return;
-        }
         setSaveConfirm(true);
     };
 
-    const executeSave = () => {
+    const executeSave = async () => {
         setSaveConfirm(false);
-        showToast('success', 'Pricing and configuration updated successfully across the platform!');
+        try {
+            const res = await fetch('/api/admin/plans/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(plans)
+            });
+            if (!res.ok) throw new Error('Failed to save plans');
+            showToast('success', 'Pricing and configuration updated successfully across the platform!');
+            fetchData();
+        } catch (err: any) {
+            showToast('error', err.message);
+        }
     };
 
     const executeDiscard = () => {
         setDiscardConfirm(false);
-        window.location.reload();
+        fetchData();
     };
 
     const toggleFeature = (feature: string) => {
-        setNewPlan(prev => ({
-            ...prev,
-            selectedFeatures: prev.selectedFeatures.includes(feature)
-                ? prev.selectedFeatures.filter(f => f !== feature)
-                : [...prev.selectedFeatures, feature]
-        }));
+        setNewPlan(prev => {
+            const features = prev.features || [];
+            return {
+                ...prev,
+                features: features.includes(feature)
+                    ? features.filter(f => f !== feature)
+                    : [...features, feature]
+            };
+        });
     };
 
     const toggleBlock = (blockId: string) => {
-        setNewPlan(prev => ({
-            ...prev,
-            selectedBlocks: prev.selectedBlocks.includes(blockId)
-                ? prev.selectedBlocks.filter(b => b !== blockId)
-                : [...prev.selectedBlocks, blockId]
-        }));
+        setNewPlan(prev => {
+            const blocks = prev.config?.allowed_blocks || [];
+            return {
+                ...prev,
+                config: {
+                    ...prev.config,
+                    allowed_blocks: blocks.includes(blockId)
+                        ? blocks.filter(b => b !== blockId)
+                        : [...blocks, blockId]
+                }
+            };
+        });
     };
 
     const blocksByCategory = ALL_BLOCKS.reduce((acc, block) => {
@@ -172,6 +211,15 @@ export const PlanManagementDashboard = () => {
         acc[block.category].push(block);
         return acc;
     }, {} as Record<string, typeof ALL_BLOCKS>);
+
+    if (loading && plans.length === 0) {
+        return (
+            <div className="w-full py-20 flex flex-col items-center justify-center gap-4">
+                <div className="w-10 h-10 border-4 border-[#005ab4] border-t-transparent rounded-full animate-spin"></div>
+                <p className="font-black text-[#005ab4] uppercase tracking-widest text-xs">Loading Plan Configurations...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full">
@@ -214,105 +262,69 @@ export const PlanManagementDashboard = () => {
 
             {/* Plan Tier Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-                {/* Standard Plan Card */}
-                <Card className="p-8 border-slate-200/60 shadow-sm relative group overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full -mr-16 -mt-16 group-hover:bg-slate-100 transition-colors"></div>
-                    <div className="relative z-10 flex flex-col h-full">
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-500">
-                                <span className="material-symbols-outlined text-2xl">eco</span>
-                            </div>
-                            <Badge variant="ghost" className="bg-slate-100 text-slate-600 border-none font-black text-[10px]">CURRENT DEFAULTS</Badge>
-                        </div>
-                        <h3 className="text-2xl font-black text-slate-900 mb-2">Standard Plan</h3>
-                        <p className="text-sm text-slate-500 mb-8 leading-relaxed">Essential features for creators starting their digital journey.</p>
-                        
-                        <div className="grid grid-cols-2 gap-4 mt-auto">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Monthly Price</label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">$</span>
-                                    <input 
-                                        type="text" 
-                                        defaultValue={prices.standardMonthly} 
-                                        onChange={(e) => handlePriceChange('standardMonthly', e.target.value)}
-                                        className={cn(
-                                            "w-full bg-slate-50 border rounded-xl py-2.5 pl-7 pr-3 text-lg font-black text-slate-900 focus:ring-2 outline-none transition-all",
-                                            errors.standardMonthly ? "border-rose-500 focus:ring-rose-500/20" : "border-slate-200 focus:ring-[#465f89]/20"
-                                        )}
-                                    />
-                                    {errors.standardMonthly && <p className="text-[9px] font-black text-rose-500 uppercase mt-1 flex items-center gap-1"><ExclamationCircleIcon className="w-3 h-3"/> {errors.standardMonthly}</p>}
+                {plans.map((plan) => (
+                    <Card key={plan.id} className={cn(
+                        "p-8 relative group overflow-hidden border transition-all",
+                        plan.id === 'pro' 
+                            ? "border-[#d6e3ff] bg-gradient-to-br from-white to-[#f8faff] shadow-xl shadow-blue-500/5" 
+                            : "border-slate-200/60 shadow-sm"
+                    )}>
+                        <div className={cn(
+                            "absolute top-0 right-0 w-32 h-32 rounded-full -mr-16 -mt-16 group-hover:transition-colors",
+                            plan.id === 'pro' ? "bg-[#d6e3ff]/30 group-hover:bg-[#d6e3ff]/50" : "bg-slate-50 group-hover:bg-slate-100"
+                        )}></div>
+                        <div className="relative z-10 flex flex-col h-full">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className={cn(
+                                    "w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all",
+                                    plan.id === 'pro' ? "bg-[#005ab4] text-white shadow-blue-500/20" : "bg-slate-100 text-slate-500 shadow-transparent"
+                                )}>
+                                    <span className="material-symbols-outlined text-2xl">{plan.id === 'pro' ? 'rocket_launch' : 'eco'}</span>
+                                </div>
+                                <div className="flex flex-col items-end gap-1">
+                                    <Badge variant="ghost" className={cn(
+                                        "border-none font-black text-[10px]",
+                                        plan.id === 'pro' ? "bg-[#005ab4] text-white animate-pulse" : "bg-slate-100 text-slate-600"
+                                    )}>{plan.badge || 'DEFAULT'}</Badge>
+                                    <span className="text-[9px] font-black text-slate-400 tracking-widest">{subStats[plan.id] || 0} SUBSCRIBERS</span>
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Yearly Price</label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">$</span>
-                                    <input 
-                                        type="text" 
-                                        defaultValue={prices.standardYearly} 
-                                        onChange={(e) => handlePriceChange('standardYearly', e.target.value)}
-                                        className={cn(
-                                            "w-full bg-slate-50 border rounded-xl py-2.5 pl-7 pr-3 text-lg font-black text-slate-900 focus:ring-2 outline-none transition-all",
-                                            errors.standardYearly ? "border-rose-500 focus:ring-rose-500/20" : "border-slate-200 focus:ring-[#465f89]/20"
-                                        )}
-                                    />
-                                    {errors.standardYearly && <p className="text-[9px] font-black text-rose-500 uppercase mt-1 flex items-center gap-1"><ExclamationCircleIcon className="w-3 h-3"/> {errors.standardYearly}</p>}
+                            <h3 className={cn("text-2xl font-black mb-2", plan.id === 'pro' ? "text-[#005ab4]" : "text-slate-900")}>{plan.name}</h3>
+                            <p className="text-sm text-slate-500 mb-8 leading-relaxed max-w-[200px]">{plan.description}</p>
+                            
+                            <div className="grid grid-cols-2 gap-4 mt-auto">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Monthly (Rp)</label>
+                                    <div className="relative">
+                                        <input 
+                                            type="text" 
+                                            value={plan.price_monthly} 
+                                            onChange={(e) => handlePriceChange(plan.id, 'price_monthly', e.target.value)}
+                                            className={cn(
+                                                "w-full border rounded-xl py-2.5 px-3 text-lg font-black focus:ring-2 outline-none transition-all",
+                                                plan.id === 'pro' ? "bg-white border-[#d6e3ff] text-[#005ab4] focus:ring-[#005ab4]/20" : "bg-slate-50 border-slate-200 text-slate-900 focus:ring-[#465f89]/20"
+                                            )}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                </Card>
-
-                {/* PRO Plan Card */}
-                <Card className="p-8 border-[#d6e3ff] bg-gradient-to-br from-white to-[#f8faff] shadow-xl shadow-blue-500/5 relative group overflow-hidden border">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-[#d6e3ff]/30 rounded-full -mr-16 -mt-16 group-hover:bg-[#d6e3ff]/50 transition-colors"></div>
-                    <div className="relative z-10 flex flex-col h-full">
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="w-12 h-12 bg-[#005ab4] rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-                                <span className="material-symbols-outlined text-2xl">rocket_launch</span>
-                            </div>
-                            <Badge className="bg-[#005ab4] text-white border-none font-black text-[10px] animate-pulse">MOST POPULAR</Badge>
-                        </div>
-                        <h3 className="text-2xl font-black text-[#005ab4] mb-2">PRO Plan</h3>
-                        <p className="text-sm text-blue-900/60 mb-8 leading-relaxed">Advanced tools, deeper analytics, and premium integrations.</p>
-                        
-                        <div className="grid grid-cols-2 gap-4 mt-auto">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-[#00458d] uppercase tracking-widest">Monthly Price</label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400 font-bold text-sm">$</span>
-                                    <input 
-                                        type="text" 
-                                        defaultValue={prices.proMonthly} 
-                                        onChange={(e) => handlePriceChange('proMonthly', e.target.value)}
-                                        className={cn(
-                                            "w-full bg-white border rounded-xl py-2.5 pl-7 pr-3 text-lg font-black text-[#005ab4] focus:ring-2 outline-none shadow-sm transition-all",
-                                            errors.proMonthly ? "border-rose-500 focus:ring-rose-500/20" : "border-[#d6e3ff] focus:ring-[#005ab4]/20"
-                                        )}
-                                    />
-                                    {errors.proMonthly && <p className="text-[9px] font-black text-rose-500 uppercase mt-1 flex items-center gap-1"><ExclamationCircleIcon className="w-3 h-3"/> {errors.proMonthly}</p>}
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-[#00458d] uppercase tracking-widest">Yearly Price</label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400 font-bold text-sm">$</span>
-                                    <input 
-                                        type="text" 
-                                        defaultValue={prices.proYearly} 
-                                        onChange={(e) => handlePriceChange('proYearly', e.target.value)}
-                                        className={cn(
-                                            "w-full bg-white border rounded-xl py-2.5 pl-7 pr-3 text-lg font-black text-[#005ab4] focus:ring-2 outline-none shadow-sm transition-all",
-                                            errors.proYearly ? "border-rose-500 focus:ring-rose-500/20" : "border-[#d6e3ff] focus:ring-[#005ab4]/20"
-                                        )}
-                                    />
-                                    {errors.proYearly && <p className="text-[9px] font-black text-rose-500 uppercase mt-1 flex items-center gap-1"><ExclamationCircleIcon className="w-3 h-3"/> {errors.proYearly}</p>}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Yearly (Rp)</label>
+                                    <div className="relative">
+                                        <input 
+                                            type="text" 
+                                            value={plan.price_yearly} 
+                                            onChange={(e) => handlePriceChange(plan.id, 'price_yearly', e.target.value)}
+                                            className={cn(
+                                                "w-full border rounded-xl py-2.5 px-3 text-lg font-black focus:ring-2 outline-none transition-all",
+                                                plan.id === 'pro' ? "bg-white border-[#d6e3ff] text-[#005ab4] focus:ring-[#005ab4]/20" : "bg-slate-50 border-slate-200 text-slate-900 focus:ring-[#465f89]/20"
+                                            )}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </Card>
+                    </Card>
+                ))}
             </div>
 
             {/* Feature Matrix */}
@@ -348,16 +360,16 @@ export const PlanManagementDashboard = () => {
                                     <Badge variant="ghost" className="bg-blue-50 text-blue-600 border-none text-[9px] font-black">CORE</Badge>
                                 </TableCell>
                             </TableRow>
-                            <TableRow className="hover:bg-slate-50/50 transition-colors">
+                             <TableRow className="hover:bg-slate-50/50 transition-colors">
                                 <TableCell className="px-8 py-5">
                                     <div className="font-bold text-slate-700">Digital Product Sales</div>
                                     <div className="text-[10px] text-slate-400 font-medium">Sell PDF, Videos, or Files</div>
                                 </TableCell>
                                 <TableCell className="text-center">
-                                    <div className="flex justify-center"><Toggle checked={false} onChange={() => {}} /></div>
+                                    <div className="flex justify-center"><Toggle checked={plans.find(p=>p.id==='free')?.features?.includes('Digital Product Sales')} onChange={() => handleFeatureToggle('free', 'Digital Product Sales')} /></div>
                                 </TableCell>
                                 <TableCell className="text-center">
-                                    <div className="flex justify-center"><Toggle checked={true} onChange={() => {}} /></div>
+                                    <div className="flex justify-center"><Toggle checked={plans.find(p=>p.id==='pro')?.features?.includes('Digital Product Sales')} onChange={() => handleFeatureToggle('pro', 'Digital Product Sales')} /></div>
                                 </TableCell>
                                 <TableCell className="px-8 text-right">
                                     <Badge variant="ghost" className="bg-emerald-50 text-emerald-600 border-none text-[9px] font-black">COMMERCE</Badge>
@@ -369,10 +381,10 @@ export const PlanManagementDashboard = () => {
                                     <div className="text-[10px] text-slate-400 font-medium">Connect external domains</div>
                                 </TableCell>
                                 <TableCell className="text-center">
-                                    <div className="flex justify-center"><Toggle checked={false} onChange={() => {}} /></div>
+                                    <div className="flex justify-center"><Toggle checked={plans.find(p=>p.id==='free')?.features?.includes('Custom Domain (CNAME)')} onChange={() => handleFeatureToggle('free', 'Custom Domain (CNAME)')} /></div>
                                 </TableCell>
                                 <TableCell className="text-center">
-                                    <div className="flex justify-center"><Toggle checked={true} onChange={() => {}} /></div>
+                                    <div className="flex justify-center"><Toggle checked={plans.find(p=>p.id==='pro')?.features?.includes('Custom Domain (CNAME)')} onChange={() => handleFeatureToggle('pro', 'Custom Domain (CNAME)')} /></div>
                                 </TableCell>
                                 <TableCell className="px-8 text-right">
                                     <Badge variant="ghost" className="bg-purple-50 text-purple-600 border-none text-[9px] font-black">PREMIUM</Badge>
@@ -384,10 +396,10 @@ export const PlanManagementDashboard = () => {
                                     <div className="text-[10px] text-slate-400 font-medium">Direct order alerts to W.A</div>
                                 </TableCell>
                                 <TableCell className="text-center">
-                                    <div className="flex justify-center"><Toggle checked={false} onChange={() => {}} /></div>
+                                    <div className="flex justify-center"><Toggle checked={plans.find(p=>p.id==='free')?.features?.includes('WhatsApp Notification')} onChange={() => handleFeatureToggle('free', 'WhatsApp Notification')} /></div>
                                 </TableCell>
                                 <TableCell className="text-center">
-                                    <div className="flex justify-center"><Toggle checked={true} onChange={() => {}} /></div>
+                                    <div className="flex justify-center"><Toggle checked={plans.find(p=>p.id==='pro')?.features?.includes('WhatsApp Notification')} onChange={() => handleFeatureToggle('pro', 'WhatsApp Notification')} /></div>
                                 </TableCell>
                                 <TableCell className="px-8 text-right">
                                     <Badge variant="ghost" className="bg-emerald-50 text-emerald-600 border-none text-[9px] font-black">INTEGRATION</Badge>
@@ -451,8 +463,8 @@ export const PlanManagementDashboard = () => {
                                             className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-8 pr-4 focus:ring-2 focus:ring-[#005ab4]/20 outline-none transition-all font-black text-slate-900" 
                                             placeholder="Monthly price" 
                                             type="number" 
-                                            value={newPlan.priceMonthly}
-                                            onChange={e => setNewPlan(p => ({...p, priceMonthly: e.target.value}))}
+                                            value={newPlan.price_monthly}
+                                            onChange={e => setNewPlan(p => ({...p, price_monthly: Number(e.target.value)}))}
                                         />
                                     </div>
                                     <div className="relative">
@@ -461,8 +473,8 @@ export const PlanManagementDashboard = () => {
                                             className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-8 pr-4 focus:ring-2 focus:ring-[#005ab4]/20 outline-none transition-all font-black text-slate-900" 
                                             placeholder="Yearly price" 
                                             type="number"
-                                            value={newPlan.priceYearly}
-                                            onChange={e => setNewPlan(p => ({...p, priceYearly: e.target.value}))}
+                                            value={newPlan.price_yearly}
+                                            onChange={e => setNewPlan(p => ({...p, price_yearly: Number(e.target.value)}))}
                                         />
                                     </div>
                                 </div>
@@ -488,14 +500,14 @@ export const PlanManagementDashboard = () => {
                                     {['Custom Domain', 'Unlimited Products', 'Priority Support', 'API Access', 'White-labeling', 'Advanced Analytics'].map(feature => (
                                         <label key={feature} className={cn(
                                             "flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border",
-                                            newPlan.selectedFeatures.includes(feature)
+                                            (newPlan.features || []).includes(feature)
                                                 ? "bg-blue-50 border-[#005ab4]/30 text-[#005ab4]"
                                                 : "bg-slate-50 border-transparent hover:bg-slate-100 text-slate-700"
                                         )}>
                                             <input 
                                                 type="checkbox" 
                                                 className="w-4 h-4 rounded border-slate-300 text-[#005ab4] focus:ring-[#005ab4]/20"
-                                                checked={newPlan.selectedFeatures.includes(feature)}
+                                                checked={(newPlan.features || []).includes(feature)}
                                                 onChange={() => toggleFeature(feature)}
                                             />
                                             <span className="text-xs font-bold">{feature}</span>
@@ -518,18 +530,18 @@ export const PlanManagementDashboard = () => {
                                                 {blocks.map(block => (
                                                     <label key={block.id} className={cn(
                                                         "flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-all border",
-                                                        newPlan.selectedBlocks.includes(block.id)
+                                                        (newPlan.config?.allowed_blocks || []).includes(block.id)
                                                             ? "bg-blue-50 border-[#005ab4]/30"
                                                             : "bg-slate-50 border-transparent hover:bg-slate-100"
                                                     )}>
                                                         <input 
                                                             type="checkbox" 
                                                             className="w-4 h-4 rounded border-slate-300 text-[#005ab4] focus:ring-[#005ab4]/20 mt-0.5 shrink-0"
-                                                            checked={newPlan.selectedBlocks.includes(block.id)}
+                                                            checked={(newPlan.config?.allowed_blocks || []).includes(block.id)}
                                                             onChange={() => toggleBlock(block.id)}
                                                         />
                                                         <div>
-                                                            <span className={cn("text-xs font-bold block", newPlan.selectedBlocks.includes(block.id) ? "text-[#005ab4]" : "text-slate-700")}>{block.label}</span>
+                                                            <span className={cn("text-xs font-bold block", (newPlan.config?.allowed_blocks || []).includes(block.id) ? "text-[#005ab4]" : "text-slate-700")}>{block.label}</span>
                                                             <span className="text-[9px] text-slate-400">{block.desc}</span>
                                                         </div>
                                                     </label>
@@ -538,26 +550,13 @@ export const PlanManagementDashboard = () => {
                                         </div>
                                     ))}
                                 </div>
-                                {newPlan.selectedBlocks.length > 0 && (
-                                    <div className="flex flex-wrap gap-1.5 pt-2">
-                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest self-center">Selected:</span>
-                                        {newPlan.selectedBlocks.map(id => {
-                                            const block = ALL_BLOCKS.find(b => b.id === id);
-                                            return block ? (
-                                                <span key={id} className="text-[9px] font-black bg-[#005ab4]/10 text-[#005ab4] px-2 py-1 rounded-lg uppercase">
-                                                    {block.label}
-                                                </span>
-                                            ) : null;
-                                        })}
-                                    </div>
-                                )}
                             </div>
                         </div>
 
                         {/* Modal Footer */}
                         <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
                             <p className="text-[10px] text-slate-400 font-medium">
-                                {newPlan.selectedBlocks.length} blocks · {newPlan.selectedFeatures.length} features selected
+                                {(newPlan.config?.allowed_blocks || []).length} blocks · {(newPlan.features || []).length} features selected
                             </p>
                             <div className="flex gap-3">
                                 <button 

@@ -1,48 +1,109 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../ui/Card';
-import Button from '../ui/Button';
+import { Button } from '../ui/Button';
 import { 
     BuildingLibraryIcon, 
     DocumentTextIcon, 
-    ArrowTopRightOnSquareIcon 
+    ArrowTopRightOnSquareIcon,
+    ArrowLeftIcon
 } from '@heroicons/react/24/outline';
 
 export const WithdrawalDetailsDashboard = () => {
+    const [withdrawal, setWithdrawal] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id');
+        if (id) {
+            fetchWithdrawal(id);
+        } else {
+            setError("ID Penarikan tidak ditemukan.");
+            setIsLoading(false);
+        }
+    }, []);
+
+    const fetchWithdrawal = async (id: string) => {
+        try {
+            const res = await fetch(`/api/withdrawals/${id}`);
+            if (res.ok) {
+                const data = await res.json();
+                setWithdrawal(data);
+            } else {
+                setError("Gagal mengambil detail penarikan.");
+            }
+        } catch (err) {
+            console.error('Fetch error:', err);
+            setError("Koneksi bermasalah.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center p-20">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
+    if (error || !withdrawal) {
+        return (
+            <div className="text-center p-20 space-y-4">
+                <h3 className="text-xl font-bold text-slate-800">{error || "Detail tidak ditemukan"}</h3>
+                <Button onClick={() => window.location.href='/wallet'}>Kembali ke Dompet</Button>
+            </div>
+        );
+    }
+
+    const formatCurrency = (val: number) => {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val);
+    };
+
     return (
         <div className="max-w-3xl w-full mx-auto space-y-10 ">
-            <div className="mb-10 text-center md:text-left">
-                <h1 className="text-3xl font-black text-slate-900 mb-2 uppercase tracking-tighter">Withdrawal Details</h1>
-                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] leading-none">Comprehensive transaction log for your earnings disbursement.</p>
+            <div className="mb-10 flex items-center gap-4">
+                <a href="/wallet" className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
+                    <ArrowLeftIcon className="w-5 h-5 text-slate-500" />
+                </a>
+                <div>
+                    <h1 className="text-3xl font-black text-slate-900 mb-1 uppercase tracking-tighter">Withdrawal Details</h1>
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] leading-none">Comprehensive transaction log for your earnings disbursement.</p>
+                </div>
             </div>
 
             {/* Detail Card Container */}
             <div className="flex justify-center">
                 <Card className="w-full bg-white rounded-[3rem] shadow-sm border border-slate-100 p-12 flex flex-col items-center">
                     {/* Status Badge */}
-                    <div className="bg-emerald-50 text-emerald-600 px-8 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] mb-10 border border-emerald-100/50">
-                        SUCCESSFUL
+                    <div className={`px-8 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] mb-10 border ${
+                        withdrawal.status === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'
+                    }`}>
+                        {withdrawal.status.toUpperCase()}
                     </div>
 
                     {/* Amount */}
                     <div className="text-center mb-12">
-                        <h2 className="text-5xl md:text-6xl font-black text-slate-900 mb-4 tracking-tighter">Rp 1.500.000</h2>
-                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest bg-slate-50 px-4 py-2 rounded-full">TRANS-ID: TP-9821340912</span>
+                        <h2 className="text-5xl md:text-6xl font-black text-slate-900 mb-4 tracking-tighter">{formatCurrency(withdrawal.amount)}</h2>
+                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest bg-slate-50 px-4 py-2 rounded-full">TRANS-ID: {withdrawal.id.substring(0,12).toUpperCase()}</span>
                     </div>
 
                     {/* Breakdown Table */}
                     <div className="w-full bg-slate-50/50 rounded-[2rem] p-8 space-y-5 mb-10 border border-slate-100/50">
                         <div className="flex justify-between items-center">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Disbursement Amount</span>
-                            <span className="text-xs font-black text-slate-600">Rp 1.505.000</span>
+                            <span className="text-xs font-black text-slate-600">{formatCurrency(withdrawal.amount)}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Service Fee</span>
-                            <span className="text-xs font-black text-rose-500">- Rp 5.000</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Platform Fee</span>
+                            <span className="text-xs font-black text-rose-500">Free</span>
                         </div>
                         <div className="h-[2px] bg-slate-100 w-full rounded-full"></div>
                         <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-100/50">
                             <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Net Settlement</span>
-                            <span className="text-lg font-black text-slate-900">Rp 1.500.000</span>
+                            <span className="text-lg font-black text-slate-900">{formatCurrency(withdrawal.amount)}</span>
                         </div>
                     </div>
 
@@ -54,8 +115,8 @@ export const WithdrawalDetailsDashboard = () => {
                             </div>
                             <div>
                                 <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1.5 leading-none">Recipient Account</p>
-                                <p className="text-sm font-black text-slate-900 leading-tight uppercase tracking-tight">Bank Mandiri</p>
-                                <p className="text-[10px] font-black text-slate-400 mt-0.5 tracking-widest">123-xxx-456</p>
+                                <p className="text-sm font-black text-slate-900 leading-tight uppercase tracking-tight">{withdrawal.bank_accounts?.bank_name || 'Bank Account'}</p>
+                                <p className="text-[10px] font-black text-slate-400 mt-0.5 tracking-widest">{withdrawal.bank_accounts?.account_number || '-'}</p>
                             </div>
                         </div>
 
@@ -65,17 +126,21 @@ export const WithdrawalDetailsDashboard = () => {
                             </div>
                             <div>
                                 <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1.5 leading-none">Proof of Payment</p>
-                                <a className="text-[10px] font-black text-emerald-600 hover:text-emerald-700 flex items-center gap-2 uppercase tracking-widest group/link transition-colors" href="#">
-                                    View Receipt 
-                                    <ArrowTopRightOnSquareIcon className="w-4 h-4 group-hover/link:translate-x-1 group-hover/link:-translate-y-1 transition-transform" />
-                                </a>
+                                {withdrawal.proof_url ? (
+                                    <a className="text-[10px] font-black text-emerald-600 hover:text-emerald-700 flex items-center gap-2 uppercase tracking-widest group/link transition-colors" href={withdrawal.proof_url} target="_blank">
+                                        View Receipt 
+                                        <ArrowTopRightOnSquareIcon className="w-4 h-4 group-hover/link:translate-x-1 group-hover/link:-translate-y-1 transition-transform" />
+                                    </a>
+                                ) : (
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No receipt yet</p>
+                                )}
                             </div>
                         </div>
                     </div>
 
                     {/* Action Button */}
-                    <Button variant="primary" className="w-full h-16 rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center font-black uppercase text-[11px] tracking-[0.3em]">
-                        Close Details
+                    <Button variant="primary" className="w-full h-16 rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center font-black uppercase text-[11px] tracking-[0.3em]" onClick={() => window.location.href='/wallet'}>
+                        Back to Wallet
                     </Button>
                 </Card>
             </div>

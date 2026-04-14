@@ -7,64 +7,6 @@ import { TutorialsExplorer } from '../components/academy/TutorialsExplorer';
 import { BottomNavbar } from '../components/layout/BottomNavbar';
 import Button from '../components/ui/Button';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
-
-// Sample data from mockup
-const tutorials = [
-  {
-    title: "Cara Menghubungkan Custom Domain ke Orbit Site",
-    thumbnail: "https://lh3.googleusercontent.com/aida-public/AB6AXuCIw4tEQ1URh0gDvDPoXdf0GoiXrScSQ-DcldzQXg3OnLaGujY7Edj7YXHEFgj9GxaUHNkbPifVNfNItrdJXCOkeqJgVRzp2wvi9rSDIYL8Qo-RkN7x9_bRewuV3xi7-BDOtnbcrvp00a_ctUkKvSSgHLhZlRQAfUxofdI2IBw07Os-ycRBwGTqzmZgYBcNuKIhQskW0JGDwZM_ECiEt4ElBTIkmOm-_OkbeMOG2YBUIrLE9A6rqHSnrWsOG1VDckEvRBEMA6I4Bbyh",
-    duration: "12:45",
-    category: "Domain",
-    views: "2.4k",
-    publishedAt: "2 Days",
-    platform: "YouTube" as const
-  },
-  {
-    title: "Menganalisis Trafik & Konversi Landing Page Anda",
-    thumbnail: "https://lh3.googleusercontent.com/aida-public/AB6AXuA6CZnGUGxYZXu2UecyuhYO0DoIzNyQ3PUEC1cifXy0ERspiEjXKlEtqiLl1zIhMqoH4jabV5HgLsFvM8xoDsXDEHv-4c9GCqAGxtRw-vLcC7XAy7czwQNHxsXQqvTzkKzjY_OdKWw_lq8BwjDql9eF0oPYRUoWuoQZFe2GaKseULGANopCtJrF62QzXu6oAHB-T6hQXUfu6jZs-aU9vTL-fdF_INY249ZVz2Xcbq6pKzbYGQfJaFBKRkqwfso63pQXaScKTh9RNJGB",
-    duration: "08:20",
-    category: "Analytics",
-    views: "1.8k",
-    publishedAt: "1 Week",
-    platform: "YouTube" as const
-  },
-  {
-    title: "Setup Payment Gateway & Pencairan Dana Otomatis",
-    thumbnail: "https://lh3.googleusercontent.com/aida-public/AB6AXuDu8COdu6vMa-hdGfQI0zeXiVs5hVz3c-jNe727oMDSWSMnC5AE744I4I4WF0hmdsiqK-xzP7lSNs7xFmfg2W0Nc0MTbegBTyGeSO7mfDe8u8NWqzwbjfX6AE8_8orf1Tfc8vteVO_WcL0vEDpaKPspUnQOYRC-0gqhxWfkhpIXh6oor8jxVLLOByG_855PHfVWBMK6OK4MRq43mAy8d4rJUhNbEiBKAvKSbV5BCC5SakYvGKLlTzF7aoA6dhf8R9P3INW3BbR1EKhF",
-    duration: "15:10",
-    category: "Payout",
-    views: "5.1k",
-    publishedAt: "3 Weeks",
-    platform: "YouTube" as const
-  },
-  {
-    title: "Optimasi Link-in-Bio untuk Konversi Maksimal",
-    thumbnail: "https://lh3.googleusercontent.com/aida-public/AB6AXuALkam7RKiU2iSDdE6mgzWUy1yne-kVCbikMZOBIRHJ9tRHog3zSc-2FTxmXMEqN8SK89iypl2UVZBrPH0Ll0hwqIjP9Qdu5C2nQ-8HuxEpoj75jfznoXiAJF2b_Or4HgmtUDSM1HvC7nteU73XlMBSfS8hpX2hta0uztCUEZ8-geIL5weTcC5cdYQPBJxxIQHCJ1H52o1_K4chqq_i-sGq-8P7mn-12Au2y0eoCiEIGmkRH4c92iNhr5FR1UmykgHO7E0j85YDE95T",
-    duration: "06:45",
-    category: "Link-in-Bio",
-    views: "942",
-    publishedAt: "1 Month",
-    platform: "YouTube" as const
-  },
-  {
-    title: "Menjual E-book & Preset Lightbox Secara Otomatis",
-    thumbnail: "https://lh3.googleusercontent.com/aida-public/AB6AXuB8H3O3h2nIR_LPgoujEzyjUP-k1ixcSBQiqpNKWDxexKyuRW_onLbckDX1iQIJO0KwLxw2CIPmyI_wtZgtQ_aMTmYkjsKl5ROmvobg3JMLtms5dHoRxXEHKIeUBo7mMGthEvvRasWsywyoBmVLPFLXswc1goVYE48PpqIGN4uaXlNCJgTXK-hlkVAYFAAzJpAJ1G3zmoSodoBN75RBgFxmLeMnIKmU0YdgpgTjxkZbKhArKP2PH6fP7fMz-m0n3xZqeNXSb0y7phdd",
-    duration: "10:30",
-    category: "Digital Products",
-    views: "3.2k",
-    publishedAt: "2 Months",
-    platform: "YouTube" as const
-  },
-  {
-    title: "Panduan SEO: Agar Halaman Orbit Site Anda Muncul di Google",
-    thumbnail: "https://lh3.googleusercontent.com/aida-public/AB6AXuB-A560_G4A8wEmJ4W7Hg8S71ycSO7-7js1XV5dQvWNVVQtbwL3P8APk-047I3edFPYGZqywlzRYPz0NK_JQbrBrTPAeGRMLTe8pSrIuokE6XIQHBokgf2Z60E6WM3P83KdVKVrs_GNk94ODWj9mPVxrx6F_qP-5dRZLn5-9ivdV_fWFsbxrooocR6uS0hmVqXtTvgwciY1bFYpbc1buWjLlSuPnrKJTTHfkDfmJbRr4LEhE9zT707ft4C85xJ3JPRihCjNRqvlVhNJ",
-    duration: "11:55",
-    category: "SEO",
-    views: "4.8k",
-    publishedAt: "5 Months",
-    platform: "YouTube" as const
-  }
-];
 ---
 
 <BaseLayout title="Academy — Creator Studio">
@@ -82,7 +24,7 @@ const tutorials = [
                 <AcademyHero client:load />
 
                 <!-- Tutorials Explorer (Search, Filters, Grid) -->
-                <TutorialsExplorer client:load tutorials={tutorials} />
+                <TutorialsExplorer client:load />
 
                 <!-- Load More Section -->
                 <div class="mt-20 flex flex-col items-center gap-6 text-center">

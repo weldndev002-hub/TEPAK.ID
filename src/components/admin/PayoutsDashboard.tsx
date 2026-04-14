@@ -62,14 +62,11 @@ const ConfirmModal = ({
 };
 
 export const PayoutsDashboard = () => {
-    const [payouts, setPayouts] = React.useState([
-        { id: 101, name: 'Ahmad Fauzi', email: 'ahmad.fauzi@email.com', amount: '$250.00', fee: '$5.00', net: '$245.00', bank: 'BCA', account: '1234005678', accountMasked: '••••5678', holder: 'AHMAD FAUZI', date: 'Oct 12, 2023, 14:30', status: 'Pending', avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA-SIkJhYUowdY-ll6gbXfshU1rALh3em60TJM3tQuCkY9MY10OmrXrHSDzwi8-wOGvNFHoQJBdIZfeV6qqeQzlU_0C4xU6mKPsG4Xwi9acBFRsKC0o5Fdtc0aypnJdo0pBLuFCA7VzU1OFCQPvIT0Dl4Ls_iPaQR8-YBbg9Juz_NOiQ4LjVNiG9Z6_rCpacLrLHmHvY1hHE0rcFIrj4XKFvmwV7MOkNKwT5iraLbi1y1_yBpQjhlR8uc0i97piqeKAnOM4UN85pY89' },
-        { id: 102, name: 'Riska Amelia', email: 'riska.ml@example.com', amount: '$1,200.00', fee: '$5.00', net: '$1,195.00', bank: 'Mandiri', account: '9876541122', accountMasked: '••••1122', holder: 'RISKA AMELIA', date: 'Oct 12, 2023, 15:45', status: 'Pending', avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAPlPjPxAMkvRRVzHmiBhvbAWaH-K3tMYyz0elNIw1aCo3PZfmDT1fSAHOYXAtz86zcEF_AC1lgDEXpYZ-Y1PLldZO2iwTU6BMye9wv75xPQXJEfF6BrVs8QRDw4eYau5d_iAasdUX7215-6ScY476dlvODPKAb83A5TQgl4145YvyKdcVAwrq-60MAngS4ItfdN9vsC9YMg8-3ZV8WiJFqHiyhMWcYaDnDvSPId2CWe8rgT_lcIuCHHjr1PpV2Q-jb7nXVGP-5FNNL' },
-        { id: 103, name: 'Budi Santoso', email: 'budi.san@web.id', amount: '$5,000.00', fee: '$5.00', net: '$4,995.00', bank: 'BNI', account: '1122339900', accountMasked: '••••9900', holder: 'BUDI SANTOSO', date: 'Oct 13, 2023, 08:20', status: 'Pending', avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD8Ha_c9uw2xRRy41qNLcBZee4unv_9eG7SauD40C776cJAUOUL0lJ2uzuZunhwEL8cWRiw8oIkn945Vb-fsFk5gPYBnjrinSDkkhZoqJufZ-8E5Fl-7UhSOtVVftmf3VA8aorucnzPbvRAtytrKeRlNeSZtvnhpTwkJZVT-N-wu1B5hEv1UkpaVF-41nHrbEk0AxoVxNME4DMNLmRUzYOl_8fN1z9D-6rdsUHcTmG-Vkyjkd-6dw93PKP4FCZkc1XTNtALAJvGItGm' }
-    ]);
+    const [payouts, setPayouts] = React.useState<any[]>([]);
+    const [loading, setLoading] = React.useState(true);
     const [selectedPayout, setSelectedPayout] = React.useState<any>(null);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
-    const [activeTab, setActiveTab] = React.useState<'Pending' | 'Success' | 'Rejected'>('Pending');
+    const [activeTab, setActiveTab] = React.useState<'pending' | 'completed' | 'rejected'>('pending');
 
     // Action States
     const [proofFile, setProofFile] = React.useState<File | null>(null);
@@ -80,6 +77,7 @@ export const PayoutsDashboard = () => {
     // Confirm modal states
     const [approveConfirm, setApproveConfirm] = React.useState(false);
     const [rejectConfirm, setRejectConfirm] = React.useState(false);
+    const [processing, setProcessing] = React.useState(false);
 
     // Success/Error toast
     const [toast, setToast] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -87,6 +85,25 @@ export const PayoutsDashboard = () => {
         setToast({ type, message });
         setTimeout(() => setToast(null), 4000);
     };
+
+    const fetchPayouts = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/admin/payouts');
+            if (res.ok) {
+                const data = await res.json();
+                setPayouts(data);
+            }
+        } catch (err) {
+            console.error('Failed to fetch payouts:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        fetchPayouts();
+    }, []);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -97,28 +114,25 @@ export const PayoutsDashboard = () => {
         }
     };
 
-    const executeApprove = (id: number) => {
-        if (!proofFile) {
-            showToast('error', 'Harap upload Bukti Transfer terlebih dahulu.');
-            return;
-        }
-        setPayouts(prev => prev.map(p => p.id === id ? { ...p, status: 'Success' } : p));
-        setIsModalOpen(false);
-        setProofFile(null);
-        setProofPreview('');
-        showToast('success', 'Payout berhasil diproses. Notifikasi telah dikirim ke kreator.');
-    };
+    const executeUpdate = async (id: string, status: string, notes: string) => {
+        setProcessing(true);
+        try {
+            const res = await fetch('/api/admin/payouts/update-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, status, notes })
+            });
 
-    const executeReject = (id: number) => {
-        if (!rejectReason) {
-            showToast('error', 'Harap masukkan alasan penolakan untuk transparansi kreator.');
-            return;
+            if (!res.ok) throw new Error('Failed to update payout status');
+
+            showToast('success', `Payout successfully marked as ${status}.`);
+            fetchPayouts();
+            setIsModalOpen(false);
+        } catch (err: any) {
+            showToast('error', err.message);
+        } finally {
+            setProcessing(false);
         }
-        const payout = payouts.find(p => p.id === id);
-        setPayouts(prev => prev.map(p => p.id === id ? { ...p, status: 'Rejected', rejectReason } : p));
-        setIsModalOpen(false);
-        setRejectReason('');
-        showToast('success', `Payout ditolak. Saldo ${payout?.amount} di-refund ke Virtual Balance kreator.`);
     };
 
     const handleApproveClick = () => {
@@ -138,6 +152,9 @@ export const PayoutsDashboard = () => {
     };
 
     const filteredPayouts = payouts.filter(p => p.status === activeTab);
+    const totalPendingAmount = payouts
+        .filter(p => p.status === 'pending')
+        .reduce((sum, p) => sum + Number(p.amount), 0);
 
     const openDetails = (payout: any) => {
         setSelectedPayout(payout);
@@ -147,6 +164,15 @@ export const PayoutsDashboard = () => {
         setProofPreview('');
         setRejectReason('');
     };
+
+    if (loading && payouts.length === 0) {
+        return (
+            <div className="w-full py-20 flex flex-col items-center justify-center gap-4">
+                <div className="w-10 h-10 border-4 border-[#005ab4] border-t-transparent rounded-full animate-spin"></div>
+                <p className="font-black text-[#005ab4] uppercase tracking-widest text-xs tracking-widest">Loading Payout Requests...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full">
@@ -173,11 +199,11 @@ export const PayoutsDashboard = () => {
                 <div className="flex gap-4">
                     <div className="bg-slate-50 px-6 py-4 rounded-xl border border-slate-100 flex flex-col justify-center">
                         <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Total Pending</p>
-                        <p className="text-2xl font-black text-[#465f89]">$12,450.00</p>
+                        <p className="text-2xl font-black text-[#465f89]">Rp {totalPendingAmount.toLocaleString('id-ID')}</p>
                     </div>
                     <div className="bg-slate-50 px-6 py-4 rounded-xl border border-slate-100 flex flex-col justify-center">
                         <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Queue Size</p>
-                        <p className="text-2xl font-black text-[#005ab4]">{payouts.filter(p => p.status === 'Pending').length} Requests</p>
+                        <p className="text-2xl font-black text-[#005ab4]">{payouts.filter(p => p.status === 'pending').length} Requests</p>
                     </div>
                 </div>
             </div>
@@ -185,22 +211,22 @@ export const PayoutsDashboard = () => {
             {/* Navigation Tabs */}
             <div className="flex items-center gap-8 mb-8 border-b border-slate-100">
                 <button 
-                    onClick={() => setActiveTab('Pending')}
-                    className={`pb-4 text-sm font-bold transition-all px-2 ${activeTab === 'Pending' ? 'text-[#465f89] border-b-2 border-[#465f89]' : 'text-slate-400 hover:text-[#005ab4]'}`}
+                    onClick={() => setActiveTab('pending')}
+                    className={`pb-4 text-sm font-bold transition-all px-2 ${activeTab === 'pending' ? 'text-[#465f89] border-b-2 border-[#465f89]' : 'text-slate-400 hover:text-[#005ab4]'}`}
                 >
-                    Pending ({payouts.filter(p => p.status === 'Pending').length})
+                    Pending ({payouts.filter(p => p.status === 'pending').length})
                 </button>
                 <button 
-                    onClick={() => setActiveTab('Success')}
-                    className={`pb-4 text-sm font-bold transition-all px-2 ${activeTab === 'Success' ? 'text-emerald-500 border-b-2 border-emerald-500' : 'text-slate-400 hover:text-emerald-500'}`}
+                    onClick={() => setActiveTab('completed')}
+                    className={`pb-4 text-sm font-bold transition-all px-2 ${activeTab === 'completed' ? 'text-emerald-500 border-b-2 border-emerald-500' : 'text-slate-400 hover:text-emerald-500'}`}
                 >
-                    Successful ({payouts.filter(p => p.status === 'Success').length})
+                    Successful ({payouts.filter(p => p.status === 'completed').length})
                 </button>
                 <button 
-                    onClick={() => setActiveTab('Rejected')}
-                    className={`pb-4 text-sm font-bold transition-all px-2 ${activeTab === 'Rejected' ? 'text-rose-500 border-b-2 border-rose-500' : 'text-slate-400 hover:text-rose-500'}`}
+                    onClick={() => setActiveTab('rejected')}
+                    className={`pb-4 text-sm font-bold transition-all px-2 ${activeTab === 'rejected' ? 'text-rose-500 border-b-2 border-rose-500' : 'text-slate-400 hover:text-rose-500'}`}
                 >
-                    Failed/Rejected ({payouts.filter(p => p.status === 'Rejected').length})
+                    Failed/Rejected ({payouts.filter(p => p.status === 'rejected').length})
                 </button>
             </div>
 
@@ -229,41 +255,40 @@ export const PayoutsDashboard = () => {
                                     <TableCell className="px-6 py-6">
                                         <div className="flex items-center gap-4">
                                             <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-200 cursor-pointer" onClick={() => openDetails(payout)}>
-                                                <img alt={payout.name} src={payout.avatar} className="w-full h-full object-cover" />
+                                                <img alt={payout.profiles?.full_name} src={payout.profiles?.avatar_url || 'https://via.placeholder.com/40'} className="w-full h-full object-cover" />
                                             </div>
                                             <div className="cursor-pointer" onClick={() => openDetails(payout)}>
-                                                <p className="font-bold text-[#005ab4] hover:underline uppercase tracking-tight text-xs">{payout.name}</p>
-                                                <p className="text-[10px] text-slate-400 font-medium">{payout.email}</p>
+                                                <p className="font-bold text-[#005ab4] hover:underline uppercase tracking-tight text-xs">{payout.profiles?.full_name || payout.profiles?.username}</p>
+                                                <p className="text-[10px] text-slate-400 font-medium uppercase">{payout.profiles?.username}</p>
                                             </div>
                                         </div>
                                     </TableCell>
                                     <TableCell className="px-6 py-6">
                                         <div className="space-y-1">
-                                            <p className="font-black text-slate-900">{payout.amount}</p>
+                                            <p className="font-black text-slate-900">Rp {Number(payout.amount).toLocaleString('id-ID')}</p>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[10px] text-slate-400">Fees: {payout.fee}</span>
-                                                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded tracking-tighter">Net: {payout.net}</span>
+                                                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded tracking-tighter">Net: Rp {(Number(payout.amount) - 5000).toLocaleString('id-ID')}</span>
                                             </div>
                                         </div>
                                     </TableCell>
                                     <TableCell className="px-6 py-6">
                                         <div>
-                                            <p className="font-bold text-slate-900 text-xs">{payout.bank} {payout.accountMasked}</p>
-                                            <p className="text-[10px] text-slate-400 uppercase tracking-tighter">AN. {payout.holder}</p>
+                                            <p className="font-bold text-slate-900 text-xs uppercase">{payout.bank_accounts?.bank_name}</p>
+                                            <p className="text-[10px] text-slate-400 uppercase tracking-tighter">AN. {payout.bank_accounts?.account_name}</p>
                                         </div>
                                     </TableCell>
                                     <TableCell className="px-6 py-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                                        {payout.date}
+                                        {new Date(payout.requested_at).toLocaleString()}
                                     </TableCell>
                                     <TableCell className="px-6 py-6">
                                         <div className="flex justify-end gap-2">
-                                            {payout.status === 'Pending' ? (
+                                            {payout.status === 'pending' ? (
                                                 <>
                                                     <Button onClick={() => openDetails(payout)} variant="ghost" className="px-4 py-2 text-rose-500 hover:bg-rose-50 text-[10px] font-black uppercase tracking-widest rounded-xl border border-rose-100">Review</Button>
                                                     <Button onClick={() => openDetails(payout)} variant="primary" className="px-4 py-2 bg-[#465f89] text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-[#465f89]/20">Process</Button>
                                                 </>
                                             ) : (
-                                                <Badge className={payout.status === 'Success' ? 'bg-emerald-50 text-emerald-600 border-none' : 'bg-rose-50 text-rose-600 border-none'}>
+                                                <Badge className={payout.status === 'completed' ? 'bg-emerald-50 text-emerald-600 border-none' : 'bg-rose-50 text-rose-600 border-none font-bold'}>
                                                     {payout.status.toUpperCase()}
                                                 </Badge>
                                             )}
@@ -276,22 +301,6 @@ export const PayoutsDashboard = () => {
                 </div>
             </Card>
 
-            {/* Footer Pagination Info */}
-            <div className="mt-8 flex items-center justify-between">
-                <p className="text-xs text-slate-500 font-medium">Showing 3 of 42 payout requests</p>
-                <div className="flex gap-2">
-                    <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-[#005ab4] transition-all">
-                        <span className="material-symbols-outlined">chevron_left</span>
-                    </button>
-                    <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#465f89] text-white font-bold shadow-md">1</button>
-                    <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-500 hover:bg-slate-100 transition-all">2</button>
-                    <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-500 hover:bg-slate-100 transition-all">3</button>
-                    <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-[#005ab4] transition-all">
-                        <span className="material-symbols-outlined">chevron_right</span>
-                    </button>
-                </div>
-            </div>
-
             {/* Payout Detail Modal */}
             {isModalOpen && selectedPayout && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[#005ab4]/40 backdrop-blur-sm">
@@ -300,7 +309,7 @@ export const PayoutsDashboard = () => {
                         <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
                             <div>
                                 <h2 className="text-2xl font-black text-[#005ab4]">Payout Request Details</h2>
-                                <p className="text-sm text-slate-500 font-medium">Verification for Withdrawal Request ID #PRQ-{selectedPayout.id}</p>
+                                <p className="text-sm text-slate-500 font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[400px]">ID: {selectedPayout.id}</p>
                             </div>
                             <button 
                                 className="p-2 hover:bg-slate-100 rounded-full transition-colors"
@@ -319,15 +328,15 @@ export const PayoutsDashboard = () => {
                                     <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-3">
                                         <div className="flex justify-between items-center text-sm">
                                             <span className="text-slate-500 font-medium">Request amount</span>
-                                            <span className="font-bold text-slate-900">{selectedPayout.amount}</span>
+                                            <span className="font-bold text-slate-900">Rp {Number(selectedPayout.amount).toLocaleString('id-ID')}</span>
                                         </div>
                                         <div className="flex justify-between items-center text-sm">
                                             <span className="text-slate-500 font-medium">Processing fee</span>
-                                            <span className="font-bold text-rose-500">-{selectedPayout.fee}</span>
+                                            <span className="font-bold text-rose-500">-Rp 5.000</span>
                                         </div>
                                         <div className="pt-3 border-t border-slate-200 flex justify-between items-center">
                                             <span className="text-xs font-black text-[#005ab4] uppercase tracking-wider">Net to Transfer</span>
-                                            <span className="text-xl font-black text-[#005ab4]">{selectedPayout.net}</span>
+                                            <span className="text-xl font-black text-[#005ab4]">Rp {(Number(selectedPayout.amount) - 5000).toLocaleString('id-ID')}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -349,7 +358,7 @@ export const PayoutsDashboard = () => {
                                     <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
                                         <div>
                                             <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Bank Provider</p>
-                                            <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{selectedPayout.bank}</p>
+                                            <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{selectedPayout.bank_accounts?.bank_name}</p>
                                         </div>
                                         <div>
                                             <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Account Number</p>
@@ -358,7 +367,7 @@ export const PayoutsDashboard = () => {
                                                     "text-sm font-black text-slate-900 tracking-widest transition-all duration-300 select-all",
                                                     !showAccountNumber && "blur-sm select-none"
                                                 )}>
-                                                    {showAccountNumber ? selectedPayout.account : selectedPayout.accountMasked}
+                                                    {selectedPayout.bank_accounts?.account_number}
                                                 </p>
                                                 {showAccountNumber && (
                                                     <span className="text-[8px] font-black text-emerald-500 uppercase bg-emerald-50 px-1.5 py-0.5 rounded">Revealed</span>
@@ -367,95 +376,109 @@ export const PayoutsDashboard = () => {
                                         </div>
                                         <div>
                                             <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Account Holder Name</p>
-                                            <p className="text-sm font-black text-slate-900 uppercase">{selectedPayout.holder}</p>
+                                            <p className="text-sm font-black text-slate-900 uppercase">{selectedPayout.bank_accounts?.account_name}</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 mb-6">
-                                <div className="flex gap-4">
-                                    <div className="w-10 h-10 bg-[#005ab4] rounded-xl flex items-center justify-center text-white shrink-0">
-                                        <span className="material-symbols-outlined">security</span>
-                                    </div>
-                                    <div>
-                                        <h4 className="text-sm font-black text-[#005ab4] uppercase tracking-tight">Security Check Passed</h4>
-                                        <p className="text-[11px] text-[#465f89] font-medium leading-relaxed">System has verified that this bank account belongs to {selectedPayout.name} and matches the records on file. IP Address: 114.125.xx.xx (Verified).</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Upload Proof of Transfer */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">
-                                        Bukti Transfer <span className="text-rose-400">*</span>
-                                    </label>
-                                    <label className={cn(
-                                        "flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-2xl cursor-pointer transition-all h-[120px]",
-                                        proofFile ? "border-emerald-300 bg-emerald-50/40" : "border-slate-200 bg-slate-50 hover:border-[#005ab4]/40 hover:bg-blue-50/20"
-                                    )}>
-                                        <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleFileChange} />
-                                        {proofFile ? (
-                                            <>
-                                                {proofPreview && proofFile.type.startsWith('image/') ? (
-                                                    <img src={proofPreview} alt="proof" className="h-16 w-auto object-contain rounded-lg" />
+                            {selectedPayout.status === 'pending' && (
+                                <>
+                                    {/* Upload Proof of Transfer */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">
+                                                Bukti Transfer <span className="text-rose-400">*</span>
+                                            </label>
+                                            <label className={cn(
+                                                "flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-2xl cursor-pointer transition-all h-[120px]",
+                                                proofFile ? "border-emerald-300 bg-emerald-50/40" : "border-slate-200 bg-slate-50 hover:border-[#005ab4]/40 hover:bg-blue-50/20"
+                                            )}>
+                                                <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleFileChange} />
+                                                {proofFile ? (
+                                                    <>
+                                                        {proofPreview && proofFile.type.startsWith('image/') ? (
+                                                            <img src={proofPreview} alt="proof" className="h-16 w-auto object-contain rounded-lg" />
+                                                        ) : (
+                                                            <span className="material-symbols-outlined text-emerald-500 text-3xl">description</span>
+                                                        )}
+                                                        <span className="text-[10px] font-black text-emerald-600 uppercase">{proofFile.name}</span>
+                                                    </>
                                                 ) : (
-                                                    <span className="material-symbols-outlined text-emerald-500 text-3xl">description</span>
+                                                    <>
+                                                        <ArrowUpTrayIcon className="w-6 h-6 text-slate-300" />
+                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Click to Upload</span>
+                                                        <span className="text-[9px] text-slate-300">JPG, PNG, PDF – Max 5MB</span>
+                                                    </>
                                                 )}
-                                                <span className="text-[10px] font-black text-emerald-600 uppercase">{proofFile.name}</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <ArrowUpTrayIcon className="w-6 h-6 text-slate-300" />
-                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Click to Upload</span>
-                                                <span className="text-[9px] text-slate-300">JPG, PNG, PDF – Max 5MB</span>
-                                            </>
-                                        )}
-                                    </label>
-                                    <p className="text-[9px] text-slate-400 italic px-1">*Wajib diisi sebelum Approve & Process.</p>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-rose-400 uppercase tracking-widest px-1">Alasan Penolakan</label>
-                                    <textarea 
-                                        className="w-full bg-rose-50/30 border border-rose-100 rounded-xl py-3 px-4 text-xs font-medium focus:ring-2 focus:ring-rose-500/10 outline-none transition-all h-[120px] resize-none" 
-                                        placeholder="No. Rekening tidak terdaftar / Salah bank..."
-                                        value={rejectReason}
-                                        onChange={(e) => setRejectReason(e.target.value)}
-                                    />
-                                </div>
-                            </div>
+                                            </label>
+                                            <p className="text-[9px] text-slate-400 italic px-1">*Wajib diisi sebelum Approve & Process.</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-rose-400 uppercase tracking-widest px-1">Alasan Penolakan</label>
+                                            <textarea 
+                                                className="w-full bg-rose-50/30 border border-rose-100 rounded-xl py-3 px-4 text-xs font-medium focus:ring-2 focus:ring-rose-500/10 outline-none transition-all h-[120px] resize-none" 
+                                                placeholder="No. Rekening tidak terdaftar / Salah bank..."
+                                                value={rejectReason}
+                                                onChange={(e) => setRejectReason(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="bg-amber-50/50 p-6 rounded-2xl border border-amber-100 mb-6">
+                                        <div className="flex gap-4">
+                                            <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-amber-500/20">
+                                                <span className="material-symbols-outlined font-black">warning</span>
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm font-black text-amber-600 uppercase tracking-tight">Financial Warning</h4>
+                                                <p className="text-[11px] text-amber-700/70 font-medium leading-relaxed">Pastikan nominal transfer ke <strong>{selectedPayout.bank_accounts?.account_name}</strong> adalah <strong>Rp {(Number(selectedPayout.amount) - 5000).toLocaleString('id-ID')}</strong>. Biaya transfer dibebankan ke Admin (Rp 5.000).</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
 
-                            <div className="bg-amber-50/50 p-6 rounded-2xl border border-amber-100 mb-6">
-                                <div className="flex gap-4">
-                                    <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-amber-500/20">
-                                        <span className="material-symbols-outlined font-black">warning</span>
+                            {selectedPayout.status !== 'pending' && (
+                                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
+                                    <div>
+                                        <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Processing Notes</p>
+                                        <p className="text-sm font-medium text-slate-700 leading-relaxed italic">"{selectedPayout.notes || 'No notes provided.'}"</p>
                                     </div>
                                     <div>
-                                        <h4 className="text-sm font-black text-amber-600 uppercase tracking-tight">Financial Warning</h4>
-                                        <p className="text-[11px] text-amber-700/70 font-medium leading-relaxed">Pastikan nominal transfer ke <strong>{selectedPayout.holder}</strong> adalah <strong>{selectedPayout.net}</strong>. Biaya transfer dibebankan ke Admin (Rp 5.000).</p>
+                                        <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Processed At</p>
+                                        <p className="text-sm font-bold text-slate-900">{new Date(selectedPayout.processed_at).toLocaleString()}</p>
                                     </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
 
                         {/* Modal Footer */}
                         <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                            <button 
-                                className="px-6 py-2.5 rounded-xl font-black text-rose-500 hover:bg-rose-50 transition-all border border-transparent hover:border-rose-100 text-[10px] uppercase tracking-widest"
-                                onClick={handleRejectClick}
-                            >
-                                Reject Request
-                            </button>
-                            <div className="flex gap-3">
-                                <button className="px-6 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setIsModalOpen(false)}>Close</button>
-                                <button 
-                                    className="px-8 py-2.5 rounded-xl bg-[#465f89] text-white font-black shadow-lg shadow-[#465f89]/20 hover:scale-[1.02] active:scale-95 transition-all text-[10px] uppercase tracking-widest"
-                                    onClick={handleApproveClick}
-                                >
-                                    Approve & Process
-                                </button>
-                            </div>
+                            {selectedPayout.status === 'pending' ? (
+                                <>
+                                    <button 
+                                        className="px-6 py-2.5 rounded-xl font-black text-rose-500 hover:bg-rose-50 transition-all border border-transparent hover:border-rose-100 text-[10px] uppercase tracking-widest"
+                                        onClick={handleRejectClick}
+                                        disabled={processing}
+                                    >
+                                        Reject Request
+                                    </button>
+                                    <div className="flex gap-3">
+                                        <button className="px-6 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setIsModalOpen(false)}>Close</button>
+                                        <button 
+                                            className="px-8 py-2.5 rounded-xl bg-[#465f89] text-white font-black shadow-lg shadow-[#465f89]/20 hover:scale-[1.02] active:scale-95 transition-all text-[10px] uppercase tracking-widest"
+                                            onClick={handleApproveClick}
+                                            disabled={processing}
+                                        >
+                                            {processing ? 'Processing...' : 'Approve & Process'}
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="w-full flex justify-center">
+                                    <button className="px-10 py-2.5 rounded-xl bg-slate-900 text-white font-black uppercase text-[10px] tracking-widest" onClick={() => setIsModalOpen(false)}>Close Overview</button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -465,7 +488,7 @@ export const PayoutsDashboard = () => {
             <ConfirmModal
                 isOpen={approveConfirm}
                 onClose={() => setApproveConfirm(false)}
-                onConfirm={() => { setApproveConfirm(false); executeApprove(selectedPayout?.id); }}
+                onConfirm={() => { setApproveConfirm(false); executeUpdate(selectedPayout?.id, 'completed', 'Transfer Successful'); }}
                 title="Confirm Payout Approval"
                 confirmLabel="Yes, Approve & Process"
                 confirmStyle="success"
@@ -475,7 +498,7 @@ export const PayoutsDashboard = () => {
                     </div>
                 }
                 message={
-                    <>Anda akan menyetujui transfer sebesar <strong>{selectedPayout?.net}</strong> ke rekening <strong>{selectedPayout?.bank} {selectedPayout?.holder}</strong>. Tindakan ini tidak bisa dibatalkan.</>
+                    <>Anda akan menyetujui transfer sebesar <strong>Rp {(Number(selectedPayout?.amount) - 5000).toLocaleString('id-ID')}</strong> ke rekening <strong>{selectedPayout?.bank_accounts?.bank_name} {selectedPayout?.bank_accounts?.account_name}</strong>. Tindakan ini tidak bisa dibatalkan.</>
                 }
             />
 
@@ -483,7 +506,7 @@ export const PayoutsDashboard = () => {
             <ConfirmModal
                 isOpen={rejectConfirm}
                 onClose={() => setRejectConfirm(false)}
-                onConfirm={() => { setRejectConfirm(false); executeReject(selectedPayout?.id); }}
+                onConfirm={() => { setRejectConfirm(false); executeUpdate(selectedPayout?.id, 'rejected', rejectReason); }}
                 title="Confirm Payout Rejection"
                 confirmLabel="Yes, Reject"
                 confirmStyle="danger"
@@ -493,7 +516,7 @@ export const PayoutsDashboard = () => {
                     </div>
                 }
                 message={
-                    <>Anda akan <strong>menolak</strong> permintaan payout dari <strong>{selectedPayout?.name}</strong>. Saldo sebesar <strong>{selectedPayout?.amount}</strong> akan di-refund ke Virtual Balance kreator.</>
+                    <>Anda akan <strong>menolak</strong> permintaan payout dari <strong>{selectedPayout?.profiles?.full_name}</strong>. Saldo sebesar <strong>Rp {Number(selectedPayout?.amount).toLocaleString('id-ID')}</strong> akan di-refund ke Virtual Balance kreator.</>
                 }
             />
         </div>

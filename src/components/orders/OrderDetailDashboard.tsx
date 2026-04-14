@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import {
@@ -14,21 +14,69 @@ import {
     MapPinIcon,
     EnvelopeIcon,
     PhoneIcon,
+    ShoppingBagIcon,
 } from '@heroicons/react/24/outline';
 
 export const OrderDetailDashboard = () => {
-    const [toast, setToast] = React.useState<string | null>(null);
+    const [order, setOrder] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [toast, setToast] = useState<string | null>(null);
 
     const showToast = (msg: string) => {
         setToast(msg);
         setTimeout(() => setToast(null), 4000);
     };
 
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id');
+        if (id) {
+            fetchOrder(id);
+        }
+    }, []);
+
+    const fetchOrder = async (id: string) => {
+        try {
+            const res = await fetch(`/api/orders/${id}`);
+            if (res.ok) {
+                const data = await res.json();
+                setOrder(data);
+            }
+        } catch (error) {
+            console.error('Error fetching order:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    if (isLoading) {
+        return (
+            <div className="flex-1 flex items-center justify-center bg-[#F8FAFC]">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
+    if (!order) {
+        return (
+            <div className="flex-1 flex flex-col items-center justify-center bg-[#F8FAFC] p-8 text-center">
+                <h3 className="text-xl font-bold text-slate-800 mb-2">Pesanan Tidak Ditemukan</h3>
+                <p className="text-slate-500 mb-6">Pesanan yang Anda cari tidak tersedia atau ID salah.</p>
+                <a href="/orders" className="px-6 py-2 bg-primary text-white rounded-xl font-bold">Kembali ke Pesanan</a>
+            </div>
+        );
+    }
+
+    const formatCurrency = (val: number) => {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val);
+    };
+
+    const isPaid = order.status === 'paid' || order.status === 'success';
+
     const timeline = [
-        { status: 'Payment Confirmed', time: 'Oct 12, 2023 — 14:20', done: true },
-        { status: 'Processing', time: 'Oct 12, 2023 — 14:21', done: true },
-        { status: 'Download Link Sent', time: 'Oct 12, 2023 — 14:22', done: true },
-        { status: 'Completed', time: 'Oct 12, 2023 — 14:25', done: true },
+        { status: 'Order Created', time: new Date(order.created_at).toLocaleString(), done: true },
+        { status: 'Payment Confirmed', time: isPaid ? 'Done' : 'Waiting...', done: isPaid },
+        { status: 'Completed', time: isPaid ? 'Yes' : 'No', done: isPaid },
     ];
 
     return (
@@ -48,7 +96,7 @@ export const OrderDetailDashboard = () => {
                     </a>
                     <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-0.5">Orders</p>
-                        <h2 className="text-xl font-extrabold text-[#162138] tracking-tight">Order #TPK-88210</h2>
+                        <h2 className="text-xl font-extrabold text-[#162138] tracking-tight">Order #{order.invoice_id}</h2>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -74,19 +122,19 @@ export const OrderDetailDashboard = () => {
                 <div className="max-w-5xl mx-auto space-y-8">
 
                     {/* Status Banner */}
-                    <div className="flex items-center justify-between p-6 bg-gradient-to-r from-emerald-50 to-emerald-50/30 border border-emerald-100 rounded-3xl">
+                    <div className={`flex items-center justify-between p-6 rounded-3xl border ${isPaid ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'}`}>
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600">
-                                <CheckCircleIcon className="w-6 h-6" />
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isPaid ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                                {isPaid ? <CheckCircleIcon className="w-6 h-6" /> : <ClockIcon className="w-6 h-6" />}
                             </div>
                             <div>
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600 mb-0.5">Payment Status</p>
-                                <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">PAID — Transaction Successful</h3>
+                                <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-0.5 ${isPaid ? 'text-emerald-600' : 'text-amber-600'}`}>Payment Status</p>
+                                <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">{order.status.toUpperCase()} — {isPaid ? 'Successful' : 'Processing'}</h3>
                             </div>
                         </div>
                         <div className="text-right">
                             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Total Amount</p>
-                            <p className="text-3xl font-black text-[#005ab4]">$45.00</p>
+                            <p className="text-3xl font-black text-[#005ab4]">{formatCurrency(order.amount)}</p>
                         </div>
                     </div>
 
@@ -106,16 +154,16 @@ export const OrderDetailDashboard = () => {
                                     {/* Product Row */}
                                     <div className="flex items-center gap-5 p-4 bg-slate-50 rounded-2xl">
                                         <img
-                                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBVu3w-lMjxZqZAoxZnpDbEZ-dOlMVvPptZKZait0hPH7T-ctQNBzWOhCupxGRkKW8NpuIxf9XaBENqEHCOyaV9vZZ8dOW5jgEgATTh9eh576eRmS11Q1bmJekjSWWk44HVmS20U4KN6QOJdc2-t6b-umeqk2JH0aLoV1Pb3SfTosVZLQY-3p84_Mg_UnrxM9mPEtRM8_xtwFgn0NC6dfOT0A5EscBrAOzFfL-jh38l90p2wXDCb73gXfOZCSxBP1qJ8RSBEVc0KxNC"
+                                            src={order.products?.cover_url || 'https://via.placeholder.com/150'}
                                             alt="Product"
                                             className="w-16 h-16 rounded-2xl object-cover shadow-sm flex-shrink-0"
                                         />
                                         <div className="flex-1">
-                                            <p className="font-black text-slate-800 text-sm uppercase tracking-tight">Elite Digital Watch</p>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Electronics • Digital Product</p>
+                                            <a href={`/product-detail?id=${order.products?.id}`} className="font-black text-slate-800 text-sm uppercase tracking-tight hover:text-primary transition-colors">{order.products?.title}</a>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Digital Product • {order.products?.type || 'File'}</p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="font-black text-[#005ab4] text-base">$45.00</p>
+                                            <p className="font-black text-[#005ab4] text-base">{formatCurrency(order.amount)}</p>
                                             <p className="text-[10px] text-slate-400 font-medium">Qty: 1</p>
                                         </div>
                                     </div>
@@ -123,17 +171,14 @@ export const OrderDetailDashboard = () => {
                                 {/* Totals */}
                                 <div className="px-6 pt-2 pb-6 space-y-2 border-t border-slate-50">
                                     <div className="flex justify-between text-xs font-bold text-slate-500 py-1">
-                                        <span>Subtotal</span><span>$45.00</span>
+                                        <span>Subtotal</span><span>{formatCurrency(order.amount)}</span>
                                     </div>
                                     <div className="flex justify-between text-xs font-bold text-slate-500 py-1">
-                                        <span>Platform Fee (0%)</span><span>$0.00</span>
-                                    </div>
-                                    <div className="flex justify-between text-xs font-bold text-slate-500 py-1">
-                                        <span>Tax</span><span>$0.00</span>
+                                        <span>Platform Fee (0%)</span><span>IDR 0</span>
                                     </div>
                                     <div className="flex justify-between text-sm font-black text-slate-900 py-2 border-t border-slate-100 mt-1">
                                         <span className="uppercase tracking-tight">Total</span>
-                                        <span className="text-[#005ab4]">$45.00</span>
+                                        <span className="text-[#005ab4]">{formatCurrency(order.amount)}</span>
                                     </div>
                                 </div>
                             </Card>
@@ -146,10 +191,10 @@ export const OrderDetailDashboard = () => {
                                 </div>
                                 <div className="grid grid-cols-2 gap-6">
                                     {[
-                                        { label: 'Payment Method', value: 'QRIS', icon: BuildingLibraryIcon },
-                                        { label: 'Transaction ID', value: 'TXN-928471023', icon: DocumentTextIcon },
-                                        { label: 'Order Date', value: 'Oct 12, 2023 14:20', icon: CalendarDaysIcon },
-                                        { label: 'Completed At', value: 'Oct 12, 2023 14:25', icon: ClockIcon },
+                                        { label: 'Payment Method', value: order.payment_method || 'QRIS', icon: BuildingLibraryIcon },
+                                        { label: 'Transaction ID', value: order.id.split('-')[0].toUpperCase(), icon: DocumentTextIcon },
+                                        { label: 'Order Date', value: new Date(order.created_at).toLocaleString(), icon: CalendarDaysIcon },
+                                        { label: 'Invoice ID', value: order.invoice_id, icon: ClockIcon },
                                     ].map(({ label, value, icon: Icon }) => (
                                         <div key={label} className="flex items-start gap-3">
                                             <div className="p-2 bg-slate-50 rounded-xl text-slate-400 flex-shrink-0 mt-0.5">
@@ -196,27 +241,29 @@ export const OrderDetailDashboard = () => {
                                     <h3 className="text-base font-extrabold tracking-tight text-[#005ab4]">Customer</h3>
                                 </div>
                                 <div className="flex items-center gap-4 mb-6">
-                                    <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-lg font-black flex-shrink-0">AS</div>
+                                    <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-lg font-black flex-shrink-0">
+                                        {order.customers?.name?.charAt(0) || 'C'}
+                                    </div>
                                     <div>
-                                        <p className="font-black text-slate-900 uppercase tracking-tight">Aaron Smith</p>
-                                        <p className="text-[10px] text-slate-400 font-medium">Customer since Oct 2023</p>
+                                        <p className="font-black text-slate-900 uppercase tracking-tight">{order.customers?.name}</p>
+                                        <p className="text-[10px] text-slate-400 font-medium">Customer since {new Date(order.customers?.created_at).toLocaleDateString()}</p>
                                     </div>
                                 </div>
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-3 text-slate-500">
                                         <EnvelopeIcon className="w-4 h-4 flex-shrink-0" />
-                                        <span className="text-xs font-medium">aaron.smith@gmail.com</span>
+                                        <span className="text-xs font-medium">{order.customers?.email}</span>
                                     </div>
                                     <div className="flex items-center gap-3 text-slate-500">
                                         <PhoneIcon className="w-4 h-4 flex-shrink-0" />
-                                        <span className="text-xs font-medium">+62 812-3456-7890</span>
+                                        <span className="text-xs font-medium">{order.customers?.phone || 'No phone'}</span>
                                     </div>
                                     <div className="flex items-center gap-3 text-slate-500">
                                         <MapPinIcon className="w-4 h-4 flex-shrink-0" />
-                                        <span className="text-xs font-medium">Jakarta, Indonesia</span>
+                                        <span className="text-xs font-medium">Indonesia</span>
                                     </div>
                                 </div>
-                                <a href="/customer-detail" className="mt-6 block text-center text-[10px] font-black text-primary uppercase tracking-widest hover:underline">
+                                <a href={`/customer-detail?id=${order.customers?.id}`} className="mt-6 block text-center text-[10px] font-black text-primary uppercase tracking-widest hover:underline">
                                     View Customer Profile →
                                 </a>
                             </Card>
@@ -229,10 +276,9 @@ export const OrderDetailDashboard = () => {
                                 </div>
                                 <div className="space-y-3">
                                     {[
-                                        { label: 'Order ID', value: '#TPK-88210' },
-                                        { label: 'Status', value: 'Paid' },
+                                        { label: 'Order ID', value: `#${order.invoice_id}` },
+                                        { label: 'Status', value: order.status.toUpperCase() },
                                         { label: 'Platform', value: 'Tepak.id' },
-                                        { label: 'IP Address', value: '103.xxx.xx.1' },
                                     ].map(({ label, value }) => (
                                         <div key={label} className="flex justify-between items-center py-2 border-b border-slate-50 last:border-0">
                                             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</span>

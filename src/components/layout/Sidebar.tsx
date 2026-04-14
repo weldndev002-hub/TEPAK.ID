@@ -6,8 +6,10 @@ import {
     CurrencyDollarIcon, 
     TicketIcon, 
     AcademicCapIcon, 
-    Cog6ToothIcon 
+    Cog6ToothIcon,
+    ArrowLeftOnRectangleIcon
 } from '@heroicons/react/24/outline';
+import { supabase } from '../../lib/supabase';
 
 interface NavItemProps {
   icon: React.ElementType;
@@ -52,7 +54,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePage = 'dashboard' }) =>
         <NavItem href="/admin/general-settings" icon={Cog6ToothIcon} label="Settings" active={activePage === 'settings'} />
       </nav>
 
-      <div className="p-6 mt-auto">
+      <div className="p-6 mt-auto flex flex-col gap-4">
         <div className="bg-blue-600/20 p-3 rounded-xl flex items-center gap-3">
             <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-600 flex-shrink-0">
                 <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6yXzlkK9l1vGhNg8jieQYU1URZO7iB0E8eBY6apZr9DMuSPdDsLk8Wn8ZaLWFsNUhwscYUNR5v4QRbNkNqkxdD02jsVlcL1oa05ck_tuVlkw8sJ0lck1Zyy1SdpyEYTTQoq8pmJn5XIyVZXVokDkuc2ob8I7DE18EnXNZ-NMaso7yJM4Uy6zFRYe_KSj-8JufuNcMLVT4X45Ac_ONGP7G48AQxroItKCoSzxrDF3fXmnKzMU8Z5YH56xVFGRJh1nt7oeroYj2GYav" alt="Admin" />
@@ -62,6 +64,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePage = 'dashboard' }) =>
                 <p className="text-[9px] text-blue-200 truncate pr-1">admin@tepak.id</p>
             </div>
         </div>
+
+        <button 
+          type="button"
+          onClick={async () => {
+            console.log('Logout button clicked - Admin');
+            try {
+              const { error } = await supabase.auth.signOut();
+              if (error) console.error('SignOut error:', error);
+            } catch (e) {
+              console.error('SignOut Exception:', e);
+            }
+            // Force redirect to login even if signOut fails
+            window.location.replace('/login');
+          }}
+          className="flex items-center gap-3 px-4 py-3 rounded-xl text-rose-400 hover:text-white hover:bg-rose-500/20 font-bold transition-all w-full text-left"
+        >
+          <ArrowLeftOnRectangleIcon className="w-5 h-5" />
+          <span className="text-sm">Keluar</span>
+        </button>
       </div>
     </aside>
   );

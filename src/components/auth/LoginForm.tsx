@@ -3,6 +3,7 @@ import Button from '../ui/Button';
 import Input from '../ui/Input';
 import SocialButton from '../ui/SocialButton';
 import { EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { supabase } from '../../lib/supabase';
 
 export const LoginForm: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -11,36 +12,64 @@ export const LoginForm: React.FC = () => {
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setEmailError('');
         setPasswordError('');
 
-        // 1. Password Length Validation
-        if (password.length < 8) {
-            setPasswordError('Kata sandi minimal 8 karakter');
+        // 1. Basic Validation
+        if (password.length < 6) {
+            setPasswordError('Kata sandi minimal 6 karakter');
             return;
         }
 
-        // 2. Mock Authentication Logic
         setIsLoading(true);
-        
-        setTimeout(() => {
-            if (email === 'test@gmail.com' && password === '12345678') {
-                // Berhasil
-                window.location.href = '/uikit'; // Redirect ke galeri sebagai sukses
+
+        try {
+            const { error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
+
+            if (error) {
+                if (error.message.toLowerCase().includes('email')) {
+                    setEmailError('Email tidak terdaftar atau salah');
+                } else if (error.message.toLowerCase().includes('password') || error.message.toLowerCase().includes('invalid login credentials')) {
+                    setPasswordError('Kata sandi salah atau kredensial tidak valid');
+                } else {
+                    setEmailError(error.message);
+                }
             } else {
-                // Salah
-                if (email !== 'test@gmail.com') setEmailError('Email tidak terdaftar atau salah');
-                if (password !== '12345678') setPasswordError('Kata sandi salah');
+                // Berhasil login
+                setIsSuccess(true);
+                
+                // Delay sejenak untuk menampilkan animasi sukses
+                setTimeout(() => {
+                    window.location.href = '/dashboard';
+                }, 2000);
             }
+        } catch (err: any) {
+            setEmailError('Terjadi kesalahan pada sistem. Silakan coba lagi.');
+        } finally {
             setIsLoading(false);
-        }, 800);
+        }
     };
 
     return (
         <div className="w-full flex flex-col gap-10 ">
+            {/* Success Transition Overlay - Simplified */}
+            {isSuccess && (
+                <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-900/10 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white p-10 rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.12)] border border-slate-50 flex flex-col items-center gap-6 animate-in zoom-in-95 duration-300">
+                        <div className="w-12 h-12 border-4 border-slate-100 border-t-primary rounded-full animate-spin"></div>
+                        <div className="text-center space-y-2">
+                            <h3 className="text-sm font-black text-slate-900 uppercase tracking-[0.3em]">Loading...</h3>
+                        </div>
+                    </div>
+                </div>
+            )}
             
             {/* Inputs Container */}
             <form onSubmit={handleLogin} className="w-full flex flex-col gap-8">

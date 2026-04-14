@@ -3,6 +3,7 @@ import Button from '../ui/Button';
 import Input from '../ui/Input';
 import SocialButton from '../ui/SocialButton';
 import { UserIcon, EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { supabase } from '../../lib/supabase';
 
 export const SignupForm: React.FC = () => {
     const [name, setName] = useState('');
@@ -16,7 +17,7 @@ export const SignupForm: React.FC = () => {
     const [passwordError, setPasswordError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleSignup = (e: React.FormEvent) => {
+    const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault();
         
         // Reset Errors
@@ -51,13 +52,42 @@ export const SignupForm: React.FC = () => {
 
         if (!isValid) return;
 
-        // Mock Sign-up Process
+        // Real Supabase Sign-up Process
         setIsLoading(true);
-        setTimeout(() => {
+        
+        try {
+            const { error, data } = await supabase.auth.signUp({
+                email: email,
+                password: password,
+                options: {
+                    data: {
+                        full_name: name,
+                        role: 'creator' // Trigger SQL yang kita buat akan membaca field ini
+                    }
+                }
+            });
+
+            if (error) {
+                if (error.message.toLowerCase().includes('already registered')) {
+                    setEmailError('Email ini sudah terdaftar. Silakan login.');
+                } else {
+                    setEmailError(error.message);
+                }
+            } else {
+                // Berhasil. Cek apakah butuh konfirmasi email.
+                // Jika user.identities kosong, artinya email sudah terdaftar tapi belum dikonfirmasi.
+                // Jika session null tetapi tidak ada error, biasanya butuh konfirmasi email.
+                if (data.user && data.session === null) {
+                    window.location.href = '/verify-email';
+                } else {
+                    window.location.href = '/dashboard';
+                }
+            }
+        } catch (err: any) {
+            setEmailError('Terjadi kesalahan sistem. Silakan coba lagi.');
+        } finally {
             setIsLoading(false);
-            // Redirect to verify-email as success simulation
-            window.location.href = '/verify-email';
-        }, 1200);
+        }
     };
 
     return (

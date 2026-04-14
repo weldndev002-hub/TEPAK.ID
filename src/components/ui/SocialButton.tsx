@@ -1,21 +1,41 @@
 import React from 'react';
 import Button from './Button';
+import { supabase } from '../../lib/supabase';
 
 interface SocialButtonProps {
     provider: 'google' | 'apple';
     className?: string;
-    onClick?: () => void;
 }
 
-export const SocialButton: React.FC<SocialButtonProps> = ({ provider, className, onClick }) => {
+export const SocialButton: React.FC<SocialButtonProps> = ({ provider, className }) => {
     const isGoogle = provider === 'google';
+
+    const handleLogin = async () => {
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: provider,
+                options: {
+                    redirectTo: `${window.location.origin}/dashboard`,
+                    queryParams: {
+                        access_type: 'offline',
+                        prompt: 'consent',
+                    },
+                },
+            });
+
+            if (error) throw error;
+        } catch (error: any) {
+            console.error(`Error logging in with ${provider}:`, error.message);
+            alert(`Gagal login dengan ${provider}: ${error.message}`);
+        }
+    };
 
     return (
         <Button 
             variant="outline" 
             size="lg" 
             className={`w-full py-6 rounded-2xl shadow-sm hover:shadow-md transition-all group flex-col gap-3 h-auto ${className}`}
-            onClick={onClick}
+            onClick={handleLogin}
         >
             {isGoogle ? (
                 <svg className="w-6 h-6 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">

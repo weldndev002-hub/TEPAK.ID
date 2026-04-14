@@ -11,8 +11,10 @@ import {
   Cog6ToothIcon,
   TicketIcon,
   ChartBarIcon,
-  UserIcon
+  UserIcon,
+  ArrowLeftOnRectangleIcon
 } from '@heroicons/react/24/outline';
+import { supabase } from '../../lib/supabase';
 
 interface NavItemProps {
   icon: React.ElementType;
@@ -41,13 +43,37 @@ interface LightSidebarProps {
 }
 
 export const LightSidebar: React.FC<LightSidebarProps> = ({ activePage = 'dashboard' }) => {
+  const [username, setUsername] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase.from('profiles').select('username').eq('id', user.id).single();
+        if (data) setUsername(data.username);
+      }
+    };
+    fetchUser();
+  }, []);
+
   return (
     <>
       {/* Fixed sidebar — never scrolls with page content */}
       <aside className="hidden md:flex flex-col fixed left-0 top-0 z-40 h-screen shrink-0 w-64 p-4 gap-2 bg-slate-50 border-r border-slate-200 antialiased overflow-y-auto no-scrollbar">
         {/* BRANDING */}
-        <div className="flex items-center gap-3 px-3 py-6 mb-4">
+        <div className="flex flex-col gap-4 px-3 py-6 mb-4">
           <img src="/logo-light.png" alt="Orbit Site" className="w-32 h-auto" />
+          
+          {/* VIEW SITE LINK */}
+          <a 
+            href={username ? `/u/${username}` : '#'} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20"
+          >
+            <WindowIcon className="w-4 h-4" />
+            View My site
+          </a>
         </div>
 
         {/* NAVIGATION */}
@@ -66,8 +92,25 @@ export const LightSidebar: React.FC<LightSidebarProps> = ({ activePage = 'dashbo
         </nav>
 
         {/* BOTTOM ACTION */}
-        <div className="mt-auto pt-4 border-t border-slate-200 opacity-0 pointer-events-none">
-          {/* Placeholder if needed later */}
+        <div className="mt-auto pt-4 border-t border-slate-200">
+          <button 
+            type="button"
+            onClick={async () => {
+              console.log('Logout button clicked - Creator');
+              try {
+                const { error } = await supabase.auth.signOut();
+                if (error) console.error('SignOut error:', error);
+              } catch (e) {
+                console.error('SignOut Exception:', e);
+              }
+              // Force redirect to login even if signOut fails
+              window.location.replace('/login');
+            }}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-rose-500 hover:bg-rose-50 hover:text-rose-700 font-bold transition-all w-full group text-left"
+          >
+            <ArrowLeftOnRectangleIcon className="w-5 h-5 text-rose-400 group-hover:text-rose-600 transition-colors" />
+            <span className="text-[13px] uppercase tracking-tight">Keluar Akun</span>
+          </button>
         </div>
       </aside>
 
