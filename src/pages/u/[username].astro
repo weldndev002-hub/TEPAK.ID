@@ -13,7 +13,7 @@ import { AnalyticsTracker } from '../../components/analytics/AnalyticsTracker';
 
 const { username } = Astro.params;
 const { cookies } = Astro;
-const supabase = getServerClient(cookies, Astro.request);
+const supabase = getServerClient(cookies, Astro.request, Astro.locals.runtime?.env);
 
 let merchantData = null;
 let products = [];

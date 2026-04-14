@@ -23,7 +23,7 @@ import { AnalyticsTracker } from '../components/analytics/AnalyticsTracker';
 // 1. Detect Hostname & Identity Logic (Dynamic Routing)
 const hostname = Astro.url.hostname;
 const { cookies } = Astro;
-const supabase = getServerClient(cookies, Astro.request);
+const supabase = getServerClient(cookies, Astro.request, Astro.locals.runtime?.env);
 const urlParams = Astro.url.searchParams;
 const testUsername = urlParams.get('u');
 

@@ -2,13 +2,17 @@ import { createClient } from '@supabase/supabase-js';
 import { createServerClient, createBrowserClient, parseCookieHeader } from '@supabase/ssr';
 
 // Helper to safely get environment variables across Browser, Node, and Cloudflare
-const getEnv = (key: string) => {
-  // 1. Vite / Astro Build-time (PUBLIC_ vars)
+// Helper to safely get environment variables across Browser, Node, and Cloudflare
+const getEnv = (key: string, env?: any) => {
+  // 1. Try passed runtime env (Cloudflare Functions)
+  if (env && env[key]) return env[key];
+
+  // 2. Vite / Astro Build-time (PUBLIC_ vars for browser)
   if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
     return import.meta.env[key];
   }
 
-  // 2. Node.js Runtime fallback
+  // 3. Node.js Runtime fallback
   if (typeof process !== 'undefined' && process.env && process.env[key]) {
     return process.env[key];
   }
@@ -16,25 +20,22 @@ const getEnv = (key: string) => {
   return undefined;
 };
 
-const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL');
-const supabaseAnonKey = getEnv('PUBLIC_SUPABASE_ANON_KEY');
-
-if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('placeholder')) {
-  if (typeof window !== 'undefined') {
-    console.error('❌ Supabase configuration is missing. Please check your Cloudflare Build Variables.');
-  }
-}
-
+const supabaseUrlDefault = getEnv('PUBLIC_SUPABASE_URL');
+const supabaseAnonKeyDefault = getEnv('PUBLIC_SUPABASE_ANON_KEY');
 
 // 1. Browser Client untuk React Components 
-export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createBrowserClient(supabaseUrlDefault || '', supabaseAnonKeyDefault || '');
 
 // 2. Server Client untuk Middleware atau .astro files (SSR)
-export const getServerClient = (cookies: any, request: Request) => {
-  const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
-  const key = getEnv('PUBLIC_SUPABASE_ANON_KEY') || supabaseAnonKey;
+export const getServerClient = (cookies: any, request: Request, runtimeEnv?: any) => {
+  const url = getEnv('PUBLIC_SUPABASE_URL', runtimeEnv) || supabaseUrlDefault;
+  const key = getEnv('PUBLIC_SUPABASE_ANON_KEY', runtimeEnv) || supabaseAnonKeyDefault;
 
-  return createServerClient(url, key, {
+  if (!url || !key) {
+    console.error('❌ Supabase Server Client: Missing URL or Key. Check Cloudflare ENV.');
+  }
+
+  return createServerClient(url || '', key || '', {
     cookies: {
       getAll() {
         return parseCookieHeader(request.headers.get('Cookie') ?? '');
@@ -48,9 +49,9 @@ export const getServerClient = (cookies: any, request: Request) => {
   });
 };
 
-export const getSupabaseAdmin = () => {
-  const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
-  const serviceKey = getEnv('SUPABASE_SERVICE_ROLE_KEY') || 'placeholder-service-key';
-  return createClient(url, serviceKey);
+export const getSupabaseAdmin = (runtimeEnv?: any) => {
+  const url = getEnv('PUBLIC_SUPABASE_URL', runtimeEnv) || supabaseUrlDefault;
+  const serviceKey = getEnv('SUPABASE_SERVICE_ROLE_KEY', runtimeEnv) || 'placeholder-service-key';
+  return createClient(url || '', serviceKey);
 };
 
