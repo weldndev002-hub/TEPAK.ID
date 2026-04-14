@@ -534,7 +534,7 @@ app.put('/profile', async (c) => {
 
 // GET ALL PUBLISHED TUTORIALS
 app.get('/tutorials', async (c) => {
-  const { supabase } = await getAuthContext(c.req.raw);
+  const { supabase } = await getAuthContext(c);
   
   try {
     const { data, error } = await supabase
