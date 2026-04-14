@@ -4,13 +4,26 @@ import { z } from 'zod';
 import type { APIRoute } from 'astro';
 import { createServerClient, parseCookieHeader } from '@supabase/ssr';
 
+// Get environment from Cloudflare v6 standard if available
+let cfEnv: any = {};
+try {
+    // @ts-ignore
+    const cf = await import('cloudflare:workers');
+    cfEnv = cf.env;
+} catch (e) {
+    // Fail silently for non-CF environments
+}
+
 // Helper to safely get environment variables
 const getEnv = (key: string) => {
-    if (import.meta.env && import.meta.env[key]) return import.meta.env[key];
-    try {
-        // @ts-ignore
-        if (typeof env !== 'undefined' && (env as any)[key]) return (env as any)[key];
-    } catch (e) {}
+    // 1. Try passed runtime env (Cloudflare v6+)
+    if (cfEnv && cfEnv[key]) return cfEnv[key];
+
+    // 2. Vite / Astro Build-time (PUBLIC_ vars)
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
+        return import.meta.env[key];
+    }
+
     return null;
 };
 

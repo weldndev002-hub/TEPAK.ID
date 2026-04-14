@@ -60,6 +60,7 @@ export const SignupForm: React.FC = () => {
                 email: email,
                 password: password,
                 options: {
+                    redirectTo: `${window.location.origin}/dashboard`,
                     data: {
                         full_name: name,
                         role: 'creator' // Trigger SQL yang kita buat akan membaca field ini
