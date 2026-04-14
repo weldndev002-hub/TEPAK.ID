@@ -3,22 +3,26 @@ import { createServerClient, createBrowserClient, parseCookieHeader } from '@sup
 
 // Helper to safely get environment variables across Browser, Node, and Cloudflare
 const getEnv = (key: string) => {
-  // 1. Try import.meta.env (Vite/Astro)
-  if (import.meta.env && import.meta.env[key]) return import.meta.env[key];
-  // 2. Try global cloudflare env if available (Edge)
-  try {
-    // @ts-ignore
-    if (typeof env !== 'undefined' && (env as any)[key]) return (env as any)[key];
-  } catch (e) {}
-  
-  return null;
+  // 1. Vite / Astro Build-time (PUBLIC_ vars)
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
+    return import.meta.env[key];
+  }
+
+  // 2. Node.js Runtime fallback
+  if (typeof process !== 'undefined' && process.env && process.env[key]) {
+    return process.env[key];
+  }
+
+  return undefined;
 };
 
-const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL') || 'https://placeholder.supabase.co';
-const supabaseAnonKey = getEnv('PUBLIC_SUPABASE_ANON_KEY') || 'placeholder-key';
+const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL');
+const supabaseAnonKey = getEnv('PUBLIC_SUPABASE_ANON_KEY');
 
-if (!supabaseUrl || supabaseUrl.includes('placeholder')) {
-  console.warn('⚠️ Supabase environment variables are missing.');
+if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('placeholder')) {
+  if (typeof window !== 'undefined') {
+    console.error('❌ Supabase configuration is missing. Please check your Cloudflare Build Variables.');
+  }
 }
 
 
