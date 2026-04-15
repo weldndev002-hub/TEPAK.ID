@@ -11,6 +11,10 @@ interface AvatarUploadProps {
 export const AvatarUpload: React.FC<AvatarUploadProps> = ({ image, onUpload, className }) => {
     const [preview, setPreview] = useState(image || '');
 
+    React.useEffect(() => {
+        if (image) setPreview(image);
+    }, [image]);
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {

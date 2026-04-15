@@ -1,15 +1,48 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../ui/Card';
 import { FunnelIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
 
-const funnelSteps = [
-    { label: 'Total Visits', value: '12,402', percent: 100, color: 'bg-primary' },
-    { label: 'Product Views', value: '5,820', percent: 47, color: 'bg-primary/80' },
-    { label: 'Added to Cart', value: '1,240', percent: 10, color: 'bg-primary/60' },
-    { label: 'Purchased', value: '452', percent: 3.6, color: 'bg-emerald-500' },
-];
+interface FunnelStep {
+    label: string;
+    value: string;
+    percent: number;
+    color: string;
+}
 
 export const ConversionFunnel = () => {
+    const [funnelSteps, setFunnelSteps] = useState<FunnelStep[]>([]);
+    const [conversionRate, setConversionRate] = useState<number>(0);
+    const [improvement, setImprovement] = useState<number>(0);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchFunnelData = async () => {
+            try {
+                const res = await fetch('/api/analytics/conversion-funnel?range=30d');
+                if (!res.ok) throw new Error('Failed to fetch');
+                const data = await res.json();
+                setFunnelSteps(data.funnelSteps || []);
+                setConversionRate(data.conversionRate || 0);
+                setImprovement(data.improvement || 0);
+            } catch (err) {
+                console.error('Funnel Error:', err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchFunnelData();
+    }, []);
+
+    const defaultFunnelSteps: FunnelStep[] = [
+        { label: 'Total Visits', value: '12,402', percent: 100, color: 'bg-primary' },
+        { label: 'Product Views', value: '5,820', percent: 47, color: 'bg-primary/80' },
+        { label: 'Added to Cart', value: '1,240', percent: 10, color: 'bg-primary/60' },
+        { label: 'Purchased', value: '452', percent: 3.6, color: 'bg-emerald-500' },
+    ];
+
+    const displaySteps = funnelSteps.length > 0 ? funnelSteps : defaultFunnelSteps;
+    const displayRate = conversionRate > 0 ? conversionRate : 3.64;
     return (
         <Card className="p-10 border-slate-50 shadow-sm h-full rounded-[2.5rem] ">
             <div className="flex items-center justify-between mb-10">
@@ -23,8 +56,8 @@ export const ConversionFunnel = () => {
             </div>
 
             <div className="space-y-6">
-                {funnelSteps.map((step, idx) => {
-                    const nextStep = funnelSteps[idx + 1];
+                {displaySteps.map((step, idx) => {
+                    const nextStep = displaySteps[idx + 1];
                     const dropoff = nextStep ? (100 - (nextStep.percent / step.percent) * 100).toFixed(1) : null;
 
                     return (
@@ -62,10 +95,10 @@ export const ConversionFunnel = () => {
             <div className="mt-12 p-8 bg-emerald-50 border border-emerald-100/50 rounded-[2rem] flex items-center justify-between shadow-sm">
                 <div>
                     <p className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.3em] mb-2 leading-none">Global Conversion Rate</p>
-                    <p className="text-4xl font-black text-emerald-800 tracking-tighter uppercase">3.64%</p>
+                    <p className="text-4xl font-black text-emerald-800 tracking-tighter uppercase">{displayRate.toFixed(2)}%</p>
                 </div>
                 <div className="text-right">
-                    <span className="px-4 py-2 rounded-xl bg-white/50 text-emerald-700 border border-emerald-100 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">+14% vs Avg</span>
+                    <span className="px-4 py-2 rounded-xl bg-white/50 text-emerald-700 border border-emerald-100 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">+{improvement}% vs Avg</span>
                 </div>
             </div>
         </Card>

@@ -241,9 +241,10 @@ export const EditProductDashboard = () => {
                     <Button 
                         variant="secondary" 
                         className="px-8 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-blue-900/30 hover:scale-105 active:scale-95 transition-all bg-[#465f89] hover:bg-[#344d77] text-white"
-                        onClick={() => setShowSaveModal(true)}
+                        onClick={handleSave}
+                        disabled={isSaving}
                     >
-                        Simpan Perubahan
+                        {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
                     </Button>
                     <button 
                         onClick={async () => {
@@ -550,37 +551,7 @@ export const EditProductDashboard = () => {
                     </div>
                 </div>
             </main>
-            {/* Save Confirmation Modal */}
-            {showSaveModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-md rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <div className="p-8 text-center">
-                            <div className="w-16 h-16 bg-blue-50 text-[#005ab4] rounded-full flex items-center justify-center mx-auto mb-6">
-                                <CheckCircleIcon className="w-8 h-8" />
-                            </div>
-                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-2">Simpan Perubahan?</h3>
-                            <p className="text-sm text-slate-500 font-medium leading-relaxed px-4">
-                                Pastikan semua data sudah benar sebelum menyimpan. Perubahan akan segera aktif di toko Anda.
-                            </p>
-                        </div>
-                        <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-center gap-3">
-                            <button 
-                                className="flex-1 py-3 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" 
-                                onClick={() => setShowSaveModal(false)}
-                            >
-                                Periksa Lagi
-                            </button>
-                            <button 
-                                className="flex-1 py-3 rounded-xl font-black bg-[#465f89] hover:bg-[#344d77] text-white shadow-lg shadow-blue-900/20 transition-all text-[10px] uppercase tracking-widest disabled:opacity-50" 
-                                onClick={handleSave}
-                                disabled={isSaving}
-                            >
-                                {isSaving ? 'Menyimpan...' : 'Ya, Simpan'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+
 
             {/* Discard Changes Modal */}
             {showDiscardModal && (

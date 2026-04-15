@@ -1,16 +1,45 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../ui/Card';
 import { GlobeAltIcon, MapIcon } from '@heroicons/react/24/outline';
 
-const locations = [
-    { country: 'Indonesia', flag: '🇮🇩', sessions: '45.2k', share: 62, trend: '+12%' },
-    { country: 'Malaysia', flag: '🇲🇾', sessions: '12.4k', share: 18, trend: '+5%' },
-    { country: 'Singapore', flag: '🇸🇬', sessions: '8.1k', share: 11, trend: '-2%' },
-    { country: 'United States', flag: '🇺🇸', sessions: '4.2k', share: 6, trend: '+20%' },
-    { country: 'Others', flag: '🌐', sessions: '2.1k', share: 3, trend: '+1%' },
-];
+interface Location {
+    country: string;
+    flag: string;
+    sessions: string | number;
+    share: number;
+    trend: string;
+}
 
 export const GeoAnalytics = () => {
+    const [locations, setLocations] = useState<Location[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchGeoData = async () => {
+            try {
+                const res = await fetch('/api/analytics/geo?range=30d');
+                if (!res.ok) throw new Error('Failed to fetch');
+                const data = await res.json();
+                setLocations(data.locations || []);
+            } catch (err) {
+                console.error('Geo Analytics Error:', err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchGeoData();
+    }, []);
+
+    const defaultLocations: Location[] = [
+        { country: 'Indonesia', flag: '🇮🇩', sessions: '45.2k', share: 62, trend: '+12%' },
+        { country: 'Malaysia', flag: '🇲🇾', sessions: '12.4k', share: 18, trend: '+5%' },
+        { country: 'Singapore', flag: '🇸🇬', sessions: '8.1k', share: 11, trend: '-2%' },
+        { country: 'United States', flag: '🇺🇸', sessions: '4.2k', share: 6, trend: '+20%' },
+        { country: 'Others', flag: '🌐', sessions: '2.1k', share: 3, trend: '+1%' },
+    ];
+
+    const displayLocations = locations.length > 0 ? locations : defaultLocations;
     return (
         <Card className="p-10 border-slate-50 shadow-sm h-full rounded-[2.5rem] ">
             <div className="flex items-center justify-between mb-10">
@@ -24,7 +53,7 @@ export const GeoAnalytics = () => {
             </div>
 
             <div className="space-y-8">
-                {locations.map((loc, idx) => (
+                {displayLocations.map((loc, idx) => (
                     <div key={idx} className="space-y-3">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">

@@ -40,6 +40,8 @@ export const OnboardingForm: React.FC = () => {
 
     // VALIDATION STATES
     const [errors, setErrors] = useState<{ domain?: string }>({});
+    const [apiError, setApiError] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const themes = [
         { id: 'atelier-dark', name: 'Atelier Dark', gradient: 'bg-slate-900 shadow-2xl' },
@@ -47,7 +49,8 @@ export const OnboardingForm: React.FC = () => {
         { id: 'sunrise-glow', name: 'Sunrise Glow', gradient: 'bg-gradient-to-br from-amber-100 to-rose-200' },
     ];
 
-    const nextStep = () => {
+    const nextStep = async () => {
+        setApiError(null);
         if (currentStep === 0) {
             const result = domainSchema.safeParse(domain);
             if (!result.success) {
@@ -55,6 +58,45 @@ export const OnboardingForm: React.FC = () => {
                 return;
             }
             setErrors({});
+        }
+
+        if (currentStep === 1) {
+            setIsSubmitting(true);
+            try {
+                // Save domain
+                const domainRes = await fetch('/api/settings/domain', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ domain_name: domain })
+                });
+                
+                const domainData = await domainRes.json();
+                if (!domainRes.ok) {
+                    throw new Error(domainData.error || 'Terjadi kesalahan saat menyimpan domain');
+                }
+
+                // Save profile settings
+                const profileRes = await fetch('/api/profile', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        full_name: fullName,
+                        bio: bio
+                    })
+                });
+
+                if (!profileRes.ok) {
+                    const profileData = await profileRes.json();
+                    throw new Error(profileData.error || 'Terjadi kesalahan saat menyimpan profil');
+                }
+
+            } catch (err: any) {
+                console.error('Save Onboarding Error:', err);
+                setApiError(err.message);
+                setIsSubmitting(false);
+                return; // Stop and don't go to next step
+            }
+            setIsSubmitting(false);
         }
 
         if (currentStep < ONBOARDING_STEPS.length - 1) {
@@ -251,7 +293,12 @@ export const OnboardingForm: React.FC = () => {
                 )}
 
                 {/* NAVIGATION CTA */}
-                <div className="mt-20 pt-16 border-t border-slate-50 flex flex-col md:flex-row items-center justify-between gap-10">
+                {apiError && (
+                    <div className="mt-8 p-4 bg-rose-50 border border-rose-100 rounded-xl">
+                        <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest text-center">{apiError}</p>
+                    </div>
+                )}
+                <div className="mt-12 pt-16 border-t border-slate-50 flex flex-col md:flex-row items-center justify-between gap-10">
                     <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em] max-w-[240px] text-center md:text-left leading-relaxed">
                         By continuing, you agree to the TEPAK.ID Ecosystem Terms & Conditions.
                     </p>
@@ -269,11 +316,12 @@ export const OnboardingForm: React.FC = () => {
                         {currentStep < 2 && (
                             <Button 
                                 variant="primary" 
+                                disabled={isSubmitting}
                                 className="w-full md:w-auto px-16 py-5 font-black uppercase text-[10px] tracking-widest group shadow-2xl shadow-primary/20 rounded-2xl bg-primary text-white"
                                 onClick={nextStep}
                             >
-                                <span>Continue</span>
-                                <ArrowRightIcon className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
+                                <span>{isSubmitting ? 'Saving...' : 'Continue'}</span>
+                                {!isSubmitting && <ArrowRightIcon className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />}
                             </Button>
                         )}
                     </div>

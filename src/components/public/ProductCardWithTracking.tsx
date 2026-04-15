@@ -48,10 +48,10 @@ export const ProductCardWithTracking: React.FC<ProductWithTrackingProps> = ({
   return (
     <ProductCard
       id={id}
-      image={image}
       title={title}
       price={price}
       description={description}
+      imageSrc={image}
       onProductClick={handleProductClick}
       onBuy={handleBuy}
     />

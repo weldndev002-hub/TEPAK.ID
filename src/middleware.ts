@@ -18,7 +18,7 @@ export const onRequest = defineMiddleware(async ({ locals, cookies, request, red
   };
 
   const url = new URL(request.url);
-  const isAuthPage = ['/login', '/signup', '/forgot-password'].includes(url.pathname);
+  const isAuthPage = ['/login', '/signup', '/forgot-password', '/callback'].includes(url.pathname);
   
   // Define protected prefixes
   const protectedPrefixes = [

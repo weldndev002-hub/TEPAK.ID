@@ -28,6 +28,10 @@ export const CreatorAtelierEditor: React.FC = () => {
     const [bio, setBio] = useState('Visual Architect & Content Strategist based in Jakarta.');
     const [fullName, setFullName] = useState('');
     const [avatarUrl, setAvatarUrl] = useState('');
+    const [instagramUrl, setInstagramUrl] = useState('');
+    const [tiktokUrl, setTiktokUrl] = useState('');
+    const [twitterUrl, setTwitterUrl] = useState('');
+    const [youtubeUrl, setYoutubeUrl] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [activeBlockType, setActiveBlockType] = useState<string | null>(null);
     const [blocks, setBlocks] = useState([
@@ -51,6 +55,11 @@ export const CreatorAtelierEditor: React.FC = () => {
                     if (data.bio) setBio(data.bio);
                     if (data.full_name) setFullName(data.full_name);
                     if (data.avatar_url) setAvatarUrl(data.avatar_url);
+                    if (data.instagram_url) setInstagramUrl(data.instagram_url);
+                    if (data.tiktok_url) setTiktokUrl(data.tiktok_url);
+                    if (data.twitter_url) setTwitterUrl(data.twitter_url);
+                    if (data.youtube_url) setYoutubeUrl(data.youtube_url);
+                    if (data.blocks && Array.isArray(data.blocks)) setBlocks(data.blocks);
                 }
             } catch (err) {
                 console.error('Failed to fetch profile:', err);
@@ -69,7 +78,13 @@ export const CreatorAtelierEditor: React.FC = () => {
                     bio: bio,
                     username: subdomain,
                     domain_name: subdomain,
-                    full_name: fullName
+                    full_name: fullName,
+                    avatar_url: avatarUrl,
+                    instagram_url: instagramUrl,
+                    tiktok_url: tiktokUrl,
+                    twitter_url: twitterUrl,
+                    youtube_url: youtubeUrl,
+                    blocks: blocks
                 })
             });
             if (res.ok) {
@@ -165,7 +180,28 @@ export const CreatorAtelierEditor: React.FC = () => {
                                     </div>
                                     <div className="space-y-4 md:space-y-8">
                                         <div className="flex flex-col items-center gap-5 md:gap-8 p-3 md:p-10 bg-white rounded-[1.2rem] md:rounded-[2rem] border border-slate-100 shadow-sm">
-                                            <AvatarUpload />
+                                             <AvatarUpload 
+                                                image={avatarUrl}
+                                                onUpload={async (file: File) => {
+                                                    try {
+                                                        const formData = new FormData();
+                                                        formData.append('avatar', file);
+                                                        const res = await fetch('/api/profile/avatar', {
+                                                            method: 'POST',
+                                                            body: formData,
+                                                        });
+                                                        if (res.ok) {
+                                                            const data = await res.json();
+                                                            setAvatarUrl(data.avatar_url);
+                                                        } else {
+                                                            const err = await res.json().catch(() => ({}));
+                                                            alert('Gagal upload foto: ' + (err?.error || 'Unknown error'));
+                                                        }
+                                                    } catch (e: any) {
+                                                        alert('Error: ' + e.message);
+                                                    }
+                                                }}
+                                             />
                                             <div className="w-full space-y-4 md:space-y-6">
                                                 <div>
                                                     <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] md:tracking-[0.3em] block mb-2 md:mb-3">Host Subdomain</label>
@@ -184,7 +220,55 @@ export const CreatorAtelierEditor: React.FC = () => {
                                                         className="w-full bg-slate-50 border-slate-100 rounded-xl md:rounded-3xl text-[10px] md:text-xs font-black uppercase tracking-tight focus:border-primary focus:ring-0 p-3 md:p-5 px-4 md:px-6 min-h-[80px] md:min-h-[120px] shadow-inner" 
                                                         value={bio}
                                                         onChange={(e) => setBio(e.target.value)}
+                                                        placeholder="Ceritakan tentang Anda..."
                                                     />
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] md:tracking-[0.3em] block mb-2 md:mb-3 flex items-center gap-2">
+                                                            <span className="material-symbols-outlined text-sm">brand_awareness</span> Instagram
+                                                        </label>
+                                                        <Input 
+                                                            placeholder="@username" 
+                                                            value={instagramUrl}
+                                                            onChange={(e) => setInstagramUrl(e.target.value)}
+                                                            className="rounded-lg md:rounded-xl text-[9px] md:text-xs h-8 md:h-auto"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] md:tracking-[0.3em] block mb-2 md:mb-3 flex items-center gap-2">
+                                                            <span className="material-symbols-outlined text-sm">video_library</span> TikTok
+                                                        </label>
+                                                        <Input 
+                                                            placeholder="@username" 
+                                                            value={tiktokUrl}
+                                                            onChange={(e) => setTiktokUrl(e.target.value)}
+                                                            className="rounded-lg md:rounded-xl text-[9px] md:text-xs h-8 md:h-auto"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] md:tracking-[0.3em] block mb-2 md:mb-3 flex items-center gap-2">
+                                                            <span className="material-symbols-outlined text-sm">alternate_email</span> Twitter/X
+                                                        </label>
+                                                        <Input 
+                                                            placeholder="@username" 
+                                                            value={twitterUrl}
+                                                            onChange={(e) => setTwitterUrl(e.target.value)}
+                                                            className="rounded-lg md:rounded-xl text-[9px] md:text-xs h-8 md:h-auto"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] md:tracking-[0.3em] block mb-2 md:mb-3 flex items-center gap-2">
+                                                            <span className="material-symbols-outlined text-sm">play_circle</span> YouTube
+                                                        </label>
+                                                        <Input 
+                                                            placeholder="channel/name" 
+                                                            value={youtubeUrl}
+                                                            onChange={(e) => setYoutubeUrl(e.target.value)}
+                                                            className="rounded-lg md:rounded-xl text-[9px] md:text-xs h-8 md:h-auto"
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

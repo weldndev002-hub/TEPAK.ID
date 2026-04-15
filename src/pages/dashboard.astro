@@ -21,6 +21,19 @@ import {
   ShareIcon
 } from '@heroicons/react/24/outline';
 
+const user = await Astro.locals.getUser();
+if (user) {
+  const { data: settings } = await Astro.locals.supabase
+    .from('user_settings')
+    .select('domain_name')
+    .eq('user_id', user.id)
+    .single();
+    
+  if (!settings?.domain_name) {
+    return Astro.redirect('/onboarding');
+  }
+}
+
 ---
 
 <BaseLayout title="Atelier Dashboard — Real-time Pulse">

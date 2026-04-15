@@ -60,7 +60,7 @@ export const SignupForm: React.FC = () => {
                 email: email,
                 password: password,
                 options: {
-                    redirectTo: `${window.location.origin}/dashboard`,
+                    redirectTo: `${window.location.origin}/auth/callback`,
                     data: {
                         full_name: name,
                         role: 'creator' // Trigger SQL yang kita buat akan membaca field ini
@@ -81,7 +81,7 @@ export const SignupForm: React.FC = () => {
                 if (data.user && data.session === null) {
                     window.location.href = '/verify-email';
                 } else {
-                    window.location.href = '/dashboard';
+                    window.location.href = '/onboarding';
                 }
             }
         } catch (err: any) {

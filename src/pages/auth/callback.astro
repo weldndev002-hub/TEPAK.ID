@@ -1,0 +1,50 @@
+---
+import { getServerClient } from '../../lib/supabase';
+
+const { code, error, error_description } = Astro.url.searchParams;
+
+// Handle error cases
+if (error) {
+  console.error('[Auth Callback] Error:', error, error_description);
+  
+  if (error === 'access_denied' && error_description?.includes('otp_expired')) {
+    return Astro.redirect('/verify-email?error=link_expired');
+  }
+  
+  return Astro.redirect(`/login?error=${error}`);
+}
+
+// Handle verification code
+if (code) {
+  const supabase = getServerClient(Astro.cookies, Astro.request);
+  
+  try {
+    // Exchange verification code for session
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    
+    if (error) {
+      console.error('[Auth Callback] Exchange code error:', error);
+      return Astro.redirect('/login?error=verification_failed');
+    }
+
+    if (data.session) {
+      // Set session cookies
+      Astro.cookies.set('sb-session', JSON.stringify(data.session), {
+        path: '/',
+        secure: true,
+        httpOnly: true,
+        sameSite: 'lax'
+      });
+
+      console.log('[Auth Callback] Session verified, redirecting to dashboard');
+      return Astro.redirect('/dashboard');
+    }
+  } catch (err: any) {
+    console.error('[Auth Callback] Unexpected error:', err);
+    return Astro.redirect('/login?error=callback_error');
+  }
+}
+
+// No code or error provided, redirect to login
+return Astro.redirect('/login');
+---

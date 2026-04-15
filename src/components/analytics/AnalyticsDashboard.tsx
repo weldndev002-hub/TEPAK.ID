@@ -77,6 +77,8 @@ export const AnalyticsDashboard = () => {
                 // Decorate API data with icons and colors for UI
                 const decoratedData = {
                     ...result,
+                    totalRevenue,
+                    totalOrders,
                     conversionRate: `${conversionRate}%`,
                     avgOrderValue: avgOrderValue,
                     avgCTR: `${ctr}%`,
@@ -84,7 +86,8 @@ export const AnalyticsDashboard = () => {
                         ...d,
                         icon: d.type === 'Mobile' ? DevicePhoneMobileIcon : ComputerDesktopIcon,
                         color: d.type === 'Mobile' ? 'text-primary bg-amber-50' : 'text-blue-600 bg-blue-50'
-                    }))
+                    })),
+                    browsers: result.browsers || []
                 };
                 setData(decoratedData);
             } else {
@@ -248,7 +251,7 @@ export const AnalyticsDashboard = () => {
                             <div className="flex items-start justify-between">
                                 <div>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Total Revenue</p>
-                                    <h3 className="text-3xl font-black text-amber-600 tracking-tighter">Rp {(data.totalRevenue / 1000000).toFixed(1)}M</h3>
+                                    <h3 className="text-3xl font-black text-amber-600 tracking-tighter">Rp {((data.totalRevenue || 0) / 1000000).toFixed(1)}M</h3>
                                     <p className="text-[9px] text-emerald-600 font-bold mt-2">↑ 24% dari periode lalu</p>
                                 </div>
                                 <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
@@ -323,11 +326,11 @@ export const AnalyticsDashboard = () => {
                             <div className="relative flex justify-center">
                                 <svg className="w-48 h-48 transform -rotate-90" viewBox="0 0 36 36">
                                     <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#f1f5f9" strokeDasharray="100, 100" strokeWidth="4"></path>
-                                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#f6af3b" strokeDasharray={`${data.devices[0].percentage}, 100`} strokeWidth="4" className="transition-all duration-1000"></path>
-                                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#465f89" strokeDasharray={`${data.devices[1].percentage}, 100`} strokeDashoffset={`-${data.devices[0].percentage}`} strokeWidth="4" className="transition-all duration-1000"></path>
+                                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#f6af3b" strokeDasharray={`${data.devices[0]?.percentage || 0}, 100`} strokeWidth="4" className="transition-all duration-1000"></path>
+                                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#465f89" strokeDasharray={`${data.devices[1]?.percentage || 0}, 100`} strokeDashoffset={`-${data.devices[0]?.percentage || 0}`} strokeWidth="4" className="transition-all duration-1000"></path>
                                 </svg>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                    <span className="text-3xl font-black text-slate-900 tracking-tighter">{data.devices[0].percentage}%</span>
+                                    <span className="text-3xl font-black text-slate-900 tracking-tighter">{data.devices[0]?.percentage || 0}%</span>
                                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Mobile First</span>
                                 </div>
                             </div>

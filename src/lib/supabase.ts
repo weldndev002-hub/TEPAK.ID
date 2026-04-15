@@ -1,47 +1,44 @@
 import { createClient } from '@supabase/supabase-js';
 import { createServerClient, createBrowserClient, parseCookieHeader } from '@supabase/ssr';
 
-// Helper to safely get environment variables across Browser, Node, and Cloudflare
-// Get environment from Cloudflare v6 standard if available
-let cfEnv: any = {};
-try {
-  // @ts-ignore
-  const cf = await import('cloudflare:workers');
-  cfEnv = cf.env;
-} catch (e) {
-  // Fail silently for non-CF environments
-}
-
-const getEnv = (key: string) => {
-  // 1. Try passed runtime env (Cloudflare v6+)
-  if (cfEnv && cfEnv[key]) return cfEnv[key];
-
-  // 2. Vite / Astro Build-time (PUBLIC_ vars for browser)
+// Helper to get env vars safely
+// Browser: uses import.meta.env (Vite/Astro build-time)
+// Server: uses import.meta.env or resolved CF env
+const getEnv = (key: string): string | undefined => {
   if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
     return import.meta.env[key];
   }
-
-  // 3. Node.js Runtime fallback
   if (typeof process !== 'undefined' && process.env && process.env[key]) {
     return process.env[key];
   }
-
   return undefined;
 };
 
-const supabaseUrlDefault = getEnv('PUBLIC_SUPABASE_URL');
-const supabaseAnonKeyDefault = getEnv('PUBLIC_SUPABASE_ANON_KEY');
+// Helper for server-side: tries cloudflare:workers env first (runtime), then build-time env
+const getServerEnv = async (key: string): Promise<string | undefined> => {
+  try {
+    // @ts-ignore - only available in Cloudflare Workers runtime
+    const cf = await import('cloudflare:workers');
+    if (cf?.env?.[key]) return cf.env[key];
+  } catch (e) {
+    // Not in CF runtime, fall through
+  }
+  return getEnv(key);
+};
 
-// 1. Browser Client untuk React Components 
-export const supabase = createBrowserClient(supabaseUrlDefault || '', supabaseAnonKeyDefault || '');
+const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL');
+const supabaseAnonKey = getEnv('PUBLIC_SUPABASE_ANON_KEY');
+
+// 1. Browser Client for React Components (uses build-time env only — no CF workers)
+export const supabase = createBrowserClient(supabaseUrl || '', supabaseAnonKey || '');
 
 // 2. Server Client untuk Middleware atau .astro files (SSR)
 export const getServerClient = (cookies: any, request: Request) => {
-  const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrlDefault;
-  const key = getEnv('PUBLIC_SUPABASE_ANON_KEY') || supabaseAnonKeyDefault;
+  const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
+  const key = getEnv('PUBLIC_SUPABASE_ANON_KEY') || supabaseAnonKey;
 
   if (!url || !key) {
-    console.error('❌ Supabase Server Client: Missing URL or Key. Check Cloudflare ENV.');
+    console.error('❌ Supabase Server Client: Missing URL or Key. Check ENV.');
   }
 
   return createServerClient(url || '', key || '', {
@@ -59,7 +56,7 @@ export const getServerClient = (cookies: any, request: Request) => {
 };
 
 export const getSupabaseAdmin = () => {
-  const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrlDefault;
+  const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
   const serviceKey = getEnv('SUPABASE_SERVICE_ROLE_KEY') || 'placeholder-service-key';
   return createClient(url || '', serviceKey);
 };

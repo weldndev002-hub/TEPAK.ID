@@ -1,0 +1,205 @@
+---
+import { getServerClient } from '../lib/supabase';
+
+/**
+ * DuitKu Payment Gateway Callback Handler
+ * URL: /callback
+ * Method: GET/POST
+ * 
+ * Query Parameters:
+ * - resultCode: Status pembayaran (00=success, 01=pending, 02=cancelled, 03=failed)
+ * - orderId: Invoice ID dari order
+ * - reference: Referensi transaksi DuitKu
+ * - signature: Tanda tangan untuk validasi
+ */
+
+const resultCode = Astro.url.searchParams.get('resultCode');
+const orderId = Astro.url.searchParams.get('orderId');
+const reference = Astro.url.searchParams.get('reference');
+const signature = Astro.url.searchParams.get('signature');
+
+console.log('[DuitKu Callback] Received:', { resultCode, orderId, reference });
+
+let status = 'unknown';
+let message = 'Status pembayaran tidak diketahui';
+
+// Map DuitKu result code to order status
+const statusMap: Record<string, { status: string; message: string }> = {
+  '00': { status: 'paid', message: 'Pembayaran berhasil! Pesanan Anda sedang diproses.' },
+  '01': { status: 'pending', message: 'Pembayaran masih menunggu konfirmasi.' },
+  '02': { status: 'cancelled', message: 'Pembayaran dibatalkan.' },
+  '03': { status: 'failed', message: 'Pembayaran gagal atau telah kedaluwarsa.' },
+};
+
+if (resultCode && statusMap[resultCode]) {
+  status = statusMap[resultCode].status;
+  message = statusMap[resultCode].message;
+
+  if (orderId) {
+    try {
+      const supabase = getServerClient(Astro.cookies, Astro.request);
+
+      // Update order status in database
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({
+          status: status,
+          payment_reference: reference || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('invoice_id', orderId);
+
+      if (updateError) {
+        console.error('[DuitKu Callback] Database error:', updateError);
+      } else {
+        console.log(`[DuitKu Callback] Order ${orderId} updated to ${status}`);
+      }
+    } catch (err) {
+      console.error('[DuitKu Callback] Error:', err);
+    }
+  }
+}
+
+// Redirect based on status
+const redirectUrl = status === 'paid' 
+  ? `/orders/${orderId}?status=success`
+  : `/checkout?status=${status}`;
+---
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Callback Pembayaran DuitKu</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 32px 64px rgba(0, 0, 0, 0.08);
+            padding: 40px;
+            max-width: 500px;
+            text-align: center;
+        }
+        .icon {
+            font-size: 64px;
+            margin-bottom: 24px;
+        }
+        h1 {
+            font-size: 28px;
+            font-weight: 900;
+            color: #1f2937;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: -0.02em;
+        }
+        p {
+            font-size: 15px;
+            color: #6b7280;
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 24px;
+        }
+        .status-success {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        .status-pending {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+        .status-failed {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        .redirect-text {
+            font-size: 13px;
+            color: #9ca3af;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #e5e7eb;
+        }
+        .reference {
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 16px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {status === 'paid' && (
+            <>
+                <div class="icon">✅</div>
+                <h1>Pembayaran Berhasil</h1>
+                <div class="status-badge status-success">Transaksi Sukses</div>
+            </>
+        )}
+        {status === 'pending' && (
+            <>
+                <div class="icon">⏳</div>
+                <h1>Pembayaran Pending</h1>
+                <div class="status-badge status-pending">Menunggu Konfirmasi</div>
+            </>
+        )}
+        {status === 'failed' && (
+            <>
+                <div class="icon">❌</div>
+                <h1>Pembayaran Gagal</h1>
+                <div class="status-badge status-failed">Transaksi Gagal</div>
+            </>
+        )}
+        {status === 'unknown' && (
+            <>
+                <div class="icon">❓</div>
+                <h1>Status Tidak Diketahui</h1>
+                <div class="status-badge" style="background-color: #f3f4f6; color: #6b7280;">Unknown</div>
+            </>
+        )}
+        
+        <p>{message}</p>
+        
+        {reference && (
+            <div class="reference">
+                <strong>Referensi:</strong> {reference}
+            </div>
+        )}
+        
+        <div class="redirect-text">
+            Mengalihkan Anda dalam beberapa detik...
+        </div>
+    </div>
+
+    <script>
+        // Redirect after 3 seconds
+        setTimeout(() => {
+            window.location.href = '{redirectUrl}';
+        }, 3000);
+    </script>
+</body>
+</html>

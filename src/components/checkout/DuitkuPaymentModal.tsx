@@ -68,8 +68,8 @@ export const DuitkuPaymentModal: React.FC<DuitkuPaymentModalProps> = ({
             setErrorMessage('');
 
             // Dapatkan URL return dari domain saat ini
-            const returnUrl = `${window.location.origin}/checkout?order_id=${orderId}`;
-            const callbackUrl = `${window.location.origin}/api/payments/duitku/webhook`;
+            const returnUrl = `${window.location.origin}/orders/${orderId}`;
+            const callbackUrl = `${window.location.origin}/callback`;
 
             // Panggil API kami untuk membuat pembayaran DuitKu
             const response = await fetch('/api/payments/duitku/create', {

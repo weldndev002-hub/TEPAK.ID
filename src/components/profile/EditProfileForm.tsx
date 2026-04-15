@@ -14,7 +14,6 @@ import {
     XCircleIcon,
     ExclamationCircleIcon
 } from '@heroicons/react/24/outline';
-import { supabase } from '../../lib/supabase';
 
 export const EditProfileForm = () => {
     const [profile, setProfile] = useState<any>({
@@ -81,25 +80,23 @@ export const EditProfileForm = () => {
 
     const handleAvatarUpload = async (file: File) => {
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            const formData = new FormData();
+            formData.append('avatar', file);
 
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-            const filePath = `avatars/${fileName}`;
+            const res = await fetch('/api/profile/avatar', {
+                method: 'POST',
+                body: formData,
+            });
 
-            const { error: uploadError } = await supabase.storage
-                .from('user-avatars')
-                .upload(filePath, file);
-
-            if (uploadError) throw uploadError;
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('user-avatars')
-                .getPublicUrl(filePath);
-
-            setProfile((prev: any) => ({ ...prev, avatar_url: publicUrl }));
-            showToast('Avatar uploaded successfully!');
+            if (res.ok) {
+                const data = await res.json();
+                setProfile((prev: any) => ({ ...prev, avatar_url: data.avatar_url }));
+                showToast('Foto profil berhasil diunggah dan disimpan!');
+            } else {
+                const errBody = await res.json().catch(() => ({}));
+                console.error('[Avatar Upload] Error:', res.status, errBody);
+                showToast('Gagal upload: ' + (errBody?.error || `HTTP ${res.status}`));
+            }
         } catch (error: any) {
             console.error('Error uploading avatar:', error);
             showToast('Error: ' + error.message);
@@ -110,10 +107,13 @@ export const EditProfileForm = () => {
         setSaveModal(false);
         setIsSaving(true);
         try {
+            // Remove 'settings' property because it doesn't belong to the 'profiles' db table
+            const { settings, ...profileToUpdate } = profile;
+
             const res = await fetch('/api/profile', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(profile)
+                body: JSON.stringify(profileToUpdate)
             });
 
             if (res.ok) {
@@ -168,7 +168,7 @@ export const EditProfileForm = () => {
                     <Button 
                         variant="primary" 
                         className="flex-1 md:flex-none shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all font-black px-10 py-5 rounded-2xl text-[11px] uppercase tracking-widest" 
-                        onClick={() => setSaveModal(true)}
+                        onClick={executeSave}
                         disabled={isSaving}
                     >
                         {isSaving ? 'Saving...' : 'Save Changes'}
@@ -428,7 +428,7 @@ export const EditProfileForm = () => {
                         <Button 
                             variant="primary" 
                             className="shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all px-12 py-5 rounded-2xl font-black text-[11px] uppercase tracking-widest bg-primary text-white w-full md:w-auto" 
-                            onClick={() => setSaveModal(true)}
+                            onClick={executeSave}
                             disabled={isSaving}
                         >
                             {isSaving ? 'Saving...' : 'Save Changes'}
@@ -437,24 +437,7 @@ export const EditProfileForm = () => {
                 </div>
             </div>
 
-        {/* Save Confirm Modal */}
-        {saveModal && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-                <div className="bg-white w-full max-w-md rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                    <div className="p-8">
-                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-blue-100 mb-4">
-                            <CheckCircleIcon className="w-6 h-6 text-[#005ab4]" />
-                        </div>
-                        <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Save Profile Changes?</h3>
-                        <p className="text-sm text-slate-500 font-medium leading-relaxed">Perubahan pada profil publik Anda akan langsung diterapkan. Informasi baru akan terlihat oleh pengunjung halaman Anda.</p>
-                    </div>
-                    <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
-                        <button className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setSaveModal(false)}>Cancel</button>
-                        <button className="px-6 py-2.5 rounded-xl font-black bg-[#465f89] hover:bg-[#3a4f75] text-white shadow-lg shadow-[#465f89]/20 transition-all text-[10px] uppercase tracking-widest" onClick={executeSave}>Yes, Save</button>
-                    </div>
-                </div>
-            </div>
-        )}
+
 
         {/* Cancel Confirm Modal */}
         {cancelModal && (
