@@ -3,6 +3,7 @@ import { cn } from '../../lib/utils';
 import Button from '../ui/Button';
 
 export interface ProductCardProps {
+  id?: string;
   title: string;
   description: string;
   price: string;
@@ -10,12 +11,33 @@ export interface ProductCardProps {
   badge?: string;
   ctaText?: string;
   onBuy?: () => void;
+  onProductClick?: () => void;
   className?: string;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ 
-  title, description, price, imageSrc, badge, ctaText = "Beli Sekarang", onBuy, className 
+  id,
+  title, 
+  description, 
+  price, 
+  imageSrc, 
+  badge, 
+  ctaText = "Beli Sekarang", 
+  onBuy,
+  onProductClick,
+  className 
 }) => {
+  const handleBuyClick = () => {
+    // Track click
+    if (onProductClick) {
+      onProductClick();
+    }
+    // Call original handler
+    if (onBuy) {
+      onBuy();
+    }
+  };
+
   return (
     <div className={cn("w-full max-w-xs bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden group flex flex-col", className)}>
       
@@ -45,7 +67,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </div>
           
           <Button 
-            onClick={onBuy}
+            onClick={handleBuyClick}
             variant="primary" 
             className="px-6 py-2.5 h-auto rounded-xl shadow-lg shadow-primary/20 font-bold"
           >

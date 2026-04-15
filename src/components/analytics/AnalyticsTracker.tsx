@@ -12,7 +12,7 @@ export const AnalyticsTracker: React.FC<AnalyticsTrackerProps> = ({
     eventType = 'view' 
 }) => {
     useEffect(() => {
-        const trackEvent = async () => {
+        const trackEvent = async (type: string = eventType) => {
             if (typeof window === 'undefined') return;
 
             // Simple Device & Browser Detection
@@ -41,22 +41,28 @@ export const AnalyticsTracker: React.FC<AnalyticsTrackerProps> = ({
                     body: JSON.stringify({
                         merchant_id: merchantId,
                         product_id: productId,
-                        event_type: eventType,
+                        event_type: type,
                         path: window.location.pathname,
                         browser,
                         os,
                         device_type: deviceType
                     })
                 });
+                console.log('[Analytics] Tracked:', type);
             } catch (err) {
                 // Silently fail to not disturb user experience
                 console.warn('[Analytics] Tracking failed:', err);
             }
         };
 
-        // Delay tracking slightly to prioritize page load
-        const timer = setTimeout(trackEvent, 1000);
-        return () => clearTimeout(timer);
+        if (eventType === 'view') {
+            // Track page view with delay
+            const timer = setTimeout(() => trackEvent('view'), 1000);
+            return () => clearTimeout(timer);
+        } else if (eventType === 'click') {
+            // For clicks - track immediately
+            trackEvent('click');
+        }
     }, [merchantId, productId, eventType]);
 
     return null;

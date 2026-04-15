@@ -27,6 +27,10 @@ export const AnalyticsDashboard = () => {
         totalViews: 12450,
         totalClicks: 842,
         avgCTR: '6.7%',
+        conversionRate: '3.2%',
+        totalRevenue: 3250000,
+        totalOrders: 26,
+        avgOrderValue: 125000,
         devices: [
             { type: 'Mobile', percentage: 72, icon: DevicePhoneMobileIcon, color: 'text-primary bg-amber-50' },
             { type: 'Desktop', percentage: 28, icon: ComputerDesktopIcon, color: 'text-blue-600 bg-blue-50' }
@@ -35,7 +39,21 @@ export const AnalyticsDashboard = () => {
             { name: 'Chrome', percentage: 65, icon: '🌐' },
             { name: 'Safari', percentage: 22, icon: '🍎' },
             { name: 'Firefox', percentage: 8, icon: '🦊' }
-        ]
+        ],
+        sales: {
+            total_revenue: 3250000,
+            order_count: 26
+        },
+        top_links: [
+            { path: '/products', views: 2450, clicks: 312 },
+            { path: '/checkout', views: 1844, clicks: 128 }
+        ],
+        time_series: {
+            labels: ['Apr 03', 'Apr 04', 'Apr 05', 'Apr 06', 'Apr 07', 'Apr 08'],
+            views: [2100, 2254, 2345, 2122, 2988, 1744],
+            clicks: [145, 168, 142, 156, 189, 142],
+            sales: [450000, 520000, 485000, 625000, 875000, 295000]
+        }
     });
 
     const handleRefresh = async () => {
@@ -46,9 +64,22 @@ export const AnalyticsDashboard = () => {
             const result = await res.json();
             
             if (res.ok) {
+                // Calculate conversion rate and metrics
+                const totalViews = result.totalViews || 0;
+                const totalOrders = result.sales?.order_count || 0;
+                const totalRevenue = result.sales?.total_revenue || 0;
+                const totalClicks = result.totalClicks || 0;
+                
+                const conversionRate = totalViews > 0 ? ((totalOrders / totalViews) * 100).toFixed(1) : '0';
+                const ctr = totalViews > 0 ? ((totalClicks / totalViews) * 100).toFixed(1) : '0';
+                const avgOrderValue = totalOrders > 0 ? Math.floor(totalRevenue / totalOrders) : 0;
+
                 // Decorate API data with icons and colors for UI
                 const decoratedData = {
                     ...result,
+                    conversionRate: `${conversionRate}%`,
+                    avgOrderValue: avgOrderValue,
+                    avgCTR: `${ctr}%`,
                     devices: (result.devices || []).map((d: any) => ({
                         ...d,
                         icon: d.type === 'Mobile' ? DevicePhoneMobileIcon : ComputerDesktopIcon,
@@ -167,9 +198,115 @@ export const AnalyticsDashboard = () => {
                     </Button>
                 </div>
             ) : (
-                <div className={cn("grid grid-cols-1 lg:grid-cols-3 gap-8 transition-opacity duration-300", isLoading ? "opacity-40" : "opacity-100")}>
-                    
-                    {/* Device Segmentation Chart (Simplified visual represent) */}
+                <>
+                    {/* PRO PERFORMANCE INSIGHTS - KEY METRICS */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                        {/* Total Views */}
+                        <Card className="p-6 border-slate-50 shadow-sm bg-white hover:shadow-lg transition-shadow">
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Total Views</p>
+                                    <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{data.totalViews.toLocaleString('id-ID')}</h3>
+                                    <p className="text-[9px] text-emerald-600 font-bold mt-2">↑ 12% dari periode lalu</p>
+                                </div>
+                                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                                    <span className="text-lg">👁️</span>
+                                </div>
+                            </div>
+                        </Card>
+
+                        {/* Total Clicks */}
+                        <Card className="p-6 border-slate-50 shadow-sm bg-white hover:shadow-lg transition-shadow">
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Total Clicks</p>
+                                    <h3 className="text-3xl font-black text-slate-900 tracking-tighter">{data.totalClicks.toLocaleString('id-ID')}</h3>
+                                    <p className="text-[9px] text-emerald-600 font-bold mt-2">↑ 8% dari periode lalu</p>
+                                </div>
+                                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+                                    <span className="text-lg">🖱️</span>
+                                </div>
+                            </div>
+                        </Card>
+
+                        {/* Conversion Rate */}
+                        <Card className="p-6 border-slate-50 shadow-sm bg-gradient-to-br from-emerald-50 to-emerald-50/30 hover:shadow-lg transition-shadow border-emerald-100">
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Conversion Rate</p>
+                                    <h3 className="text-3xl font-black text-emerald-600 tracking-tighter">{data.conversionRate}</h3>
+                                    <p className="text-[9px] text-emerald-600 font-bold mt-2">↑ 0.5% dari periode lalu</p>
+                                </div>
+                                <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+                                    <span className="text-lg">📈</span>
+                                </div>
+                            </div>
+                        </Card>
+
+                        {/* Total Revenue */}
+                        <Card className="p-6 border-slate-50 shadow-sm bg-gradient-to-br from-amber-50 to-amber-50/30 hover:shadow-lg transition-shadow border-amber-100">
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Total Revenue</p>
+                                    <h3 className="text-3xl font-black text-amber-600 tracking-tighter">Rp {(data.totalRevenue / 1000000).toFixed(1)}M</h3>
+                                    <p className="text-[9px] text-emerald-600 font-bold mt-2">↑ 24% dari periode lalu</p>
+                                </div>
+                                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+                                    <span className="text-lg">💰</span>
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
+
+                    {/* SECONDARY METRICS */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                        {/* Total Orders */}
+                        <Card className="p-6 border-slate-50 shadow-sm">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Total Orders</p>
+                            <div className="flex items-end justify-between">
+                                <div>
+                                    <h3 className="text-2xl font-black text-slate-900 tracking-tighter">{data.totalOrders}</h3>
+                                    <p className="text-[9px] text-slate-500 mt-1">transaksi berhasil</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[10px] font-bold text-emerald-600">+18%</p>
+                                </div>
+                            </div>
+                        </Card>
+
+                        {/* Average Order Value */}
+                        <Card className="p-6 border-slate-50 shadow-sm">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Avg Order Value</p>
+                            <div className="flex items-end justify-between">
+                                <div>
+                                    <h3 className="text-2xl font-black text-slate-900 tracking-tighter">Rp {(data.avgOrderValue / 1000).toFixed(0)}K</h3>
+                                    <p className="text-[9px] text-slate-500 mt-1">per transaksi</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[10px] font-bold text-emerald-600">+5%</p>
+                                </div>
+                            </div>
+                        </Card>
+
+                        {/* CTR */}
+                        <Card className="p-6 border-slate-50 shadow-sm">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Click-Through Rate</p>
+                            <div className="flex items-end justify-between">
+                                <div>
+                                    <h3 className="text-2xl font-black text-slate-900 tracking-tighter">{data.avgCTR}</h3>
+                                    <p className="text-[9px] text-slate-500 mt-1">engagement rate</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[10px] font-bold text-emerald-600">+3%</p>
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
+
+                    {/* PERFORMANCE BREAKDOWN */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 transition-opacity duration-300">
+                        
+                        {/* Device Segmentation Chart */}
                     <Card className="lg:col-span-2 p-8 border-slate-50 shadow-sm relative overflow-hidden group">
                         <div className="flex items-center justify-between mb-10">
                             <div>
@@ -258,7 +395,8 @@ export const AnalyticsDashboard = () => {
                         </div>
                     </Card>
 
-                </div>
+                    </div>
+                </>
             )}
         </div>
     );

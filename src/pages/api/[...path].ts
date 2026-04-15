@@ -1069,7 +1069,7 @@ app.post(
     })
   ),
   async (c) => {
-    const { supabase } = await getAuthContext(c.req.raw);
+    const { supabase } = await getAuthContext(c);
     const body = c.req.valid('json');
 
     // 1. Upsert Customer
@@ -1110,7 +1110,141 @@ app.post(
 );
 
 /**
- * PROFILE & USER SETTINGS ENDPOINTS
+ * ENDPOINT GATEWAY PEMBAYARAN DUITKU
+ */
+
+// 1. Buat Permintaan Pembayaran DuitKu
+app.post(
+  '/payments/duitku/create',
+  zValidator(
+    'json',
+    z.object({
+      orderId: z.string(),
+      amount: z.number().min(1),
+      productDetails: z.string(),
+      customerEmail: z.string().email(),
+      customerPhone: z.string(),
+      customerName: z.string(),
+      merchantCode: z.string(),
+      merchantKey: z.string(),
+      paymentMethod: z.string().default('QRIS'),
+      returnUrl: z.string().url(),
+      callbackUrl: z.string().url(),
+      expiryPeriod: z.number().optional().default(60),
+    })
+  ),
+  async (c) => {
+    const body = c.req.valid('json');
+
+    try {
+      // Import DuitkuService
+      const { DuitkuService } = await import('../../lib/duitku');
+      const duitkuService = new DuitkuService(body.merchantCode, body.merchantKey);
+
+      // Buat permintaan pembayaran
+      const paymentResponse = await duitkuService.createPayment({
+        merchantCode: body.merchantCode,
+        merchantKey: body.merchantKey,
+        paymentAmount: body.amount,
+        orderId: body.orderId,
+        productDetails: body.productDetails,
+        customerEmail: body.customerEmail,
+        customerPhone: body.customerPhone,
+        customerName: body.customerName,
+        returnUrl: body.returnUrl,
+        callbackUrl: body.callbackUrl,
+        paymentMethod: body.paymentMethod,
+        expiryPeriod: body.expiryPeriod,
+      });
+
+      return c.json(paymentResponse, 200);
+    } catch (error: any) {
+      console.error('Kesalahan pembuatan pembayaran DuitKu:', error);
+      return c.json({ error: error.message }, 400);
+    }
+  }
+);
+
+// 2. Handler Webhook DuitKu (untuk notifikasi pembayaran)
+app.post('/payments/duitku/webhook', async (c) => {
+  const body = await c.req.json();
+
+  try {
+    const { supabase } = await getAuthContext(c);
+
+    // Validasi tanda tangan webhook
+    const { DuitkuService } = await import('../../lib/duitku');
+    
+    // Dapatkan kunci merchant dari pengaturan pengguna - untuk produksi, query dari database
+    const merchantKey = body.merchantKey; // Harus berasal dari permintaan untuk keamanan
+    const duitkuService = new DuitkuService(body.merchantCode, merchantKey);
+
+    if (!duitkuService.validateWebhook(body)) {
+      return c.json({ error: 'Tanda tangan webhook tidak valid' }, 401);
+    }
+
+    // Perbarui status pesanan berdasarkan respons DuitKu
+    const statusMap: Record<string, string> = {
+      '00': 'completed', // Pembayaran berhasil
+      '01': 'pending',   // Tertunda
+      '02': 'cancelled', // Dibatalkan
+      '03': 'failed',    // Gagal/Kedaluwarsa
+    };
+
+    const orderStatus = statusMap[body.statusCode] || 'pending';
+
+    // Cari dan perbarui pesanan
+    const { error: updateError } = await supabase
+      .from('orders')
+      .update({
+        status: orderStatus,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('invoice_id', body.orderId);
+
+    if (updateError) throw updateError;
+
+    // Catat webhook untuk debugging
+    console.log(`[Webhook DuitKu] Pesanan ${body.orderId} -> ${orderStatus} (Ref: ${body.reference})`);
+
+    return c.json({ success: true, status: orderStatus });
+  } catch (error: any) {
+    console.error('Kesalahan webhook DuitKu:', error);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// 3. Periksa Status Pembayaran DuitKu
+app.post(
+  '/payments/duitku/status',
+  zValidator(
+    'json',
+    z.object({
+      orderId: z.string(),
+      amount: z.number(),
+      merchantCode: z.string(),
+      merchantKey: z.string(),
+    })
+  ),
+  async (c) => {
+    const body = c.req.valid('json');
+
+    try {
+      const { DuitkuService } = await import('../../lib/duitku');
+      const duitkuService = new DuitkuService(body.merchantCode, body.merchantKey);
+
+      const status = await duitkuService.checkPaymentStatus(body.orderId, body.amount);
+
+      return c.json(status);
+    } catch (error: any) {
+      console.error('Kesalahan pemeriksaan status DuitKu:', error);
+      return c.json({ error: error.message }, 400);
+    }
+  }
+);
+
+/**
+ * ENDPOINT PROFIL & PENGATURAN PENGGUNA
  */
 
 // 1. Get My Profile (with Settings)
@@ -1206,21 +1340,35 @@ app.post(
     })
   ),
   async (c) => {
-    const { supabase } = await getAuthContext(c.req.raw);
-    const body = c.req.valid('json');
+    try {
+      const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
+      const key = getEnv('PUBLIC_SUPABASE_ANON_KEY') || supabaseAnonKey;
 
-    // Basic IP Hashing for uniqueness (optional/simulation)
-    const ip = c.req.header('x-forwarded-for') || '127.0.0.1';
-    
-    const { error } = await supabase
-      .from('analytics_events')
-      .insert({
-        ...body,
-        ip_hash: ip // In production, hash this
-      });
+      if (!url || !key) {
+        return c.json({ error: 'Configuration missing' }, 500);
+      }
 
-    if (error) return c.json({ error: error.message }, 500);
-    return c.json({ success: true }, 201);
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(url, key);
+
+      const body = c.req.valid('json');
+
+      // Basic IP Hashing for uniqueness (optional/simulation)
+      const ip = c.req.header('x-forwarded-for') || '127.0.0.1';
+      
+      const { error } = await supabase
+        .from('analytics_events')
+        .insert({
+          ...body,
+          ip_hash: ip // In production, hash this
+        });
+
+      if (error) return c.json({ error: error.message }, 500);
+      return c.json({ success: true }, 201);
+    } catch (err: any) {
+      console.error('[analytics/track] Error:', err);
+      return c.json({ error: 'Internal server error', message: err.message }, 500);
+    }
   }
 );
 
@@ -1382,7 +1530,15 @@ app.get('/analytics/dashboard', async (c) => {
 // 3. Get Public Product Detail (for Checkout)
 app.get('/public/products/:id', async (c) => {
     const id = c.req.param('id');
-    const { supabase } = await getAuthContext(c.req.raw);
+    const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
+    const key = getEnv('PUBLIC_SUPABASE_ANON_KEY') || supabaseAnonKey;
+
+    if (!url || !key) {
+        return c.json({ error: 'Configuration missing' }, 500);
+    }
+
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(url, key);
 
     const { data, error } = await supabase
         .from('products')
@@ -1392,6 +1548,36 @@ app.get('/public/products/:id', async (c) => {
         .single();
 
     if (error) return c.json({ error: 'Produk tidak ditemukan atau tidak tersedia' }, 404);
+    return c.json(data);
+});
+
+// 4. Get Public Profile Detail (for Creator Landing Page Link)
+app.get('/public/profiles/:id', async (c) => {
+    const id = c.req.param('id');
+    console.log(`[API] GET /public/profiles/${id}`);
+    
+    const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
+    const key = getEnv('PUBLIC_SUPABASE_ANON_KEY') || supabaseAnonKey;
+
+    if (!url || !key) {
+        return c.json({ error: 'Configuration missing' }, 500);
+    }
+
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(url, key);
+
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username, full_name, avatar_url')
+        .eq('id', id)
+        .single();
+
+    if (error) {
+        console.error(`[API] Profile ${id} not found:`, error);
+        return c.json({ error: 'Profile tidak ditemukan' }, 404);
+    }
+    
+    console.log(`[API] Profile found:`, data);
     return c.json(data);
 });
 
@@ -1694,7 +1880,7 @@ app.get('/admin/payouts', async (c) => {
 });
 
 app.post('/admin/payouts/update-status', async (c) => {
-    const { supabase, user: adminUser } = await getAuthContext(c.req.raw);
+    const { supabase, user: adminUser } = await getAuthContext(c);
     const isAdmin = await checkAdmin(supabase, adminUser);
     if (!isAdmin) return c.json({ error: 'Forbidden' }, 403);
 

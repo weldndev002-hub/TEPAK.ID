@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PaymentMethodCard from './PaymentMethodCard';
 import OrderSummary from './OrderSummary';
 import { 
@@ -8,10 +8,11 @@ import {
     BuildingLibraryIcon, 
     WalletIcon,
     ExclamationCircleIcon,
-    CheckCircleIcon
+    CheckCircleIcon,
+    ArrowLeftIcon
 } from '@heroicons/react/24/outline';
 import { z } from 'zod';
-import { DuitkuSimulation } from './DuitkuSimulation';
+import { DuitkuPaymentModal } from './DuitkuPaymentModal';
 import { cn } from '../../lib/utils';
 
 const paymentMethods = [
@@ -52,6 +53,12 @@ export const CheckoutForm: React.FC = () => {
     const [successModal, setSuccessModal] = useState<{ netIncome: number } | null>(null);
     const [product, setProduct] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [creatorUrl, setCreatorUrl] = useState('/public');
+
+    // DuitKu Credentials (should be fetched from merchant settings or environment)
+    const [duitkuMerchantCode, setDuitkuMerchantCode] = useState('');
+    const [duitkuMerchantKey, setDuitkuMerchantKey] = useState('');
+    const [orderId, setOrderId] = useState('');
 
     const feePercentage = 5;
 
@@ -59,6 +66,19 @@ export const CheckoutForm: React.FC = () => {
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const productId = params.get('product_id');
+        
+        // Generate unique order ID
+        const newOrderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        setOrderId(newOrderId);
+
+        // TODO: Load DuitKu credentials from merchant settings
+        // For now, these should be stored in environment variables or fetched from API
+        const merchantCode = import.meta.env.PUBLIC_DUITKU_MERCHANT_CODE || '';
+        const merchantKey = import.meta.env.PUBLIC_DUITKU_MERCHANT_KEY || '';
+        
+        setDuitkuMerchantCode(merchantCode);
+        setDuitkuMerchantKey(merchantKey);
+
         if (productId) {
             fetchProduct(productId);
         } else {
@@ -77,9 +97,54 @@ export const CheckoutForm: React.FC = () => {
     const fetchProduct = async (id: string) => {
         try {
             const res = await fetch(`/api/public/products/${id}`);
+            console.log(`[CheckoutForm] Fetch product ${id}:`, res.status);
+            
             if (res.ok) {
                 const data = await res.json();
+                console.log(`[CheckoutForm] Product data:`, data);
                 setProduct(data);
+                
+                // Fetch creator profile based on merchant_id
+                if (data.merchant_id) {
+                    try {
+                        const profileRes = await fetch(`/api/public/profiles/${data.merchant_id}`);
+                        console.log(`[CheckoutForm] Fetch profile ${data.merchant_id}:`, profileRes.status);
+                        
+                        if (profileRes.ok) {
+                            const profile = await profileRes.json();
+                            console.log(`[CheckoutForm] Profile data:`, profile);
+                            
+                            // Use username if available, fallback to profile ID or full_name
+                            let creatorIdentifier = null;
+                            
+                            if (profile?.username) {
+                                creatorIdentifier = profile.username;
+                                console.log(`[CheckoutForm] Using username:`, creatorIdentifier);
+                            } else if (profile?.full_name) {
+                                // Fallback: use full_name converted to URL-friendly format
+                                creatorIdentifier = profile.full_name
+                                    .toLowerCase()
+                                    .replace(/\s+/g, '-')
+                                    .replace(/[^a-z0-9-]/g, '');
+                                console.log(`[CheckoutForm] Fallback to full_name:`, creatorIdentifier);
+                            } else if (profile?.id) {
+                                // Last resort: use profile ID
+                                creatorIdentifier = profile.id;
+                                console.log(`[CheckoutForm] Fallback to profile ID:`, creatorIdentifier);
+                            }
+                            
+                            if (creatorIdentifier) {
+                                const newUrl = `/u/${creatorIdentifier}`;
+                                console.log(`[CheckoutForm] Setting creatorUrl to:`, newUrl);
+                                setCreatorUrl(newUrl);
+                            }
+                        } else {
+                            console.error(`[CheckoutForm] Profile fetch failed:`, profileRes.status);
+                        }
+                    } catch (err) {
+                        console.error('Error fetching creator profile:', err);
+                    }
+                }
             } else {
                 setErrors({ global: 'Produk tidak ditemukan. Silakan kembali ke halaman profil.' });
             }
@@ -159,8 +224,41 @@ export const CheckoutForm: React.FC = () => {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
+            <div className="min-h-[400px] flex flex-col items-center justify-center px-8">
+                <div className="max-w-screen-2xl mx-auto px-0 mb-8 w-full">
+                    <a href={creatorUrl} className="inline-flex items-center gap-2 text-slate-500 hover:text-primary transition-colors font-bold text-sm group">
+                        <ArrowLeftIcon className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
+                        Kembali
+                    </a>
+                </div>
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
+    // Show error if product failed to load
+    if (errors.global || !product) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] px-8">
+                <div className="max-w-screen-2xl mx-auto mb-8 w-full">
+                    <a href={creatorUrl} className="inline-flex items-center gap-2 text-slate-500 hover:text-primary transition-colors font-bold text-sm group">
+                        <ArrowLeftIcon className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
+                        Kembali
+                    </a>
+                </div>
+                <div className="bg-rose-50 border-2 border-rose-200 rounded-2xl p-8 max-w-md text-center">
+                    <ExclamationCircleIcon className="w-12 h-12 text-rose-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-bold text-rose-700 mb-2">Gagal Memuat Produk</h3>
+                    <p className="text-sm text-rose-600 mb-6">
+                        {errors.global || 'Produk tidak ditemukan atau terjadi kesalahan saat memuat data.'}
+                    </p>
+                    <a 
+                        href={creatorUrl} 
+                        className="inline-block px-6 py-2 bg-primary text-white rounded-lg font-bold hover:opacity-90 transition"
+                    >
+                        Kembali
+                    </a>
+                </div>
             </div>
         );
     }
@@ -171,6 +269,14 @@ export const CheckoutForm: React.FC = () => {
             {/* LEFT COLUMN: MAIN FORM CONTENT */}
             <div className="flex-grow lg:w-2/3 space-y-8">
                 
+                {/* BACK BUTTON */}
+                <div className="-mx-8 px-8 py-4 border-b border-slate-100">
+                    <a href={creatorUrl} className="inline-flex items-center gap-2 text-slate-500 hover:text-primary transition-colors font-bold text-sm group">
+                        <ArrowLeftIcon className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
+                        Kembali ke Kreator
+                    </a>
+                </div>
+
                 {/* BUYER INFO SECTION */}
                 <section className="bg-surface-container-lowest p-8 rounded-xl shadow-sm">
                     <h2 className="text-2xl font-bold mb-6 text-primary flex items-center gap-2 tracking-tight">
@@ -267,11 +373,19 @@ export const CheckoutForm: React.FC = () => {
                 />
             </div>
 
-            <DuitkuSimulation 
+            <DuitkuPaymentModal
                 isOpen={isPaymentOpen}
                 onClose={() => setIsPaymentOpen(false)}
                 onSuccess={handleSuccess}
                 grossAmount={productPrice + (productPrice * (feePercentage/100))}
+                orderId={orderId}
+                productDetails={product?.title || 'Product'}
+                buyerName={buyerName}
+                buyerEmail={buyerEmail}
+                buyerPhone={buyerPhone}
+                merchantCode={duitkuMerchantCode}
+                merchantKey={duitkuMerchantKey}
+                paymentMethod="QRIS"
             />
 
             {/* Payment Success Modal */}

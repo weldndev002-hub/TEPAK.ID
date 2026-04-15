@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import ProductCard from '../../components/ui/ProductCard';
+import ProductCardWithTracking from '../../components/public/ProductCardWithTracking';
 import { 
     CheckBadgeIcon, 
     CameraIcon, 
@@ -171,12 +171,14 @@ const is_banned = merchantData?.plan_status === 'banned' || merchantData?.profil
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
                             {formatted_products.map((product) => (
-                                <ProductCard 
+                                <ProductCardWithTracking 
+                                    client:load
                                     id={product.id}
                                     image={product.image}
                                     title={product.title}
                                     price={product.price}
                                     description={product.description}
+                                    merchantId={merchantData.profiles.id}
                                 />
                             ))}
                         </div>

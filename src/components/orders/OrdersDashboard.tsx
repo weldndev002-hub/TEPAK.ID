@@ -19,10 +19,10 @@ import {
 } from '@heroicons/react/24/outline';
 
 const filterTabsData = [
-    { label: 'All', value: 'all' },
-    { label: 'Paid', value: 'success' },
-    { label: 'Pending', value: 'pending' },
-    { label: 'Failed', value: 'failed' },
+    { label: 'Semua', value: 'all' },
+    { label: 'Tersedia', value: 'success' },
+    { label: 'Tunda', value: 'pending' },
+    { label: 'Gagal', value: 'failed' },
 ];
 
 export const OrdersDashboard = () => {
@@ -73,8 +73,8 @@ export const OrdersDashboard = () => {
         <div className="flex-1 p-10 min-h-screen bg-[#f8f9fb] ">
             {/* Breadcrumb / Section Header */}
             <div className="mb-12">
-                <h3 className="text-3xl font-black text-slate-900 tracking-tighter mb-2 uppercase">Order Management</h3>
-                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] leading-none">Manage all your business transactions in a single editorial view.</p>
+                <h3 className="text-3xl font-black text-slate-900 tracking-tighter mb-2 uppercase">Pesanan Saya</h3>
+                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] leading-none">Kelola semua pembelian produk digital Anda dalam satu tampilan.</p>
             </div>
 
             {/* Stats Grid */}
@@ -86,7 +86,7 @@ export const OrdersDashboard = () => {
                         </div>
                     </div>
                     <div>
-                        <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] mb-2 leading-none">Total Orders</p>
+                        <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] mb-2 leading-none">Total Pesanan</p>
                         <h4 className="text-3xl font-black text-slate-900 tracking-tighter">{stats.total_orders}</h4>
                     </div>
                 </Card>
@@ -98,7 +98,7 @@ export const OrdersDashboard = () => {
                         </div>
                     </div>
                     <div>
-                        <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] mb-2 leading-none">Successful</p>
+                        <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] mb-2 leading-none">Tersedia</p>
                         <h4 className="text-3xl font-black text-slate-900 tracking-tighter">{stats.successful_orders}</h4>
                     </div>
                 </Card>
@@ -110,7 +110,7 @@ export const OrdersDashboard = () => {
                         </div>
                     </div>
                     <div>
-                        <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] mb-2 leading-none">Pending</p>
+                        <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] mb-2 leading-none">Tunda</p>
                         <h4 className="text-3xl font-black text-slate-900 tracking-tighter">{stats.pending_orders}</h4>
                     </div>
                 </Card>
@@ -122,7 +122,7 @@ export const OrdersDashboard = () => {
                         </div>
                     </div>
                     <div>
-                        <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] mb-2 leading-none">Net Revenue</p>
+                        <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] mb-2 leading-none">Pendapatan Bersih</p>
                         <h4 className="text-3xl font-black text-slate-900 tracking-tighter">Rp {stats.total_revenue.toLocaleString('id-ID')}</h4>
                     </div>
                 </Card>
@@ -140,11 +140,11 @@ export const OrdersDashboard = () => {
                     <Table>
                         <TableHeader>
                             <TableRow className="border-none hover:bg-transparent">
-                                <TableHead className="px-10 py-6 font-black text-slate-400 uppercase tracking-[0.2em] text-[9px]">Order ID</TableHead>
-                                <TableHead className="font-black text-slate-400 uppercase tracking-[0.2em] text-[9px]">Date</TableHead>
-                                <TableHead className="font-black text-slate-400 uppercase tracking-[0.2em] text-[9px]">Product</TableHead>
-                                <TableHead className="font-black text-slate-400 uppercase tracking-[0.2em] text-[9px]">Buyer</TableHead>
-                                <TableHead className="font-black text-slate-400 uppercase tracking-[0.2em] text-[9px]">Method</TableHead>
+                                <TableHead className="px-10 py-6 font-black text-slate-400 uppercase tracking-[0.2em] text-[9px]">No. Pesanan</TableHead>
+                                <TableHead className="font-black text-slate-400 uppercase tracking-[0.2em] text-[9px]">Tanggal</TableHead>
+                                <TableHead className="font-black text-slate-400 uppercase tracking-[0.2em] text-[9px]">Produk</TableHead>
+                                <TableHead className="font-black text-slate-400 uppercase tracking-[0.2em] text-[9px]">Pembeli</TableHead>
+                                <TableHead className="font-black text-slate-400 uppercase tracking-[0.2em] text-[9px]">Metode</TableHead>
                                 <TableHead className="font-black text-slate-400 uppercase tracking-[0.2em] text-[9px] text-right">Total</TableHead>
                                 <TableHead className="px-10 font-black text-slate-400 uppercase tracking-[0.2em] text-[9px] text-center">Status</TableHead>
                             </TableRow>
@@ -153,7 +153,7 @@ export const OrdersDashboard = () => {
                             {filteredOrders.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={7} className="text-center py-20">
-                                        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">No orders found</p>
+                                        <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Belum ada pesanan</p>
                                     </TableCell>
                                 </TableRow>
                             ) : filteredOrders.map((order) => (

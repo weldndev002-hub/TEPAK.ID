@@ -64,7 +64,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
             {status === 'paid' ? (
                 <div className="w-full mt-8 bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex flex-col items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
                     <CheckCircleIcon className="w-8 h-8 text-emerald-500" />
-                    <p className="text-sm font-black text-emerald-700 uppercase tracking-widest">Pembayaran Berhasil</p>
+                    <p className="text-sm font-black text-emerald-700 uppercase tracking-widest">Akses Diberikan</p>
                 </div>
             ) : status === 'expired' ? (
                 <div className="w-full mt-8 bg-rose-50 border border-rose-100 p-4 rounded-xl flex flex-col items-center gap-2">
@@ -76,7 +76,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
                     onClick={onPay}
                     className="w-full mt-8 bg-secondary-container text-white font-bold py-4 rounded-xl shadow-lg hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 group"
                 >
-                    Bayar Sekarang
+                    Dapatkan Sekarang
                     <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </button>
             )}
@@ -85,17 +85,17 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
             <div className="mt-6 flex flex-col gap-4">
                 <div className="flex items-center gap-3 bg-surface p-3 rounded-lg border border-outline-variant/10">
                     <ShieldCheckIcon className="w-5 h-5 text-green-600" />
-                    <span className="text-xs font-semibold text-on-surface-variant">Transaksi Aman & Terenkripsi</span>
+                    <span className="text-xs font-semibold text-on-surface-variant">Akses Instan & Aman</span>
                 </div>
                 <div className="flex items-center justify-between px-2">
-                    <span className="text-[10px] font-bold text-outline uppercase tracking-widest">Powered by</span>
+                    <span className="text-[10px] font-bold text-outline uppercase tracking-widest">Diproses oleh</span>
                     <span className="text-xs font-extrabold text-primary tracking-tighter">DUITKU</span>
                 </div>
             </div>
             
             <div className="mt-6 bg-secondary/5 p-4 rounded-lg border border-secondary/10">
                 <p className="text-xs text-on-secondary-fixed-variant leading-relaxed text-center">
-                    Dengan menekan tombol bayar, Anda menyetujui <b>Syarat & Ketentuan</b> serta <b>Kebijakan Privasi</b> tepak.id.
+                    Dengan menekan tombol "Dapatkan Sekarang", Anda menyetujui <b>Syarat & Ketentuan</b> serta <b>Kebijakan Privasi</b> tepak.id.
                 </p>
             </div>
         </section>

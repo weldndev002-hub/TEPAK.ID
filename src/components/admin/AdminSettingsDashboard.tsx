@@ -25,6 +25,7 @@ export const AdminSettingsDashboard = () => {
                             
                             <div className="space-y-6">
                                 {[
+                                    { name: 'DuitKu', status: 'Active', icon: 'account_balance_wallet', description: 'QRIS, Virtual Account, Credit Card' },
                                     { name: 'Midtrans', status: 'Active', icon: 'account_balance_wallet' },
                                     { name: 'Xendit', status: 'Inactive', icon: 'credit_card' },
                                     { name: 'Stripe', status: 'Development', icon: 'language' }
@@ -37,6 +38,7 @@ export const AdminSettingsDashboard = () => {
                                             <div>
                                                 <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{pg.name}</p>
                                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{pg.status}</p>
+                                                {pg.description && <p className="text-[9px] text-slate-500 mt-1">{pg.description}</p>}
                                             </div>
                                         </div>
                                         <Button variant="ghost" className="text-xs font-bold text-[#465f89] hover:bg-white px-4 border border-slate-200">Configure</Button>

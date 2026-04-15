@@ -2,26 +2,17 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { CheckoutForm } from '../components/checkout/CheckoutForm';
 import { 
-    ArrowLeftIcon, 
     ShieldCheckIcon, 
     LockClosedIcon, 
     FingerPrintIcon 
 } from '@heroicons/react/24/solid';
-import { AnalyticsTracker } from '../components/analytics/AnalyticsTracker';
 ---
 
 <BaseLayout title="Checkout Aman | tepak.id Ecosystem">
-    <AnalyticsTracker client:only="react" merchantId="00000000-0000-0000-0000-000000000000" />
     <div class="min-h-screen bg-[#F8F9FB] text-[#191C1E] font-['Funnel_Display',sans-serif] antialiased flex flex-col">
         
         {/* MAIN CHECKOUT FORM AREA */}
         <main class="flex-grow">
-            <div class="max-w-screen-2xl mx-auto px-8 pt-8 -mb-4">
-                <a href="/public" class="inline-flex items-center gap-2 text-slate-500 hover:text-primary transition-colors font-bold text-sm group">
-                    <ArrowLeftIcon className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
-                    Kembali
-                </a>
-            </div>
             <CheckoutForm client:load />
         </main>
 
@@ -36,12 +27,12 @@ import { AnalyticsTracker } from '../components/analytics/AnalyticsTracker';
                 </div>
                 <div class="flex flex-col items-center md:items-end gap-6">
                     <div class="flex flex-wrap justify-center gap-6">
-                        <a class="text-[#45464d] text-xs font-bold uppercase tracking-wider hover:text-[#005ab4]" href="#">Privacy Policy</a>
-                        <a class="text-[#45464d] text-xs font-bold uppercase tracking-wider hover:text-[#005ab4]" href="#">Terms of Service</a>
-                        <a class="text-[#45464d] text-xs font-bold uppercase tracking-wider hover:text-[#005ab4]" href="#">Shipping Info</a>
+                        <a class="text-[#45464d] text-xs font-bold uppercase tracking-wider hover:text-[#005ab4]" href="#">Kebijakan Privasi</a>
+                        <a class="text-[#45464d] text-xs font-bold uppercase tracking-wider hover:text-[#005ab4]" href="#">Syarat & Ketentuan</a>
+                        <a class="text-[#45464d] text-xs font-bold uppercase tracking-wider hover:text-[#005ab4]" href="#">Info Layanan</a>
                     </div>
                     <div class="flex items-center gap-4 opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
-                        <span class="text-[10px] font-bold text-[#191C1E]">SECURE CHECKOUT BY</span>
+                        <span class="text-[10px] font-bold text-[#191C1E]">CHECKOUT AMAN OLEH</span>
                         <div class="flex gap-4">
                             <ShieldCheckIcon className="w-6 h-6" />
                             <LockClosedIcon className="w-6 h-6" />

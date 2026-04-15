@@ -74,9 +74,9 @@ export const OrderDetailDashboard = () => {
     const isPaid = order.status === 'paid' || order.status === 'success';
 
     const timeline = [
-        { status: 'Order Created', time: new Date(order.created_at).toLocaleString(), done: true },
-        { status: 'Payment Confirmed', time: isPaid ? 'Done' : 'Waiting...', done: isPaid },
-        { status: 'Completed', time: isPaid ? 'Yes' : 'No', done: isPaid },
+        { status: 'Pesanan Dibuat', time: new Date(order.created_at).toLocaleString('id-ID'), done: true },
+        { status: 'Pembayaran Dikonfirmasi', time: isPaid ? 'Selesai' : 'Menunggu...', done: isPaid },
+        { status: 'Selesai', time: isPaid ? 'Ya' : 'Tidak', done: isPaid },
     ];
 
     return (
@@ -95,8 +95,8 @@ export const OrderDetailDashboard = () => {
                         <ArrowLeftIcon className="w-5 h-5" />
                     </a>
                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-0.5">Orders</p>
-                        <h2 className="text-xl font-extrabold text-[#162138] tracking-tight">Order #{order.invoice_id}</h2>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-0.5">Pesanan</p>
+                        <h2 className="text-xl font-extrabold text-[#162138] tracking-tight">Pesanan #{order.invoice_id}</h2>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -105,14 +105,14 @@ export const OrderDetailDashboard = () => {
                         onClick={() => showToast("Mempersiapkan invoice untuk dicetak...")}
                     >
                         <PrinterIcon className="w-4 h-4" />
-                        Print Invoice
+                        Cetak Invoice
                     </button>
                     <button 
                         className="flex items-center gap-2 px-5 py-2.5 bg-[#465f89] hover:bg-[#344d77] rounded-xl font-bold text-sm text-white shadow-lg shadow-blue-900/20 active:scale-95 transition-all"
                         onClick={() => showToast("Mengekspor data pesanan ke PDF...")}
                     >
                         <ArrowDownTrayIcon className="w-4 h-4" />
-                        Export PDF
+                        Ekspor PDF
                     </button>
                 </div>
             </header>
@@ -128,12 +128,12 @@ export const OrderDetailDashboard = () => {
                                 {isPaid ? <CheckCircleIcon className="w-6 h-6" /> : <ClockIcon className="w-6 h-6" />}
                             </div>
                             <div>
-                                <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-0.5 ${isPaid ? 'text-emerald-600' : 'text-amber-600'}`}>Payment Status</p>
-                                <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">{order.status.toUpperCase()} — {isPaid ? 'Successful' : 'Processing'}</h3>
+                                <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-0.5 ${isPaid ? 'text-emerald-600' : 'text-amber-600'}`}>Status Pembayaran</p>
+                                <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">{order.status.toUpperCase()} — {isPaid ? 'Berhasil' : 'Diproses'}</h3>
                             </div>
                         </div>
                         <div className="text-right">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Total Amount</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Total Jumlah</p>
                             <p className="text-3xl font-black text-[#005ab4]">{formatCurrency(order.amount)}</p>
                         </div>
                     </div>
@@ -148,7 +148,7 @@ export const OrderDetailDashboard = () => {
                             <Card className="border-none shadow-[0px_20px_40px_rgba(16,27,50,0.04)] overflow-hidden">
                                 <div className="px-8 py-6 border-b border-slate-50 flex items-center space-x-3">
                                     <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-base font-extrabold tracking-tight text-[#005ab4]">Order Items</h3>
+                                    <h3 className="text-base font-extrabold tracking-tight text-[#005ab4]">Item Pesanan</h3>
                                 </div>
                                 <div className="p-6 space-y-4">
                                     {/* Product Row */}
@@ -160,11 +160,11 @@ export const OrderDetailDashboard = () => {
                                         />
                                         <div className="flex-1">
                                             <a href={`/product-detail?id=${order.products?.id}`} className="font-black text-slate-800 text-sm uppercase tracking-tight hover:text-primary transition-colors">{order.products?.title}</a>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Digital Product • {order.products?.type || 'File'}</p>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Produk Digital • {order.products?.type || 'File'}</p>
                                         </div>
                                         <div className="text-right">
                                             <p className="font-black text-[#005ab4] text-base">{formatCurrency(order.amount)}</p>
-                                            <p className="text-[10px] text-slate-400 font-medium">Qty: 1</p>
+                                            <p className="text-[10px] text-slate-400 font-medium">Jml: 1</p>
                                         </div>
                                     </div>
                                 </div>
@@ -174,7 +174,7 @@ export const OrderDetailDashboard = () => {
                                         <span>Subtotal</span><span>{formatCurrency(order.amount)}</span>
                                     </div>
                                     <div className="flex justify-between text-xs font-bold text-slate-500 py-1">
-                                        <span>Platform Fee (0%)</span><span>IDR 0</span>
+                                        <span>Biaya Platform (0%)</span><span>IDR 0</span>
                                     </div>
                                     <div className="flex justify-between text-sm font-black text-slate-900 py-2 border-t border-slate-100 mt-1">
                                         <span className="uppercase tracking-tight">Total</span>
@@ -187,14 +187,14 @@ export const OrderDetailDashboard = () => {
                             <Card className="border-none shadow-[0px_20px_40px_rgba(16,27,50,0.04)] p-8">
                                 <div className="flex items-center space-x-3 mb-6">
                                     <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-base font-extrabold tracking-tight text-[#005ab4]">Payment Information</h3>
+                                    <h3 className="text-base font-extrabold tracking-tight text-[#005ab4]">Informasi Pembayaran</h3>
                                 </div>
                                 <div className="grid grid-cols-2 gap-6">
                                     {[
-                                        { label: 'Payment Method', value: order.payment_method || 'QRIS', icon: BuildingLibraryIcon },
-                                        { label: 'Transaction ID', value: order.id.split('-')[0].toUpperCase(), icon: DocumentTextIcon },
-                                        { label: 'Order Date', value: new Date(order.created_at).toLocaleString(), icon: CalendarDaysIcon },
-                                        { label: 'Invoice ID', value: order.invoice_id, icon: ClockIcon },
+                                        { label: 'Metode Pembayaran', value: order.payment_method || 'QRIS', icon: BuildingLibraryIcon },
+                                        { label: 'ID Transaksi', value: order.id.split('-')[0].toUpperCase(), icon: DocumentTextIcon },
+                                        { label: 'Tanggal Pesanan', value: new Date(order.created_at).toLocaleString('id-ID'), icon: CalendarDaysIcon },
+                                        { label: 'No. Invoice', value: order.invoice_id, icon: ClockIcon },
                                     ].map(({ label, value, icon: Icon }) => (
                                         <div key={label} className="flex items-start gap-3">
                                             <div className="p-2 bg-slate-50 rounded-xl text-slate-400 flex-shrink-0 mt-0.5">
@@ -213,7 +213,7 @@ export const OrderDetailDashboard = () => {
                             <Card className="border-none shadow-[0px_20px_40px_rgba(16,27,50,0.04)] p-8">
                                 <div className="flex items-center space-x-3 mb-8">
                                     <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-base font-extrabold tracking-tight text-[#005ab4]">Order Timeline</h3>
+                                    <h3 className="text-base font-extrabold tracking-tight text-[#005ab4]">Linimasa Pesanan</h3>
                                 </div>
                                 <div className="relative pl-6">
                                     <div className="absolute left-2 top-0 bottom-0 w-px bg-slate-100"></div>
@@ -238,7 +238,7 @@ export const OrderDetailDashboard = () => {
                             <Card className="border-none shadow-[0px_20px_40px_rgba(16,27,50,0.04)] p-6">
                                 <div className="flex items-center space-x-3 mb-6">
                                     <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-base font-extrabold tracking-tight text-[#005ab4]">Customer</h3>
+                                    <h3 className="text-base font-extrabold tracking-tight text-[#005ab4]">Pelanggan</h3>
                                 </div>
                                 <div className="flex items-center gap-4 mb-6">
                                     <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-lg font-black flex-shrink-0">
@@ -246,7 +246,7 @@ export const OrderDetailDashboard = () => {
                                     </div>
                                     <div>
                                         <p className="font-black text-slate-900 uppercase tracking-tight">{order.customers?.name}</p>
-                                        <p className="text-[10px] text-slate-400 font-medium">Customer since {new Date(order.customers?.created_at).toLocaleDateString()}</p>
+                                        <p className="text-[10px] text-slate-400 font-medium">Pelanggan sejak {new Date(order.customers?.created_at).toLocaleDateString('id-ID')}</p>
                                     </div>
                                 </div>
                                 <div className="space-y-3">
@@ -256,7 +256,7 @@ export const OrderDetailDashboard = () => {
                                     </div>
                                     <div className="flex items-center gap-3 text-slate-500">
                                         <PhoneIcon className="w-4 h-4 flex-shrink-0" />
-                                        <span className="text-xs font-medium">{order.customers?.phone || 'No phone'}</span>
+                                        <span className="text-xs font-medium">{order.customers?.phone || 'Tidak ada'}</span>
                                     </div>
                                     <div className="flex items-center gap-3 text-slate-500">
                                         <MapPinIcon className="w-4 h-4 flex-shrink-0" />
@@ -264,7 +264,7 @@ export const OrderDetailDashboard = () => {
                                     </div>
                                 </div>
                                 <a href={`/customer-detail?id=${order.customers?.id}`} className="mt-6 block text-center text-[10px] font-black text-primary uppercase tracking-widest hover:underline">
-                                    View Customer Profile →
+                                    Lihat Profil Pelanggan →
                                 </a>
                             </Card>
 
@@ -272,11 +272,11 @@ export const OrderDetailDashboard = () => {
                             <Card className="border-none shadow-[0px_20px_40px_rgba(16,27,50,0.04)] p-6">
                                 <div className="flex items-center space-x-3 mb-6">
                                     <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-base font-extrabold tracking-tight text-[#005ab4]">Order Info</h3>
+                                    <h3 className="text-base font-extrabold tracking-tight text-[#005ab4]">Info Pesanan</h3>
                                 </div>
                                 <div className="space-y-3">
                                     {[
-                                        { label: 'Order ID', value: `#${order.invoice_id}` },
+                                        { label: 'No. Pesanan', value: `#${order.invoice_id}` },
                                         { label: 'Status', value: order.status.toUpperCase() },
                                         { label: 'Platform', value: 'Tepak.id' },
                                     ].map(({ label, value }) => (
