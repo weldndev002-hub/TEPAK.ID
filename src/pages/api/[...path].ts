@@ -908,8 +908,12 @@ app.get('/orders/stats', async (c) => {
 
 // 1. List Customers
 app.get('/customers', async (c) => {
-    const { supabase, user } = await getAuthContext(c);
+    const { user } = await getAuthContext(c);
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    console.log(`[API] Fetching customers for merchant_id: ${user.id}`);
+    const { getSupabaseAdmin } = await import('../../lib/supabase');
+    const supabase = getSupabaseAdmin(cfEnv);
 
     const { data, error } = await supabase
         .from('customers')
@@ -917,7 +921,12 @@ app.get('/customers', async (c) => {
         .eq('merchant_id', user.id)
         .order('created_at', { ascending: false });
 
-    if (error) return c.json({ error: error.message }, 500);
+    if (error) {
+        console.error('[API] Error fetching customers:', error);
+        return c.json({ error: error.message }, 500);
+    }
+    
+    console.log(`[API] Found ${data?.length || 0} customers for ${user.id}`);
     return c.json(data);
 });
 
@@ -1027,7 +1036,9 @@ app.post(
     })
   ),
   async (c) => {
-    const { supabase } = await getAuthContext(c);
+    // Gunakan Admin Client untuk checkout publik agar bypass RLS
+    const { getSupabaseAdmin } = await import('../../lib/supabase');
+    const supabase = getSupabaseAdmin(cfEnv);
     const body = c.req.valid('json');
 
     // 1. Upsert Customer
@@ -1037,15 +1048,14 @@ app.post(
         merchant_id: body.merchant_id,
         email: body.buyer_email,
         name: body.buyer_name,
-        phone: body.buyer_phone,
-        updated_at: new Date().toISOString()
+        phone: body.buyer_phone
       }, { onConflict: 'merchant_id, email' })
       .select()
       .single();
 
     if (custError) return c.json({ error: custError.message }, 500);
 
-    // 2. Create Order
+    // 2. Create Order (Status Pending)
     const invoiceId = `TPK-${Math.floor(Math.random() * 1000000)}`;
     const { data: order, error: orderError } = await supabase
       .from('orders')
@@ -1055,7 +1065,7 @@ app.post(
         product_id: body.product_id,
         merchant_id: body.merchant_id,
         amount: body.amount,
-        status: body.status,
+        status: 'pending', // Awalnya pending
         payment_method: body.payment_method
       })
       .select()
@@ -1063,7 +1073,45 @@ app.post(
 
     if (orderError) return c.json({ error: orderError.message }, 500);
 
-    return c.json(order, 201);
+    // 3. Inisialisasi Pembayaran Duitku
+    try {
+        const merchantCode = getEnv('PUBLIC_DUITKU_MERCHANT_CODE') || '';
+        const merchantKey = getEnv('PUBLIC_DUITKU_MERCHANT_KEY') || '';
+        const callbackUrl = getEnv('DUITKU_CALLBACK_URL') || '';
+
+        if (!merchantCode || !merchantKey) {
+            console.warn('[Orders] Duitku config missing, returning order only');
+            return c.json(order, 201);
+        }
+
+        const { DuitkuService } = await import('../../lib/duitku');
+        const duitkuService = new DuitkuService(merchantCode, merchantKey);
+
+        const paymentResponse = await duitkuService.createPayment({
+            merchantCode,
+            merchantKey,
+            paymentAmount: body.amount,
+            orderId: invoiceId,
+            productDetails: `Pesanan ${invoiceId}`,
+            customerEmail: body.buyer_email,
+            customerPhone: body.buyer_phone || '',
+            customerName: body.buyer_name,
+            returnUrl: `${new URL(c.req.url).origin}/checkout/success?id=${invoiceId}&merchant=${body.merchant_id}`,
+            callbackUrl: callbackUrl || `${new URL(c.req.url).origin}/api/payments/duitku/webhook`,
+            paymentMethod: body.payment_method,
+        });
+
+        console.log(`[Orders] Duitku created for ${invoiceId}:`, paymentResponse.reference);
+
+        return c.json({
+            ...order,
+            payment: paymentResponse
+        }, 201);
+    } catch (duitkuErr: any) {
+        console.error('[Orders] Duitku Init Error:', duitkuErr);
+        // Tetap kembalikan order meskipun duitku gagal (fallback)
+        return c.json(order, 201);
+    }
   }
 );
 
@@ -1243,14 +1291,18 @@ app.post('/payments/duitku/webhook', async (c) => {
     const merchantOrderId = (body.merchantOrderId || body.orderId || '') as string;
     const resultCode = (body.resultCode || body.statusCode || '') as string;
 
+    console.log('[Webhook DuitKu] Processing Order:', merchantOrderId, 'Result:', resultCode);
+
+    // 1. KASUS LANGGANAN (SUB--)
     if (merchantOrderId.startsWith('SUB--')) {
         const parts = merchantOrderId.split('--');
         const targetUserId = parts[1];
         
         if (resultCode === '00' && targetUserId) {
-            // Update user_settings directly
+            console.log(`[Webhook DuitKu] UPGRADING USER ${targetUserId} TO PRO...`);
+            
             const expiryDate = new Date();
-            expiryDate.setDate(expiryDate.getDate() + 30); // Tambah 30 hari
+            expiryDate.setDate(expiryDate.getDate() + 30);
 
             const { error: subError } = await supabase
                 .from('user_settings')
@@ -1261,10 +1313,10 @@ app.post('/payments/duitku/webhook', async (c) => {
                     updated_at: new Date().toISOString()
                 })
                 .eq('user_id', targetUserId);
-
+            
             if (subError) {
-                console.error('[Webhook DuitKu] Gagal update paket user:', subError);
-                return c.json({ error: 'Gagal memperbarui paket' }, 500);
+                console.error('[Webhook DuitKu] Database Update Error (Sub):', subError);
+                return c.json({ error: 'Gagal update database langganan' }, 500);
             }
 
             console.log(`[Webhook DuitKu] BERHASIL! User ${targetUserId} sekarang PRO.`);
@@ -1272,30 +1324,33 @@ app.post('/payments/duitku/webhook', async (c) => {
         }
     }
 
+    // 2. KASUS PESURAN PRODUK (Invoice Biasa)
     // Perbarui status pesanan berdasarkan respons DuitKu
     const statusMap: Record<string, string> = {
-      '00': 'completed', // Pembayaran berhasil
+      '00': 'success',    // Pembayaran berhasil
       '01': 'pending',   // Tertunda
       '02': 'cancelled', // Dibatalkan
-      '03': 'failed',    // Gagal/Kedaluwarsa
+      '03': 'expired',   // Kedaluwarsa
     };
 
-    const orderStatus = statusMap[body.statusCode] || 'pending';
+    const orderStatus = statusMap[resultCode] || 'pending';
 
-    // Cari dan perbarui pesanan
+    console.log(`[Webhook DuitKu] Updating Order ${merchantOrderId} to status: ${orderStatus}`);
+
     const { error: updateError } = await supabase
       .from('orders')
       .update({
         status: orderStatus,
         updated_at: new Date().toISOString(),
       })
-      .eq('invoice_id', body.orderId);
+      .eq('invoice_id', merchantOrderId);
 
-    if (updateError) throw updateError;
+    if (updateError) {
+        console.error('[Webhook DuitKu] Database Update Error (Order):', updateError);
+        return c.json({ error: 'Gagal update database pesanan' }, 500);
+    }
 
-    // Catat webhook untuk debugging
-    console.log(`[Webhook DuitKu] Pesanan ${body.orderId} -> ${orderStatus} (Ref: ${body.reference})`);
-
+    console.log(`[Webhook DuitKu] Pesanan ${merchantOrderId} -> ${orderStatus} (Ref: ${body.reference})`);
     return c.json({ success: true, status: orderStatus });
   } catch (error: any) {
     console.error('Kesalahan webhook DuitKu:', error);

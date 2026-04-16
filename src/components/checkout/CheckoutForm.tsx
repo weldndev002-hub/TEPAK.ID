@@ -82,14 +82,7 @@ export const CheckoutForm: React.FC = () => {
         if (productId) {
             fetchProduct(productId);
         } else {
-            // Default product if none specified (for demo)
-            setProduct({
-                id: 'demo-product-id',
-                title: 'Mastering No-Code: Professional Edition',
-                price: 499000,
-                merchant_id: 'demo-merchant-id',
-                cover_url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA8uHu8gp3KKfCXG_MbnJzQ4Jj9ZUkrndYcEqZY1YbQDSzaE6nUX1x30Vhksf1XW-EbQw-dbxao5d80CzXzUHFLYzsM4_e4UVuMuA7hIcQIMBWEPNuRO1i7YMG01O1ZRcMh_lrQ_JT-PCl6KTz-ChYC3Eb_p3KR7fuRUAH1C0t_TlQEDpzY7mjTW5ha0G1AM3xKhwIzIYc8BdmyBhTn-1R_Lu3GIqN6n5FxPYGElZdG4nV5iU-0IDQXdO4WtzruigzCLRmAbRlE-lUX'
-            });
+            setErrors({ global: 'Link produk tidak valid atau tidak ditemukan.' });
             setIsLoading(false);
         }
     }, []);
@@ -165,12 +158,9 @@ export const CheckoutForm: React.FC = () => {
         phone: z.string().regex(/^\d+$/, "Nomor HP hanya boleh berisi angka").min(9, "Nomor HP tidak valid"),
     });
 
-    const handleInitiatePayment = () => {
-        if (!product) {
-            setErrors({ global: 'Data produk belum dimuat dengan sempurna.' });
-            return;
-        }
+    // Main payment initiation handler
 
+    const handleInitiatePayment = async () => {
         const result = checkoutSchema.safeParse({
             name: buyerName,
             email: buyerEmail,
@@ -186,13 +176,19 @@ export const CheckoutForm: React.FC = () => {
             return;
         }
 
-        setErrors({});
-        setIsPaymentOpen(true);
-    };
-
-    const handleSuccess = async (netIncome: number) => {
-        // Save Order to Database
         try {
+            setOrderStatus('processing');
+            
+            // 1. Map Method to Duitku Code
+            const methodMapping: Record<string, string> = {
+                'qris': 'SP', // ShopeePay (Paling stabil di Sandbox)
+                'va': 'BT',   // Bank Transfer / VA
+                'credit': 'VC', // VISA/Mastercard
+                'ewallet': 'OV' // OVO
+            };
+            const duitkuMethod = methodMapping[selectedMethod] || 'SP';
+
+            // 2. Create Order & Get Payment URL in one go
             const res = await fetch('/api/orders', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -203,22 +199,30 @@ export const CheckoutForm: React.FC = () => {
                     buyer_name: buyerName,
                     buyer_email: buyerEmail,
                     buyer_phone: buyerPhone,
-                    payment_method: selectedMethod.toUpperCase(),
-                    status: 'success'
+                    payment_method: duitkuMethod,
                 })
             });
 
             if (!res.ok) {
                 const errData = await res.json();
-                throw new Error(errData.error || 'Failed to save order');
+                throw new Error(errData.error || 'Gagal membuat pesanan');
             }
 
-            setOrderStatus('paid');
-            setIsPaymentOpen(false);
-            setSuccessModal({ netIncome });
+            const data = await res.json();
+            
+            // 2. Redirect to Duitku Payment Page
+            if (data.payment && data.payment.paymentUrl) {
+                console.log('[Checkout] Redirecting to:', data.payment.paymentUrl);
+                window.location.href = data.payment.paymentUrl;
+            } else {
+                // Fallback jika tidak ada link payment
+                setOrderStatus('paid');
+                setSuccessModal({ netIncome: productPrice * 0.95 });
+            }
         } catch (error: any) {
-            console.error('Error saving order:', error);
-            alert(`Pembayaran berhasil, namun: ${error.message}. Silakan hubungi admin.`);
+            console.error('Error initiating order:', error);
+            setErrors({ global: error.message });
+            setOrderStatus('idle');
         }
     };
 
@@ -373,20 +377,6 @@ export const CheckoutForm: React.FC = () => {
                 />
             </div>
 
-            <DuitkuPaymentModal
-                isOpen={isPaymentOpen}
-                onClose={() => setIsPaymentOpen(false)}
-                onSuccess={handleSuccess}
-                grossAmount={productPrice + (productPrice * (feePercentage/100))}
-                orderId={orderId}
-                productDetails={product?.title || 'Product'}
-                buyerName={buyerName}
-                buyerEmail={buyerEmail}
-                buyerPhone={buyerPhone}
-                merchantCode={duitkuMerchantCode}
-                merchantKey={duitkuMerchantKey}
-                paymentMethod="QRIS"
-            />
 
             {/* Payment Success Modal */}
             {successModal && (
