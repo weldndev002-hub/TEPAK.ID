@@ -55,9 +55,24 @@ export const getServerClient = (cookies: any, request: Request) => {
   });
 };
 
-export const getSupabaseAdmin = () => {
-  const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
-  const serviceKey = getEnv('SUPABASE_SERVICE_ROLE_KEY') || 'placeholder-service-key';
-  return createClient(url || '', serviceKey);
+export const getSupabaseAdmin = (runtimeEnv?: any) => {
+  const url = runtimeEnv?.PUBLIC_SUPABASE_URL || getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
+  
+  // Try to find the service key in multiple places (SSR context, process.env, or import.meta)
+  const serviceKey = 
+    runtimeEnv?.SUPABASE_SERVICE_ROLE_KEY || 
+    getEnv('SUPABASE_SERVICE_ROLE_KEY') || 
+    (typeof process !== 'undefined' ? process.env.SUPABASE_SERVICE_ROLE_KEY : undefined);
+
+  if (!serviceKey || serviceKey.startsWith('http') || serviceKey === 'placeholder-service-key') {
+      console.warn('⚠️ [Supabase Admin] Valid SUPABASE_SERVICE_ROLE_KEY not found. Admin bypass will fail.');
+  }
+
+  return createClient(url || '', serviceKey || 'missing-key', {
+    auth: {
+        autoRefreshToken: false,
+        persistSession: false
+    }
+  });
 };
 

@@ -10,7 +10,24 @@ import { cn } from '../../lib/utils';
 const feeSchema = z.number().min(0, "Fee tidak boleh negatif").max(100, "Fee tidak boleh lebih dari 100%");
 
 export const AdminGeneralSettings = () => {
-    const [platformFee, setPlatformFee] = React.useState(5);
+    const [settings, setSettings] = React.useState<any>({
+        site_name: 'Orbit Site',
+        site_tagline: 'The Digital Hub for Creators',
+        logo_url: '',
+        favicon_url: '',
+        primary_color: '#005ab4',
+        support_email: 'support@orbitsite.com',
+        whatsapp_number: '+62 812 3456 7890',
+        office_address: 'Studio Nusantara Hub, 4th Floor, Jl. Sudirman No. 12, Jakarta',
+        platform_fee: 5,
+        maintenance_mode: false,
+        registration_enabled: true,
+        payouts_enabled: true,
+        seo_description: "Transform your creative potential into a sustainable digital career with Orbit Site"
+    });
+    
+    const [isLoading, setIsLoading] = React.useState(true);
+    const [isSaving, setIsSaving] = React.useState(false);
     const [feeError, setFeeError] = React.useState<string | null>(null);
     const [saveConfirm, setSaveConfirm] = React.useState(false);
     const [discardConfirm, setDiscardConfirm] = React.useState(false);
@@ -22,9 +39,31 @@ export const AdminGeneralSettings = () => {
         setTimeout(() => setToast(null), 4000);
     };
 
+    React.useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const res = await fetch('/api/admin/settings');
+                if (!res.ok) throw new Error('Failed to fetch settings');
+                const data = await res.json();
+                
+                // Merge default state with DB data
+                setSettings((prev: any) => ({
+                    ...prev,
+                    ...data
+                }));
+            } catch (err) {
+                console.error('[Settings Fetch Error]', err);
+                showToast('error', 'Gagal memuat pengaturan. Menggunakan data default.');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchSettings();
+    }, []);
+
     const handleSave = () => {
         try {
-            feeSchema.parse(platformFee);
+            feeSchema.parse(Number(settings.platform_fee));
             setFeeError(null);
             setSaveConfirm(true);
         } catch (err: any) {
@@ -32,9 +71,25 @@ export const AdminGeneralSettings = () => {
         }
     };
 
-    const executeSave = () => {
+    const executeSave = async () => {
         setSaveConfirm(false);
-        showToast('success', `Platform Fee diperbarui menjadi ${platformFee}%. Berlaku untuk semua transaksi baru.`);
+        setIsSaving(true);
+        try {
+            const res = await fetch('/api/admin/settings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(settings)
+            });
+            
+            if (!res.ok) throw new Error('Failed to update settings');
+            
+            showToast('success', `Pengaturan platform berhasil diperbarui.`);
+        } catch (err) {
+            console.error('[Settings Update Error]', err);
+            showToast('error', 'Gagal menyimpan perubahan ke database.');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const executeDiscard = () => {
@@ -42,12 +97,21 @@ export const AdminGeneralSettings = () => {
         window.location.reload();
     };
 
+    if (isLoading) {
+        return (
+            <div className="w-full h-[60vh] flex flex-col items-center justify-center gap-4">
+                <div className="w-10 h-10 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Memuat Konfigurasi...</p>
+            </div>
+        );
+    }
+
     return (
         <div className="w-full">
             {/* Toast */}
             {toast && (
                 <div className={cn(
-                    "fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl text-sm font-bold",
+                    "fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl text-sm font-bold animate-in fade-in slide-in-from-top-4",
                     toast.type === 'success' ? "bg-emerald-500 text-white" : "bg-rose-500 text-white"
                 )}>
                     {toast.type === 'success'
@@ -70,8 +134,8 @@ export const AdminGeneralSettings = () => {
                         <Button variant="ghost" className="bg-slate-50 text-slate-700 hover:bg-slate-100 transition-all text-sm font-semibold border-transparent" onClick={() => setDiscardConfirm(true)}>
                             Discard Changes
                         </Button>
-                        <Button onClick={handleSave} variant="primary" className="bg-[#465f89] text-white hover:shadow-lg hover:shadow-[#465f89]/20 transition-all text-sm font-semibold shadow-sm">
-                            Save Changes
+                        <Button onClick={handleSave} disabled={isSaving} variant="primary" className="bg-[#465f89] text-white hover:shadow-lg hover:shadow-[#465f89]/20 transition-all text-sm font-semibold shadow-sm">
+                            {isSaving ? 'Saving...' : 'Save Changes'}
                         </Button>
                     </div>
                 </div>
@@ -82,7 +146,6 @@ export const AdminGeneralSettings = () => {
                         General Settings
                         <span className="absolute bottom-0 left-0 w-full h-1 bg-[#465f89] rounded-t-full"></span>
                     </button>
-                    {/* Hide unused items for now as per request */}
                 </div>
             </div>
 
@@ -105,11 +168,21 @@ export const AdminGeneralSettings = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Platform Name</label>
-                                    <input className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" type="text" defaultValue="Orbit Site" />
+                                    <input 
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" 
+                                        type="text" 
+                                        value={settings.site_name}
+                                        onChange={(e) => setSettings({...settings, site_name: e.target.value})}
+                                    />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Slogan / Tagline</label>
-                                    <input className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" type="text" defaultValue="The Digital Hub for Creators" />
+                                    <input 
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" 
+                                        type="text" 
+                                        value={settings.site_tagline}
+                                        onChange={(e) => setSettings({...settings, site_tagline: e.target.value})}
+                                    />
                                 </div>
                             </div>
                             
@@ -117,7 +190,11 @@ export const AdminGeneralSettings = () => {
                                 <div className="space-y-3">
                                     <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider block">Official Logo</label>
                                     <div className="w-24 h-24 bg-slate-100 rounded-2xl flex items-center justify-center border-2 border-dashed border-slate-200 relative group cursor-pointer overflow-hidden">
-                                        <div className="text-2xl font-black text-blue-600">Orbit</div>
+                                        {settings.logo_url ? (
+                                            <img src={settings.logo_url} alt="Logo" className="w-full h-full object-contain p-2" />
+                                        ) : (
+                                            <div className="text-2xl font-black text-blue-600">Logo</div>
+                                        )}
                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                             <span className="material-symbols-outlined text-white">upload</span>
                                         </div>
@@ -127,20 +204,26 @@ export const AdminGeneralSettings = () => {
 
                                 <div className="md:col-span-2 space-y-4">
                                      <div className="space-y-2">
-                                        <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Favicon</label>
+                                        <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Favicon URL</label>
                                         <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                                            <div className="w-8 h-8 bg-white rounded-lg border border-slate-100 flex items-center justify-center text-blue-600 font-bold text-xs shadow-sm">O</div>
-                                            <div className="flex-1 text-xs text-slate-500 font-medium truncate">favicon-official_orbit.ico</div>
-                                            <Button variant="ghost" className="text-xs h-8 px-3">Change</Button>
+                                            <input 
+                                                className="flex-1 bg-transparent outline-none text-xs text-slate-500 font-medium truncate" 
+                                                value={settings.favicon_url}
+                                                onChange={(e) => setSettings({...settings, favicon_url: e.target.value})}
+                                                placeholder="https://..."
+                                            />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Primary System Theme</label>
-                                        <div className="flex gap-2">
-                                            <div className="w-8 h-8 rounded-full bg-[#005ab4] cursor-pointer ring-2 ring-offset-2 ring-[#005ab4]"></div>
-                                            <div className="w-8 h-8 rounded-full bg-[#465f89] cursor-pointer"></div>
-                                            <div className="w-8 h-8 rounded-full bg-[#7e5300] cursor-pointer"></div>
-                                            <div className="w-8 h-8 rounded-full bg-slate-900 cursor-pointer"></div>
+                                        <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Primary System Theme (HSL/Hex)</label>
+                                        <div className="flex gap-4 items-center">
+                                            <input 
+                                                type="color"
+                                                className="w-10 h-10 rounded-full border-none cursor-pointer"
+                                                value={settings.primary_color}
+                                                onChange={(e) => setSettings({...settings, primary_color: e.target.value})}
+                                            />
+                                            <span className="text-xs font-mono text-slate-500 uppercase">{settings.primary_color}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -165,19 +248,33 @@ export const AdminGeneralSettings = () => {
                                 <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Support Email Address</label>
                                 <div className="relative">
                                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg">mail</span>
-                                    <input className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" type="email" defaultValue="support@orbitsite.com" />
+                                    <input 
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" 
+                                        type="email" 
+                                        value={settings.support_email}
+                                        onChange={(e) => setSettings({...settings, support_email: e.target.value})}
+                                    />
                                 </div>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">WhatsApp Support Number</label>
                                 <div className="relative">
                                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg">chat</span>
-                                    <input className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" type="text" defaultValue="+62 812 3456 7890" />
+                                    <input 
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" 
+                                        type="text" 
+                                        value={settings.whatsapp_number}
+                                        onChange={(e) => setSettings({...settings, whatsapp_number: e.target.value})}
+                                    />
                                 </div>
                             </div>
                             <div className="space-y-2 md:col-span-2">
                                 <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Physical Office Address</label>
-                                <textarea className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold h-24 resize-none" defaultValue="Studio Nusantara Hub, 4th Floor, Jl. Sudirman No. 12, Jakarta" />
+                                <textarea 
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold h-24 resize-none" 
+                                    value={settings.office_address}
+                                    onChange={(e) => setSettings({...settings, office_address: e.target.value})}
+                                />
                             </div>
                         </div>
                     </Card>
@@ -201,8 +298,8 @@ export const AdminGeneralSettings = () => {
                                     <input 
                                         type="number" 
                                         className={`w-full bg-white border ${feeError ? 'border-rose-500 ring-4 ring-rose-500/5' : 'border-slate-200'} rounded-xl py-3 px-4 text-sm font-black text-[#005ab4] focus:ring-4 focus:ring-blue-600/5 outline-none transition-all`}
-                                        value={platformFee}
-                                        onChange={(e) => setPlatformFee(Number(e.target.value))}
+                                        value={settings.platform_fee}
+                                        onChange={(e) => setSettings({...settings, platform_fee: Number(e.target.value)})}
                                     />
                                     <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-slate-300">%</span>
                                 </div>
@@ -220,12 +317,12 @@ export const AdminGeneralSettings = () => {
                                         <span className="font-bold text-slate-900">$100.00</span>
                                     </div>
                                     <div className="flex justify-between items-center text-xs">
-                                        <span className="text-slate-500 font-medium font-bold">Platform Fee ({platformFee}%)</span>
-                                        <span className="font-bold text-rose-500">-${(100 * platformFee / 100).toFixed(2)}</span>
+                                        <span className="text-slate-500 font-medium font-bold">Platform Fee ({settings.platform_fee}%)</span>
+                                        <span className="font-bold text-rose-500">-${(100 * settings.platform_fee / 100).toFixed(2)}</span>
                                     </div>
                                     <div className="pt-3 border-t border-slate-100 flex justify-between items-center">
                                         <span className="text-[10px] font-black text-[#005ab4] uppercase">Creator Gets</span>
-                                        <span className="text-lg font-black text-emerald-600">${(100 - (100 * platformFee / 100)).toFixed(2)}</span>
+                                        <span className="text-lg font-black text-emerald-600">${(100 - (100 * settings.platform_fee / 100)).toFixed(2)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -247,7 +344,10 @@ export const AdminGeneralSettings = () => {
                                         <p className="text-sm font-bold text-slate-700">Maintenance Mode</p>
                                         <p className="text-[10px] text-slate-500">Stop all traffic except Admin</p>
                                     </div>
-                                    <Toggle checked={false} onChange={() => {}} />
+                                    <Toggle 
+                                        checked={settings.maintenance_mode} 
+                                        onChange={(val) => setSettings({...settings, maintenance_mode: val})} 
+                                    />
                                 </div>
                                 
                                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
@@ -255,7 +355,10 @@ export const AdminGeneralSettings = () => {
                                         <p className="text-sm font-bold text-slate-700">New Registration</p>
                                         <p className="text-[10px] text-slate-500">Allow new creators to join</p>
                                     </div>
-                                    <Toggle checked={true} onChange={() => {}} />
+                                    <Toggle 
+                                        checked={settings.registration_enabled} 
+                                        onChange={(val) => setSettings({...settings, registration_enabled: val})} 
+                                    />
                                 </div>
 
                                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
@@ -263,16 +366,19 @@ export const AdminGeneralSettings = () => {
                                         <p className="text-sm font-bold text-slate-700">Payout Requests</p>
                                         <p className="text-[10px] text-slate-500">Pause wallet withdrawals</p>
                                     </div>
-                                    <Toggle checked={true} onChange={() => {}} />
+                                    <Toggle 
+                                        checked={settings.payouts_enabled} 
+                                        onChange={(val) => setSettings({...settings, payouts_enabled: val})} 
+                                    />
                                 </div>
                             </div>
 
                             <div className="mt-8 border-t border-slate-100 pt-6">
                                 <div className="flex items-center gap-3 text-emerald-600">
                                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                                    <span className="text-xs font-bold tracking-widest uppercase">All Systems Ready</span>
+                                    <span className="text-xs font-bold tracking-widest uppercase">System Online</span>
                                 </div>
-                                <p className="text-[10px] text-slate-400 mt-2 font-medium">Last automated check: 5 mins ago</p>
+                                <p className="text-[10px] text-slate-400 mt-2 font-medium">Synced with Database</p>
                             </div>
                         </div>
                         
@@ -293,13 +399,12 @@ export const AdminGeneralSettings = () => {
                             <div className="space-y-4">
                                 <div className="space-y-1.5">
                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Default Meta Description</p>
-                                    <div className="p-3 bg-white/5 rounded-lg border border-white/10 text-xs text-slate-300 italic group-hover:border-blue-500/30 transition-colors">
-                                        "Transform your creative potential into a sustainable digital career with Orbit Site"
-                                    </div>
+                                    <textarea 
+                                        className="w-full p-3 bg-white/5 rounded-lg border border-white/10 text-xs text-slate-300 italic group-hover:border-blue-500/30 transition-colors resize-none h-20 outline-none focus:ring-1 focus:ring-blue-500/50"
+                                        value={settings.seo_description}
+                                        onChange={(e) => setSettings({...settings, seo_description: e.target.value})}
+                                    />
                                 </div>
-                                <button className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-all active:scale-95">
-                                    Edit Global Meta Data
-                                </button>
                             </div>
                         </div>
                         
@@ -320,7 +425,7 @@ export const AdminGeneralSettings = () => {
                             </div>
                             <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Save All Changes?</h3>
                             <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                                Platform Fee akan diubah menjadi <strong className="text-[#005ab4]">{platformFee}%</strong>. Perubahan ini langsung berlaku untuk semua transaksi baru.
+                                Konfigurasi platform akan diperbarui di database. Perubahan biaya menjadi <strong className="text-[#005ab4]">{settings.platform_fee}%</strong> akan langsung berlaku.
                             </p>
                         </div>
                         <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">

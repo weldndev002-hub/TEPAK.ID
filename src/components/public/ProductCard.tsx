@@ -10,8 +10,8 @@ export interface ProductCardProps {
   imageSrc: string;
   badge?: string;
   ctaText?: string;
-  onBuy?: () => void;
-  onProductClick?: () => void;
+  onBuy?: () => void | Promise<void>;
+  onProductClick?: () => void | Promise<void>;
   className?: string;
 }
 
@@ -27,14 +27,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onProductClick,
   className 
 }) => {
-  const handleBuyClick = () => {
+  const handleBuyClick = async () => {
     // Track click
     if (onProductClick) {
-      onProductClick();
+      await onProductClick();
     }
     // Call original handler
     if (onBuy) {
-      onBuy();
+      await onBuy();
     }
   };
 

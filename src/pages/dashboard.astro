@@ -23,14 +23,25 @@ import {
 
 const user = await Astro.locals.getUser();
 if (user) {
-  const { data: settings } = await Astro.locals.supabase
-    .from('user_settings')
-    .select('domain_name')
-    .eq('user_id', user.id)
+  // Check profile first to avoid forcing admins into onboarding/redirects
+  const { data: profile } = await Astro.locals.supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
     .single();
-    
-  if (!settings?.domain_name) {
-    return Astro.redirect('/onboarding');
+
+  const isAdmin = profile?.role === 'admin';
+
+  if (!isAdmin) {
+    const { data: settings } = await Astro.locals.supabase
+      .from('user_settings')
+      .select('domain_name')
+      .eq('user_id', user.id)
+      .single();
+      
+    if (!settings?.domain_name) {
+      return Astro.redirect('/onboarding');
+    }
   }
 }
 

@@ -38,6 +38,30 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activePage = 'dashboard' }) => {
+  const [isAdminAuth, setIsAdminAuth] = React.useState(false);
+
+  React.useEffect(() => {
+    // Check for admin cookie client-side
+    const cookies = document.cookie.split(';');
+    const adminCookie = cookies.find(c => c.trim().startsWith('admin_access_token='));
+    if (adminCookie) setIsAdminAuth(true);
+  }, []);
+
+  const handleLogout = async () => {
+    if (isAdminAuth) {
+      // Clear admin cookie
+      document.cookie = "admin_access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; sameSite=strict";
+      window.location.replace('/admin/auth');
+    } else {
+      try {
+        await supabase.auth.signOut();
+      } catch (e) {
+        console.error('SignOut error:', e);
+      }
+      window.location.replace('/login');
+    }
+  };
+
   return (
     <aside className="hidden md:flex flex-col h-screen fixed left-0 top-0 z-50 w-64 bg-[#162138] text-white  antialiased overflow-hidden border-r border-white/5">
       <div className="p-7 mb-4 flex flex-col justify-center">
@@ -55,29 +79,33 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePage = 'dashboard' }) =>
       </nav>
 
       <div className="p-6 mt-auto flex flex-col gap-4">
-        <div className="bg-blue-600/20 p-3 rounded-xl flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-600 flex-shrink-0">
-                <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6yXzlkK9l1vGhNg8jieQYU1URZO7iB0E8eBY6apZr9DMuSPdDsLk8Wn8ZaLWFsNUhwscYUNR5v4QRbNkNqkxdD02jsVlcL1oa05ck_tuVlkw8sJ0lck1Zyy1SdpyEYTTQoq8pmJn5XIyVZXVokDkuc2ob8I7DE18EnXNZ-NMaso7yJM4Uy6zFRYe_KSj-8JufuNcMLVT4X45Ac_ONGP7G48AQxroItKCoSzxrDF3fXmnKzMU8Z5YH56xVFGRJh1nt7oeroYj2GYav" alt="Admin" />
+        <div className={cn(
+            "p-3 rounded-xl flex items-center gap-3 transition-all",
+            isAdminAuth ? "bg-amber-500/10 border border-amber-500/20" : "bg-blue-600/20"
+        )}>
+            <div className={cn(
+                "w-8 h-8 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center font-black text-[10px]",
+                isAdminAuth ? "bg-amber-500 text-white" : "bg-slate-600"
+            )}>
+                {isAdminAuth ? (
+                    <span>MA</span>
+                ) : (
+                    <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6yXzlkK9l1vGhNg8jieQYU1URZO7iB0E8eBY6apZr9DMuSPdDsLk8Wn8ZaLWFsNUhwscYUNR5v4QRbNkNqkxdD02jsVlcL1oa05ck_tuVlkw8sJ0lck1Zyy1SdpyEYTTQoq8pmJn5XIyVZXVokDkuc2ob8I7DE18EnXNZ-NMaso7yJM4Uy6zFRYe_KSj-8JufuNcMLVT4X45Ac_ONGP7G48AQxroItKCoSzxrDF3fXmnKzMU8Z5YH56xVFGRJh1nt7oeroYj2GYav" alt="Admin" />
+                )}
             </div>
             <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-black text-white truncate">Administrator</p>
-                <p className="text-[9px] text-blue-200 truncate pr-1">admin@tepak.id</p>
+                <p className="text-[11px] font-black text-white truncate">
+                    {isAdminAuth ? 'Master Admin' : 'Administrator'}
+                </p>
+                <p className="text-[9px] text-blue-200 truncate pr-1">
+                    {isAdminAuth ? 'Passcode Session' : 'admin@tepak.id'}
+                </p>
             </div>
         </div>
 
         <button 
           type="button"
-          onClick={async () => {
-            console.log('Logout button clicked - Admin');
-            try {
-              const { error } = await supabase.auth.signOut();
-              if (error) console.error('SignOut error:', error);
-            } catch (e) {
-              console.error('SignOut Exception:', e);
-            }
-            // Force redirect to login even if signOut fails
-            window.location.replace('/login');
-          }}
+          onClick={handleLogout}
           className="flex items-center gap-3 px-4 py-3 rounded-xl text-rose-400 hover:text-white hover:bg-rose-500/20 font-bold transition-all w-full text-left"
         >
           <ArrowLeftOnRectangleIcon className="w-5 h-5" />

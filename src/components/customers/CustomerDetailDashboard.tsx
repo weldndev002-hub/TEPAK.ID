@@ -23,7 +23,7 @@ export const CustomerDetailDashboard = () => {
     const [toast, setToast] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
-    const [editData, setEditData] = useState({ name: '', email: '', phone: '' });
+    const [editData, setEditData] = useState({ name: '', email: '', phone: '', address_text: '' });
     const [notes, setNotes] = useState('');
 
     const showToast = (msg: string) => {
@@ -45,7 +45,12 @@ export const CustomerDetailDashboard = () => {
             if (res.ok) {
                 const data = await res.json();
                 setCustomer(data);
-                setEditData({ name: data.name, email: data.email, phone: data.phone || '' });
+                setEditData({ 
+                    name: data.name, 
+                    email: data.email, 
+                    phone: data.phone || '',
+                    address_text: data.address_text || ''
+                });
                 setNotes(data.notes || '');
             }
         } catch (error) {
@@ -217,6 +222,15 @@ export const CustomerDetailDashboard = () => {
                                                 className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none"
                                             />
                                         </div>
+                                        <div className="space-y-1 sm:col-span-2">
+                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Alamat Lengkap</label>
+                                            <textarea 
+                                                value={editData.address_text}
+                                                onChange={(e) => setEditData({...editData, address_text: e.target.value})}
+                                                placeholder="Masukan alamat lengkap..."
+                                                className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20 outline-none min-h-[80px]"
+                                            />
+                                        </div>
                                         <div className="flex items-end gap-2">
                                             <button 
                                                 onClick={handleSaveProfile}
@@ -253,7 +267,7 @@ export const CustomerDetailDashboard = () => {
                                             </div>
                                             <div className="flex items-center gap-2 text-slate-500">
                                                 <MapPinIcon className="w-4 h-4" />
-                                                <span className="text-xs font-medium">Indonesia</span>
+                                                <span className="text-xs font-medium">{customer.address_text || 'No address'}</span>
                                             </div>
                                             <div className="flex items-center gap-2 text-slate-500">
                                                 <CalendarDaysIcon className="w-4 h-4" />

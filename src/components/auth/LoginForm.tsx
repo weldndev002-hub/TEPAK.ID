@@ -45,9 +45,25 @@ export const LoginForm: React.FC = () => {
                 // Berhasil login
                 setIsSuccess(true);
                 
+                // Get user role for smart redirection
+                const { data: { user } } = await supabase.auth.getUser();
+                let targetPath = '/dashboard';
+                
+                if (user) {
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('role')
+                        .eq('id', user.id)
+                        .single();
+                    
+                    if (profile?.role === 'admin') {
+                        targetPath = '/admin';
+                    }
+                }
+
                 // Delay sejenak untuk menampilkan animasi sukses
                 setTimeout(() => {
-                    window.location.href = '/dashboard';
+                    window.location.href = targetPath;
                 }, 2000);
             }
         } catch (err: any) {

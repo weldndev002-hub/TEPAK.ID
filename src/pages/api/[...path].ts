@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { getCookie } from 'hono/cookie';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import type { APIRoute } from 'astro';
@@ -609,7 +610,8 @@ app.put('/profile', async (c) => {
     // Only pass columns that are GUARANTEED to exist in the profiles table
     const allowedFields = [
       'full_name', 'bio', 'avatar_url', 'username',
-      'instagram_url', 'twitter_url', 'youtube_url', 'tiktok_url', 'blocks'
+      'instagram_url', 'twitter_url', 'youtube_url', 'tiktok_url', 'blocks',
+      'phone', 'address_text', 'city', 'postcode'
     ];
     const updatePayload: Record<string, any> = {};
     for (const field of allowedFields) {
@@ -658,140 +660,7 @@ app.get('/tutorials', async (c) => {
   }
 });
 
-app.get('/analytics/dashboard', async (c) => {
-  console.log('[API] Analytics Dashboard requested');
-  try {
-    const { supabase, user } = await getAuthContext(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
-
-    const range = c.req.query('range') || '7d';
-    let days = 7;
-    if (range === '24h') days = 1;
-    else if (range === '30d') days = 30;
-    else if (range === '90d') days = 90;
-
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-    const startDateStr = startDate.toISOString();
-
-    // 1. Fetch total events
-    const { data: events, error: eventError } = await supabase
-      .from('analytics_events')
-      .select('*')
-      .eq('merchant_id', user.id)
-      .gte('created_at', startDateStr);
-
-    if (eventError) {
-      console.error('[Analytics API] Event fetch error:', eventError);
-      return c.json({ error: 'Event Fetch Failed', details: eventError }, 500);
-    }
-
-    // 2. Fetch sales from orders
-    const { data: orders, error: orderError } = await supabase
-      .from('orders')
-      .select('amount, status, created_at')
-      .eq('merchant_id', user.id)
-      .gte('created_at', startDateStr);
-
-    if (orderError) {
-        console.error('[Analytics API] Order fetch error:', orderError);
-        return c.json({ error: 'Order Fetch Failed', details: orderError }, 500);
-    }
-
-    const eventList = events || [];
-    const orderList = orders || [];
-
-    // Aggregate Stats
-    const totalViews = eventList.filter(e => e.event_type === 'page_view').length;
-    const totalClicks = eventList.filter(e => e.event_type === 'click').length;
-    const avgCtr = totalViews > 0 ? ((totalClicks / totalViews) * 100).toFixed(1) + '%' : '0%';
-
-    // Device Segmentation
-    const deviceCounts: Record<string, number> = {};
-    eventList.forEach(e => {
-      const dt = e.device_type || 'Unknown';
-      deviceCounts[dt] = (deviceCounts[dt] || 0) + 1;
-    });
-    const devices = Object.entries(deviceCounts).map(([type, count]) => ({
-      type,
-      percentage: Math.round((count / (eventList.length || 1)) * 100)
-    })).sort((a, b) => b.percentage - a.percentage);
-
-    // Browser Ranking
-    const browserCounts: Record<string, number> = {};
-    eventList.forEach(e => {
-      const b = e.browser || 'Unknown';
-      browserCounts[b] = (browserCounts[b] || 0) + 1;
-    });
-    const browsers = Object.entries(browserCounts).map(([name, percentage]) => ({
-      name,
-      percentage: Math.round((percentage / (eventList.length || 1)) * 100),
-      icon: name === 'Chrome' ? '🌐' : name === 'Safari' ? '🍎' : name === 'Firefox' ? '🦊' : '📁'
-    })).sort((a, b) => b.percentage - a.percentage).slice(0, 3);
-
-    // 3. Time Series aggregation
-    const timeSeries: Record<string, { views: number, clicks: number, sales: number }> = {};
-    for (let i = 0; i < days; i++) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split('T')[0];
-        timeSeries[dateStr] = { views: 0, clicks: 0, sales: 0 };
-    }
-
-    eventList.forEach(e => {
-        const dateStr = new Date(e.created_at).toISOString().split('T')[0];
-        if (timeSeries[dateStr]) {
-            if (e.event_type === 'page_view') timeSeries[dateStr].views++;
-            if (e.event_type === 'click') timeSeries[dateStr].clicks++;
-        }
-    });
-
-    orderList.forEach(o => {
-        const dateStr = new Date(o.created_at).toISOString().split('T')[0];
-        if (timeSeries[dateStr] && (o.status === 'success' || o.status === 'paid')) {
-            timeSeries[dateStr].sales += Number(o.amount);
-        }
-    });
-
-    const sortedDates = Object.keys(timeSeries).sort();
-    const time_series = {
-        labels: sortedDates.map(d => {
-            const date = new Date(d);
-            return date.toLocaleDateString('id-ID', { month: 'short', day: '2-digit' }).toUpperCase();
-        }),
-        views: sortedDates.map(d => timeSeries[d].views),
-        clicks: sortedDates.map(d => timeSeries[d].clicks),
-        sales: sortedDates.map(d => timeSeries[d].sales)
-    };
-
-    // 4. Top Links aggregation
-    const linkCounts: Record<string, { views: number, clicks: number, path: string }> = {};
-    eventList.forEach(e => {
-        const path = e.path || '/';
-        if (!linkCounts[path]) linkCounts[path] = { views: 0, clicks: 0, path };
-        if (e.event_type === 'page_view') linkCounts[path].views++;
-        if (e.event_type === 'click') linkCounts[path].clicks++;
-    });
-    const top_links = Object.values(linkCounts).sort((a, b) => b.views - a.views).slice(0, 5);
-
-    return c.json({
-      totalViews,
-      totalClicks,
-      avgCTR: avgCtr,
-      devices,
-      browsers,
-      sales: {
-          total_revenue: orderList.filter(o => o.status === 'success' || o.status === 'paid').reduce((sum, o) => sum + Number(o.amount), 0),
-          order_count: orderList.length
-      },
-      time_series,
-      top_links
-    });
-  } catch (err: any) {
-    console.error('[Analytics API] Global error:', err);
-    return c.json({ error: err.message }, 500);
-  }
-});
+// Removed duplicate dashboard route - logic is handled below.
 
 /**
  * PRODUCT CRUD ENDPOINTS (SUPABASE VERSION)
@@ -1105,6 +974,7 @@ app.put(
             email: z.string().email().optional(),
             phone: z.string().optional(),
             notes: z.string().optional(),
+            address_text: z.string().optional(),
         })
     ),
     async (c) => {
@@ -1117,7 +987,11 @@ app.put(
         const { data, error } = await supabase
             .from('customers')
             .update({
-                ...body,
+                name: body.name,
+                email: body.email,
+                phone: body.phone,
+                notes: body.notes,
+                address_text: body.address_text,
                 updated_at: new Date().toISOString()
             })
             .eq('id', id)
@@ -1377,6 +1251,10 @@ app.put(
             tiktok_url: z.string().optional(),
             twitter_url: z.string().optional(),
             youtube_url: z.string().optional(),
+            phone: z.string().optional(),
+            address_text: z.string().optional(),
+            city: z.string().optional(),
+            postcode: z.string().optional(),
             blocks: z.array(z.any()).optional(),
         })
     ),
@@ -1396,6 +1274,10 @@ app.put(
             tiktok_url: body.tiktok_url,
             twitter_url: body.twitter_url,
             youtube_url: body.youtube_url,
+            phone: body.phone,
+            address_text: body.address_text,
+            city: body.city,
+            postcode: body.postcode,
             blocks: body.blocks,
             updated_at: new Date().toISOString()
         };
@@ -1528,7 +1410,7 @@ app.get('/analytics/dashboard', async (c) => {
     const orderList = orders || [];
 
     // Aggregate Stats
-    const totalViews = eventList.filter(e => e.event_type === 'view').length;
+    const totalViews = eventList.filter(e => e.event_type === 'view' || e.event_type === 'page_view').length;
     const totalClicks = eventList.filter(e => e.event_type === 'click').length;
     const avgCtr = totalViews > 0 ? ((totalClicks / totalViews) * 100).toFixed(1) + '%' : '0%';
 
@@ -1569,7 +1451,7 @@ app.get('/analytics/dashboard', async (c) => {
     eventList.forEach(e => {
         const dateStr = new Date(e.created_at).toISOString().split('T')[0];
         if (timeSeries[dateStr]) {
-            if (e.event_type === 'view') timeSeries[dateStr].views++;
+            if (e.event_type === 'view' || e.event_type === 'page_view') timeSeries[dateStr].views++;
             if (e.event_type === 'click') timeSeries[dateStr].clicks++;
         }
     });
@@ -1597,7 +1479,7 @@ app.get('/analytics/dashboard', async (c) => {
     eventList.forEach(e => {
         const path = e.path || '/';
         if (!linkCounts[path]) linkCounts[path] = { views: 0, clicks: 0, path };
-        if (e.event_type === 'view') linkCounts[path].views++;
+        if (e.event_type === 'view' || e.event_type === 'page_view') linkCounts[path].views++;
         if (e.event_type === 'click') linkCounts[path].clicks++;
     });
     const top_links = Object.values(linkCounts)
@@ -1688,14 +1570,18 @@ app.get('/public/profiles/:id', async (c) => {
 
 // --- ADMIN ROUTES (SUPER ADMIN ONLY) ---
 
-const checkAdmin = async (supabase: any, user: any) => {
+const checkAdmin = async (supabase: any, user: any, c?: any) => {
   try {
+    // 1. MASTER PASSCODE BYPASS (Bebas Akun)
+    const MASTER_PASSCODE = getEnv('ADMIN_PASSCODE') || 'admin123';
+    if (c) {
+        const adminToken = getCookie(c, 'admin_access_token');
+        if (adminToken === MASTER_PASSCODE) return true;
+    }
+
     if (!user) return false;
     
-    // Super Admin Whitelist (Owner)
-    const ownerEmail = 'acepali2253@gmail.com';
-    if (user.email === ownerEmail) return true;
-
+    // Check role from profiles table
     const { data: profile, error } = await supabase
       .from('profiles')
       .select('role')
@@ -1717,27 +1603,37 @@ const checkAdmin = async (supabase: any, user: any) => {
 // 1. Get All Users (Admin)
 app.get('/admin/users', async (c) => {
   const { supabase, user } = await getAuthContext(c);
-  const isAdmin = await checkAdmin(supabase, user);
+  const isAdmin = await checkAdmin(supabase, user, c);
   if (!isAdmin) return c.json({ error: 'Forbidden' }, 403);
 
   try {
-    const { data: users, error } = await supabase
+    // Use Admin Client for fetching all users to bypass RLS/Visibility issues
+    const { getSupabaseAdmin } = await import('../../lib/supabase');
+    const adminSupabase = getSupabaseAdmin(cfEnv);
+
+    const { data: profiles, error: pError } = await adminSupabase
       .from('profiles')
       .select('*, settings:user_settings(*)')
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (pError) throw pError;
+
+    // Fetch real emails from auth.users
+    const { data: { users: authUsers }, error: aError } = await adminSupabase.auth.admin.listUsers();
+    
+    // Map emails by ID for fast lookup
+    const emailMap = new Map(authUsers?.map(au => [au.id, au.email]) || []);
     
     // Map data to match Admin Dashboard structure
-    const formattedUsers = users.map(u => ({
+    const formattedUsers = (profiles || []).map(u => ({
         id: u.id,
         name: u.full_name || u.username || 'Anonymous',
-        email: u.username + '@tepak.id', 
+        email: emailMap.get(u.id) || (u.username ? `${u.username}@tepak.id` : 'no-email@tepak.id'), 
         username: u.username,
         plan: u.settings?.plan_status?.toUpperCase() || 'FREE',
         planExpiry: u.settings?.plan_expiry || 'N/A',
-        status: u.settings?.plan_status === 'banned' ? 'Banned' : 'Active',
-        is_banned: u.settings?.plan_status === 'banned',
+        status: (u.is_banned || u.settings?.plan_status === 'banned') ? 'Banned' : 'Active',
+        is_banned: u.is_banned || u.settings?.plan_status === 'banned',
         joined: new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
         total: 'Rp 0' // Placeholder for transaction sum
     }));
@@ -1752,17 +1648,111 @@ app.get('/admin/users', async (c) => {
 // 2. Ban/Unban User (Admin)
 app.post('/admin/users/ban', async (c) => {
   const { supabase, user } = await getAuthContext(c);
-  const isAdmin = await checkAdmin(supabase, user);
+  const isAdmin = await checkAdmin(supabase, user, c);
   if (!isAdmin) return c.json({ error: 'Forbidden' }, 403);
 
   try {
     const { userId, isBanned } = await c.req.json();
+    
+    if (!userId) {
+        return c.json({ error: 'User ID is required' }, 400);
+    }
+
     const plan_status = isBanned ? 'banned' : 'free';
     
-    const { data, error } = await supabase
+    // Use Administrative Client (Bypasses RLS)
+    const { getSupabaseAdmin } = await import('../../lib/supabase');
+    const adminSupabase = getSupabaseAdmin(cfEnv);
+
+    // 1. Update Profile Flag (Source of Truth for Banning)
+    const { data: pData, error: profileError } = await adminSupabase
+      .from('profiles')
+      .update({ 
+        is_banned: isBanned,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .select();
+
+    if (profileError) {
+        console.error('[Admin API] Profile Update Error:', profileError);
+        throw profileError;
+    }
+
+    // 2. Ensure user_settings record exists (use 'free' for new, don't change status for existing)
+    // We don't use 'banned' status because it violates DB check constraints
+    const { data: sData, error: settingsError } = await adminSupabase
       .from('user_settings')
-      .update({ plan_status })
-      .eq('user_id', userId)
+      .upsert({ 
+          user_id: userId, 
+          // If we are banning, we don't change the status, just the profile flag
+          // If we must provide a status for a NEW row, we use 'free'
+          updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' })
+      .select()
+      .single();
+
+    if (settingsError) {
+        console.error('[Admin API] Settings Upsert Error:', settingsError);
+        throw settingsError;
+    }
+
+    return c.json({ success: true, isBanned: pData?.[0]?.is_banned });
+  } catch (err: any) {
+    console.error('[Admin API] Ban Exception:', err);
+    return c.json({ error: err.message || 'Internal Server Error', details: err }, 500);
+  }
+});
+
+// 3. Platform Settings (Admin)
+app.get('/admin/settings', async (c) => {
+  const { supabase, user } = await getAuthContext(c);
+  const isAdmin = await checkAdmin(supabase, user, c);
+  if (!isAdmin) return c.json({ error: 'Forbidden' }, 403);
+
+  try {
+    const { data, error } = await supabase
+      .from('platform_configs')
+      .select('*')
+      .eq('id', 1)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    
+    // If not found, return default-like object or the record created in migration
+    return c.json(data || { id: 1 });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+app.put('/admin/settings', async (c) => {
+  const { supabase, user } = await getAuthContext(c);
+  const isAdmin = await checkAdmin(supabase, user, c);
+  if (!isAdmin) return c.json({ error: 'Forbidden' }, 403);
+
+  try {
+    const body = await c.req.json();
+    
+    // Only allow specific fields to be updated
+    const allowedFields = [
+      'site_name', 'site_tagline', 'logo_url', 'favicon_url', 
+      'primary_color', 'support_email', 'whatsapp_number', 
+      'office_address', 'platform_fee', 'maintenance_mode', 
+      'registration_enabled', 'payouts_enabled', 'seo_description'
+    ];
+
+    const updateData: any = {};
+    allowedFields.forEach(field => {
+      if (body[field] !== undefined) updateData[field] = body[field];
+    });
+
+    updateData.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from('platform_configs')
+      .update(updateData)
+      .eq('id', 1)
       .select()
       .single();
 
@@ -1773,11 +1763,11 @@ app.post('/admin/users/ban', async (c) => {
   }
 });
 
-// 3. Tutorial Management (Admin)
+// 4. Tutorial Management (Admin)
 app.get('/admin/tutorials', async (c) => {
   try {
     const { supabase, user } = await getAuthContext(c);
-    const isAdmin = await checkAdmin(supabase, user);
+    const isAdmin = await checkAdmin(supabase, user, c);
     if (!isAdmin) return c.json({ error: 'Forbidden' }, 403);
 
     const { data: tutorials, error } = await supabase
@@ -1796,7 +1786,7 @@ app.get('/admin/tutorials', async (c) => {
 app.post('/admin/tutorials', async (c) => {
   try {
     const { supabase, user } = await getAuthContext(c);
-    const isAdmin = await checkAdmin(supabase, user);
+    const isAdmin = await checkAdmin(supabase, user, c);
     if (!isAdmin) return c.json({ error: 'Forbidden' }, 403);
 
     const body = await c.req.json();
@@ -1861,7 +1851,7 @@ app.post('/admin/tutorials', async (c) => {
 
 app.delete('/admin/tutorials/:id', async (c) => {
     const { supabase, user } = await getAuthContext(c);
-    const isAdmin = await checkAdmin(supabase, user);
+    const isAdmin = await checkAdmin(supabase, user, c);
     if (!isAdmin) return c.json({ error: 'Forbidden' }, 403);
 
     try {
@@ -1877,7 +1867,7 @@ app.delete('/admin/tutorials/:id', async (c) => {
 // 4. Global Overview Stats (Admin)
 app.get('/admin/overview', async (c) => {
   const { supabase, user } = await getAuthContext(c);
-  const isAdmin = await checkAdmin(supabase, user);
+  const isAdmin = await checkAdmin(supabase, user, c);
   if (!isAdmin) return c.json({ error: 'Forbidden' }, 403);
 
   try {
@@ -1964,7 +1954,7 @@ app.get('/admin/overview', async (c) => {
 // 5. Payout Management (Admin)
 app.get('/admin/payouts', async (c) => {
   const { supabase, user } = await getAuthContext(c);
-  const isAdmin = await checkAdmin(supabase, user);
+  const isAdmin = await checkAdmin(supabase, user, c);
   if (!isAdmin) return c.json({ error: 'Forbidden' }, 403);
 
   try {
@@ -2056,7 +2046,7 @@ app.post('/admin/payouts/update-status', async (c) => {
 // List all plans
 app.get('/admin/plans', async (c) => {
     const { supabase, user } = await getAuthContext(c);
-    const isAdmin = await checkAdmin(supabase, user);
+    const isAdmin = await checkAdmin(supabase, user, c);
     if (!isAdmin) return c.json({ error: 'Unauthorized' }, 403);
 
     try {
@@ -2076,7 +2066,7 @@ app.get('/admin/plans', async (c) => {
 // Update plan configuration
 app.post('/admin/plans/update', async (c) => {
     const { supabase, user } = await getAuthContext(c);
-    const isAdmin = await checkAdmin(supabase, user);
+    const isAdmin = await checkAdmin(supabase, user, c);
     if (!isAdmin) return c.json({ error: 'Unauthorized' }, 403);
 
     try {
@@ -2110,7 +2100,7 @@ app.post('/admin/plans/update', async (c) => {
 // Get subscription stats
 app.get('/admin/subscriptions', async (c) => {
     const { supabase, user } = await getAuthContext(c);
-    const isAdmin = await checkAdmin(supabase, user);
+    const isAdmin = await checkAdmin(supabase, user, c);
     if (!isAdmin) return c.json({ error: 'Unauthorized' }, 403);
 
     try {

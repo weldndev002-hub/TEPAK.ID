@@ -64,7 +64,15 @@ try {
 
 // Error Handling for User Not Found
 if (!merchantData) {
-    return new Response('Kreator dengan username "' + username + '" tidak ditemukan di database. Pastikan username sudah benar di menu Edit Profile.', { status: 404 });
+    return new Response('Kreator dengan username "' + username + '" tidak ditemukan di database.', { status: 404 });
+}
+
+// 3. Restriction Check
+if (merchantData.profiles?.is_banned) {
+    return new Response(null, { 
+        status: 403,
+        statusText: 'Account Restricted'
+    });
 }
 
 // Data Mapping

@@ -1,0 +1,101 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Button from '../../components/ui/Button';
+import { Card } from '../../components/ui/Card';
+import { LockClosedIcon, ShieldCheckIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+
+const ADMIN_PASSCODE = import.meta.env.ADMIN_PASSCODE || 'admin123';
+let error = '';
+
+if (Astro.request.method === 'POST') {
+  try {
+    const data = await Astro.request.formData();
+    const passcode = data.get('passcode');
+
+    if (passcode === ADMIN_PASSCODE) {
+      // Set secure cookie
+      Astro.cookies.set('admin_access_token', passcode as string, {
+        path: '/',
+        httpOnly: true,
+        maxAge: 60 * 60 * 24 * 7, // 1 week
+        secure: true,
+        sameSite: 'strict'
+      });
+      return Astro.redirect('/admin');
+    } else {
+      error = 'Passcode tidak valid. Silakan coba lagi.';
+    }
+  } catch (e) {
+    error = 'Terjadi kesalahan sistem.';
+  }
+}
+---
+
+<BaseLayout title="Admin Authentication | Orbit Site">
+    <div class="min-h-screen bg-[#0f172a] flex items-center justify-center p-6 relative overflow-hidden">
+        {/* Background Effects */}
+        <div class="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_0%,_#1e293b_0%,_transparent_70%)] opacity-50"></div>
+        <div class="absolute -top-24 -left-24 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px]"></div>
+        <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px]"></div>
+
+        <div class="w-full max-w-md relative z-10 animate-in fade-in zoom-in-95 duration-700">
+            {/* Logo area */}
+            <div class="flex flex-col items-center mb-10">
+                <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-600/20 mb-6">
+                    <ShieldCheckIcon className="w-10 h-10 text-white" />
+                </div>
+                <h1 class="text-2xl font-black text-white uppercase tracking-widest">Admin Gate</h1>
+                <p class="text-slate-500 text-xs font-bold uppercase tracking-[0.2em] mt-2">Standalone Authorization</p>
+            </div>
+
+            <Card className="p-8 border-slate-800 bg-slate-900/50 backdrop-blur-xl shadow-2xl rounded-[2rem]">
+                <form method="POST" class="space-y-6">
+                    <div class="space-y-3">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Master Passcode</label>
+                        <div class="relative group">
+                            <LockClosedIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-blue-500 transition-colors" />
+                            <input 
+                                type="password" 
+                                name="passcode"
+                                placeholder="••••••••"
+                                required
+                                autofocus
+                                class="w-full h-14 bg-slate-800/50 border border-slate-700 rounded-2xl pl-12 pr-4 text-white font-mono text-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all placeholder:text-slate-600"
+                            />
+                        </div>
+                    </div>
+
+                    {error && (
+                        <div class="flex items-center gap-3 p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl animate-in slide-in-from-top-2">
+                            <ExclamationTriangleIcon className="w-5 h-5 text-rose-500 shrink-0" />
+                            <p class="text-xs font-bold text-rose-500">{error}</p>
+                        </div>
+                    )}
+
+                    <div class="pt-2">
+                        <Button type="submit" variant="primary" className="w-full h-14 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-600/20 transition-all active:scale-95 group">
+                            <span>Authorize Access</span>
+                            <span class="material-symbols-outlined ml-2 group-hover:translate-x-1 transition-transform">login</span>
+                        </Button>
+                    </div>
+                </form>
+            </Card>
+
+            <div class="mt-8 text-center">
+                <p class="text-[10px] text-slate-600 font-bold uppercase tracking-widest">Security Protocol Alpha-9</p>
+                <div class="flex items-center justify-center gap-4 mt-6">
+                    <a href="/" class="text-[9px] font-black text-slate-500 hover:text-white transition-colors uppercase tracking-[0.2em]">Return to Site</a>
+                    <span class="w-1 h-1 bg-slate-800 rounded-full"></span>
+                    <a href="/login" class="text-[9px] font-black text-slate-500 hover:text-white transition-colors uppercase tracking-[0.2em]">User Login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style is:global>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+    </style>
+</BaseLayout>
