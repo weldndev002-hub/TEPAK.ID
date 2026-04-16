@@ -36,8 +36,22 @@ if (code) {
         sameSite: 'lax'
       });
 
-      console.log('[Auth Callback] Session verified, redirecting to dashboard');
-      return Astro.redirect('/dashboard');
+      // Check if user has completed onboarding
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('onboarding_completed, username')
+        .eq('id', data.session.user.id)
+        .single();
+
+      const hasCompletedOnboarding = profile?.onboarding_completed === true && !!profile?.username;
+
+      if (hasCompletedOnboarding) {
+        console.log('[Auth Callback] Session verified, redirecting to dashboard');
+        return Astro.redirect('/dashboard');
+      } else {
+        console.log('[Auth Callback] New user, redirecting to onboarding');
+        return Astro.redirect('/onboarding');
+      }
     }
   } catch (err: any) {
     console.error('[Auth Callback] Unexpected error:', err);

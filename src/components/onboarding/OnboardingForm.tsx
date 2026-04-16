@@ -75,13 +75,17 @@ export const OnboardingForm: React.FC = () => {
                     throw new Error(domainData.error || 'Terjadi kesalahan saat menyimpan domain');
                 }
 
-                // Save profile settings
+                // Save profile settings (name, bio, socials)
                 const profileRes = await fetch('/api/profile', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         full_name: fullName,
-                        bio: bio
+                        bio: bio,
+                        instagram_url: socials.ig || null,
+                        tiktok_url: socials.tt || null,
+                        youtube_url: socials.yt || null,
+                        onboarding_completed: true
                     })
                 });
 
@@ -284,10 +288,10 @@ export const OnboardingForm: React.FC = () => {
                             size="lg" 
                             className="px-16 mt-6 font-black uppercase text-[11px] tracking-[0.2em] py-5 rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all"
                             onClick={() => {
-                                window.location.href = `/editor?theme=${selectedTheme}&subdomain=${domain}`;
+                                window.location.href = '/dashboard';
                             }}
                         >
-                            Open Dashboard
+                            Masuk ke Dashboard
                         </Button>
                     </div>
                 )}

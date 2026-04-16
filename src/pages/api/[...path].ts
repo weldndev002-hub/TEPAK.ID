@@ -611,7 +611,7 @@ app.put('/profile', async (c) => {
     const allowedFields = [
       'full_name', 'bio', 'avatar_url', 'username',
       'instagram_url', 'twitter_url', 'youtube_url', 'tiktok_url', 'blocks',
-      'phone', 'address_text', 'city', 'postcode'
+      'phone', 'address_text', 'city', 'postcode', 'onboarding_completed'
     ];
     const updatePayload: Record<string, any> = {};
     for (const field of allowedFields) {
