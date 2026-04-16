@@ -155,11 +155,13 @@ export const ProductDetailDashboard = () => {
                                     <div className="p-3 bg-blue-50 rounded-2xl text-blue-600 group-hover:scale-110 transition-transform">
                                         <EyeIcon className="w-5 h-5" />
                                     </div>
-                                    <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">+0%</span>
+                                    <span className="text-[10px] font-black text-slate-400 bg-slate-50 px-2 py-1 rounded-full">Total</span>
                                 </div>
                                 <div>
                                     <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] mb-1">Total Dilihat</p>
-                                    <h4 className="text-3xl font-black text-slate-900 tracking-tighter">0</h4>
+                                    <h4 className="text-3xl font-black text-slate-900 tracking-tighter">
+                                        {isLoading ? '...' : (stats?.total_views ?? 0).toLocaleString('id-ID')}
+                                    </h4>
                                 </div>
                             </Card>
 
@@ -172,7 +174,9 @@ export const ProductDetailDashboard = () => {
                                 </div>
                                 <div>
                                     <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] mb-1">Total Terjual</p>
-                                    <h4 className="text-3xl font-black text-slate-900 tracking-tighter">{stats?.total_sold || 0}</h4>
+                                    <h4 className="text-3xl font-black text-slate-900 tracking-tighter">
+                                        {isLoading ? '...' : (stats?.total_sold ?? 0)}
+                                    </h4>
                                 </div>
                             </Card>
 
@@ -185,7 +189,9 @@ export const ProductDetailDashboard = () => {
                                 </div>
                                 <div>
                                     <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] mb-1">Total Penghasilan</p>
-                                    <h4 className="text-2xl font-black text-slate-900 tracking-tighter">{formatCurrency(stats?.total_revenue || 0)}</h4>
+                                    <h4 className="text-2xl font-black text-slate-900 tracking-tighter">
+                                        {isLoading ? '...' : formatCurrency(stats?.total_revenue ?? 0)}
+                                    </h4>
                                 </div>
                             </Card>
 
@@ -194,11 +200,13 @@ export const ProductDetailDashboard = () => {
                                     <div className="p-3 bg-purple-50 rounded-2xl text-purple-600 group-hover:scale-110 transition-transform">
                                         <ChartBarIcon className="w-5 h-5" />
                                     </div>
-                                    <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">New</span>
+                                    <span className="text-[10px] font-black text-purple-600 bg-purple-50 px-2 py-1 rounded-full">CVR</span>
                                 </div>
                                 <div>
                                     <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em] mb-1">Tingkat Konversi</p>
-                                    <h4 className="text-3xl font-black text-slate-900 tracking-tighter">0%</h4>
+                                    <h4 className="text-3xl font-black text-slate-900 tracking-tighter">
+                                        {isLoading ? '...' : `${stats?.conversion_rate ?? '0.0'}%`}
+                                    </h4>
                                 </div>
                             </Card>
                         </div>
@@ -256,7 +264,7 @@ export const ProductDetailDashboard = () => {
                                     </div>
                                     {product.file_url && (
                                         <a 
-                                            href={product.file_url} 
+                                            href={product.admin_download_url || product.file_url} 
                                             target="_blank" 
                                             className="w-full flex items-center justify-center gap-2 py-2 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
                                         >

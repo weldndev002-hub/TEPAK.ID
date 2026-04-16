@@ -749,6 +749,13 @@ app.get('/products/:id', async (c) => {
     .single();
     
   if (error) return c.json({ error: error.message }, 404);
+
+  // If the file is in our private bucket (internal path without http), generate a signed URL for the merchant to preview
+  if (data.file_url && !data.file_url.startsWith('http')) {
+      const { data: signed } = await supabase.storage.from('media-produk-private').createSignedUrl(data.file_url, 60 * 60);
+      data.admin_download_url = signed?.signedUrl || data.file_url;
+  }
+
   return c.json(data);
 });
 
@@ -797,27 +804,49 @@ app.get('/products/:id/stats', async (c) => {
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
     const id = c.req.param('id');
 
-    // Get order stats for this product
-    const { data: orders, error: orderError } = await supabase
-        .from('orders')
-        .select(`
-            *,
-            customers (name, email)
-        `)
-        .eq('product_id', id)
-        .eq('merchant_id', user.id);
+    // Fetch all in parallel for performance
+    const [ordersResult, analyticsResult] = await Promise.all([
+        supabase
+            .from('orders')
+            .select('*, customers (name, email)')
+            .eq('product_id', id)
+            .eq('merchant_id', user.id),
+        supabase
+            .from('analytics_events')
+            .select('event_type, created_at')
+            .eq('merchant_id', user.id)
+            .in('event_type', ['view', 'page_view', 'click'])
+    ]);
 
-    if (orderError) return c.json({ error: orderError.message }, 500);
+    if (ordersResult.error) return c.json({ error: ordersResult.error.message }, 500);
+
+    const orders = ordersResult.data || [];
+    const events = analyticsResult.data || [];
 
     const totalSold = orders.filter(o => o.status === 'success' || o.status === 'paid').length;
     const totalRevenue = orders
         .filter(o => o.status === 'success' || o.status === 'paid')
         .reduce((sum, o) => sum + Number(o.amount), 0);
-    
+
+    // View count from analytics events
+    const totalViews = events.filter(e => e.event_type === 'view' || e.event_type === 'page_view').length;
+    const totalClicks = events.filter(e => e.event_type === 'click').length;
+
+    // Conversion rate: sold / views * 100
+    const conversionRate = totalViews > 0
+        ? ((totalSold / totalViews) * 100).toFixed(1)
+        : '0.0';
+
     return c.json({
         total_sold: totalSold,
         total_revenue: totalRevenue,
-        recent_buyers: orders.slice(0, 5) // Last 5 buyers
+        total_views: totalViews,
+        total_clicks: totalClicks,
+        conversion_rate: conversionRate,
+        recent_buyers: orders
+            .filter(o => o.status === 'success' || o.status === 'paid')
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .slice(0, 5)
     });
 });
 

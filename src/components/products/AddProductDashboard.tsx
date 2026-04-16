@@ -108,15 +108,20 @@ export const AddProductDashboard = () => {
         setPublishConfirm(true);
     };
 
-    const uploadFile = async (file: File, path: string) => {
+    const uploadFile = async (file: File, path: string, bucket: string = 'media-produk') => {
         const { data, error } = await supabase.storage
-            .from('media-produk')
+            .from(bucket)
             .upload(path, file, { upsert: true });
         
         if (error) throw error;
         
+        if (bucket === 'media-produk-private') {
+            // Return internal path for private bucket items instead of a strictly unauthorized public url
+            return data.path;
+        }
+
         const { data: { publicUrl } } = supabase.storage
-            .from('media-produk')
+            .from(bucket)
             .getPublicUrl(data.path);
             
         return publicUrl;
@@ -147,10 +152,10 @@ export const AddProductDashboard = () => {
                 })
             );
 
-            // 3. Upload Product File
+            // 3. Upload Product File to PRIVATE BUCKET
             if (productFile) {
                 const ext = productFile.name.split('.').pop();
-                file_url = await uploadFile(productFile, `assets/${timestamp}.${ext}`);
+                file_url = await uploadFile(productFile, `assets/${timestamp}.${ext}`, 'media-produk-private');
             }
 
             // 4. Save to Database via API
@@ -169,7 +174,10 @@ export const AddProductDashboard = () => {
                 })
             });
 
-            if (!res.ok) throw new Error('Gagal menyimpan ke database');
+            if (!res.ok) {
+                const errData = await res.json().catch(() => null);
+                throw new Error(errData?.error || errData?.message || 'Gagal menyimpan ke database');
+            }
 
             setIsPublishing(false);
             window.location.href = '/products';

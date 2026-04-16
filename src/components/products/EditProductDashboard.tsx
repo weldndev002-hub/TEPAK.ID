@@ -93,15 +93,19 @@ export const EditProductDashboard = () => {
         }
     };
 
-    const uploadFile = async (file: File, path: string) => {
+    const uploadFile = async (file: File, path: string, bucket: string = 'media-produk') => {
         const { data, error } = await supabase.storage
-            .from('media-produk')
+            .from(bucket)
             .upload(path, file, { upsert: true });
         
         if (error) throw error;
+
+        if (bucket === 'media-produk-private') {
+            return data.path;
+        }
         
         const { data: { publicUrl } } = supabase.storage
-            .from('media-produk')
+            .from(bucket)
             .getPublicUrl(data.path);
             
         return publicUrl;
@@ -129,7 +133,7 @@ export const EditProductDashboard = () => {
             if (fileInput?.files?.[0]) {
                 const productFile = fileInput.files[0];
                 const ext = productFile.name.split('.').pop();
-                final_file_url = await uploadFile(productFile, `assets/${timestamp}.${ext}`);
+                final_file_url = await uploadFile(productFile, `assets/${timestamp}.${ext}`, 'media-produk-private');
             }
 
             // 3. Process Preview Images
@@ -160,7 +164,10 @@ export const EditProductDashboard = () => {
                 })
             });
 
-            if (!res.ok) throw new Error('Gagal memperbarui produk');
+            if (!res.ok) {
+                const errData = await res.json().catch(() => null);
+                throw new Error(errData?.error || errData?.message || 'Gagal memperbarui produk');
+            }
 
             setIsDirty(false);
             showToast("Perubahan produk berhasil disimpan!");
