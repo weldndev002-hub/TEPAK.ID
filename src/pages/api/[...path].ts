@@ -1503,32 +1503,42 @@ app.post(
   ),
   async (c) => {
     try {
-      const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
-      const key = getEnv('PUBLIC_SUPABASE_ANON_KEY') || supabaseAnonKey;
+      const { getSupabaseAdmin } = await import('../../lib/supabase');
+      const supabase = getSupabaseAdmin(cfEnv);
 
-      if (!url || !key) {
-        return c.json({ error: 'Configuration missing' }, 500);
+      const body = await c.req.json();
+
+      const mid = String(body.merchant_id || '');
+      if (!mid || mid === 'undefined' || mid === 'null' || mid.length < 10) {
+          console.log('[analytics/track] Skipping: Invalid merchant_id:', mid);
+          return c.json({ success: true, message: 'Skipped: Invalid merchant_id' }, 200);
       }
 
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabase = createClient(url, key);
+      // Filter and map to actual DB columns (Lowercased to avoid check constraint violations)
+      const insertData = {
+          merchant_id: body.merchant_id,
+          event_type: String(body.event_type || 'page_view').toLowerCase() === 'view' ? 'page_view' : String(body.event_type || 'page_view').toLowerCase(),
+          traffic_source: String(body.traffic_source || 'direct').toLowerCase(),
+          device_type: String(body.device_type || 'desktop').toLowerCase(),
+          browser: String(body.browser || 'unknown').toLowerCase(),
+          country: String(body.country || 'id').toLowerCase(),
+          city: String(body.city || 'unknown').toLowerCase(),
+          session_id: body.session_id || `sess_${Date.now()}`,
+          referrer: body.referrer || '',
+          visitor_ip: c.req.header('x-forwarded-for') || '127.0.0.1'
+      };
 
-      const body = c.req.valid('json');
-
-      // Basic IP Hashing for uniqueness (optional/simulation)
-      const ip = c.req.header('x-forwarded-for') || '127.0.0.1';
-      
       const { error } = await supabase
         .from('analytics_events')
-        .insert({
-          ...body,
-          ip_hash: ip // In production, hash this
-        });
+        .insert(insertData);
 
-      if (error) return c.json({ error: error.message }, 500);
+      if (error) {
+          console.error('[analytics/track] Supabase Error:', error);
+          return c.json({ error: error.message, details: error }, 500);
+      }
       return c.json({ success: true }, 201);
     } catch (err: any) {
-      console.error('[analytics/track] Error:', err);
+      console.error('[analytics/track] Global Catch:', err);
       return c.json({ error: 'Internal server error', message: err.message }, 500);
     }
   }

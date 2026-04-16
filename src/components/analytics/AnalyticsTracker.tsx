@@ -3,13 +3,13 @@ import { useEffect } from 'react';
 interface AnalyticsTrackerProps {
     merchantId: string;
     productId?: string;
-    eventType?: 'view' | 'click';
+    eventType?: 'view' | 'click' | 'page_view';
 }
 
 export const AnalyticsTracker: React.FC<AnalyticsTrackerProps> = ({ 
     merchantId, 
     productId, 
-    eventType = 'view' 
+    eventType = 'page_view' 
 }) => {
     useEffect(() => {
         const trackEvent = async (type: string = eventType) => {
@@ -17,22 +17,18 @@ export const AnalyticsTracker: React.FC<AnalyticsTrackerProps> = ({
 
             // Simple Device & Browser Detection
             const ua = navigator.userAgent;
-            let deviceType = 'Desktop';
-            if (/Mobi|Android/i.test(ua)) deviceType = 'Mobile';
-            else if (/Tablet|iPad/i.test(ua)) deviceType = 'Tablet';
+            let deviceType = 'desktop';
+            if (/Mobi|Android/i.test(ua)) deviceType = 'mobile';
+            else if (/Tablet|iPad/i.test(ua)) deviceType = 'tablet';
 
-            let browser = 'Other';
-            if (ua.includes('Chrome')) browser = 'Chrome';
-            else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Safari';
-            else if (ua.includes('Firefox')) browser = 'Firefox';
-            else if (ua.includes('Edg')) browser = 'Edge';
+            let browser = 'other';
+            if (ua.includes('Chrome')) browser = 'chrome';
+            else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'safari';
+            else if (ua.includes('Firefox')) browser = 'firefox';
+            else if (ua.includes('Edg')) browser = 'edge';
 
-            let os = 'Unknown';
-            if (ua.includes('Win')) os = 'Windows';
-            else if (ua.includes('Mac')) os = 'MacOS';
-            else if (ua.includes('Linux')) os = 'Linux';
-            else if (ua.includes('Android')) os = 'Android';
-            else if (ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS';
+            // Map 'view' to 'page_view' for DB compatibility
+            const finalType = type === 'view' ? 'page_view' : type;
 
             try {
                 await fetch('/api/analytics/track', {
@@ -41,26 +37,23 @@ export const AnalyticsTracker: React.FC<AnalyticsTrackerProps> = ({
                     body: JSON.stringify({
                         merchant_id: merchantId,
                         product_id: productId,
-                        event_type: type,
+                        event_type: finalType,
                         path: window.location.pathname,
                         browser,
-                        os,
-                        device_type: deviceType
+                        device_type: deviceType,
+                        referrer: document.referrer || ''
                     })
                 });
-                console.log('[Analytics] Tracked:', type);
+                console.log('[Analytics] Tracked:', finalType);
             } catch (err) {
-                // Silently fail to not disturb user experience
                 console.warn('[Analytics] Tracking failed:', err);
             }
         };
 
-        if (eventType === 'view') {
-            // Track page view with delay
-            const timer = setTimeout(() => trackEvent('view'), 1000);
+        if (eventType === 'page_view' || eventType === 'view') {
+            const timer = setTimeout(() => trackEvent('page_view'), 1000);
             return () => clearTimeout(timer);
         } else if (eventType === 'click') {
-            // For clicks - track immediately
             trackEvent('click');
         }
     }, [merchantId, productId, eventType]);
