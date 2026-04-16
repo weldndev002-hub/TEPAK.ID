@@ -32,6 +32,7 @@ const formatCountdown = (expiryDate: string | null) => {
 const PlanInfoContent = () => {
     const { plan, expiryDate, autoRenewal, upgradeToPro, cancelSubscription, isLoading } = useSubscription();
     const [countdown, setCountdown] = useState<string | null>(null);
+    const [selectedMethod, setSelectedMethod] = useState<string>('SP'); // Default ShopeePay
 
     useEffect(() => {
         if (expiryDate && plan !== 'free') {
@@ -107,14 +108,40 @@ const PlanInfoContent = () => {
                                     )}
                                 </>
                             ) : (
-                                <Button 
-                                    onClick={upgradeToPro} 
-                                    disabled={isLoading}
-                                    className="w-full bg-[#0873df] hover:bg-[#005ab4] text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
-                                >
-                                    <BoltIcon className="w-5 h-5" />
-                                    {isLoading ? 'Memproses...' : 'Aktifkan PRO Sekarang'}
-                                </Button>
+                                <div className="space-y-6">
+                                    <div className="space-y-3">
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Pilih Metode Pembayaran</p>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {[
+                                                { id: 'BT', name: 'Transfer Bank (Permata/ATM)' },
+                                                { id: 'B1', name: 'Transfer Bank (CIMB Niaga)' },
+                                                { id: 'SP', name: 'ShopeePay / QRIS' },
+                                                { id: 'OV', name: 'OVO (E-Wallet)' },
+                                                { id: 'LA', name: 'Alfamart / Retail' }
+                                            ].map((m) => (
+                                                <button
+                                                    key={m.id}
+                                                    onClick={() => setSelectedMethod(m.id)}
+                                                    className={`p-3 rounded-xl border text-[10px] font-bold uppercase transition-all text-left flex flex-col justify-center ${
+                                                        selectedMethod === m.id 
+                                                        ? 'border-primary bg-primary/5 text-primary shadow-sm ring-1 ring-primary' 
+                                                        : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
+                                                    }`}
+                                                >
+                                                    {m.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <Button 
+                                        onClick={() => upgradeToPro(selectedMethod)} 
+                                        disabled={isLoading}
+                                        className="w-full bg-[#0873df] hover:bg-[#005ab4] text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <BoltIcon className="w-5 h-5" />
+                                        {isLoading ? 'Memproses...' : `Bayar via ${selectedMethod === 'SP' ? 'ShopeePay' : selectedMethod === 'OV' ? 'OVO' : selectedMethod === 'BT' ? 'Permata' : 'Alfamart'}`}
+                                    </Button>
+                                </div>
                             )}
                         </div>
                     </div>

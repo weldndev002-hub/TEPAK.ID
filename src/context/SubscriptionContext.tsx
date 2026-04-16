@@ -8,7 +8,7 @@ interface SubscriptionContextType {
     expiryDate: string | null;
     autoRenewal: boolean;
     isLoading: boolean;
-    upgradeToPro: () => Promise<void>;
+    upgradeToPro: (method?: string) => Promise<void>;
     cancelSubscription: () => Promise<void>;
     refreshStatus: () => Promise<void>;
 }
@@ -23,14 +23,13 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     const refreshStatus = async () => {
         try {
-            const res = await fetch('/api/profile');
+            const res = await fetch('/api/subscription/status');
             if (res.ok) {
                 const data = await res.json();
-                const settings = data.settings;
-                if (settings) {
-                    setPlan(settings.plan_status as Plan);
-                    setExpiryDate(settings.plan_expiry);
-                    setAutoRenewal(settings.auto_renewal);
+                if (data) {
+                    setPlan(data.plan_status as Plan);
+                    setExpiryDate(data.plan_expiry);
+                    setAutoRenewal(data.auto_renewal);
                 }
             }
         } catch (err) {
@@ -44,14 +43,29 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         refreshStatus();
     }, []);
 
-    const upgradeToPro = async () => {
+    const upgradeToPro = async (method?: string) => {
         setIsLoading(true);
         try {
-            const res = await fetch('/api/subscription/upgrade', { method: 'POST' });
+            // Kita kirim pilihan metode di body request
+            const res = await fetch('/api/subscription/upgrade', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ method }) // 'BT', 'SP', 'OV', dll
+            });
+            
             if (!res.ok) throw new Error('Gagal melakukan upgrade');
-            await refreshStatus();
-        } catch (err) {
+            
+            const data = await res.json();
+            
+            // Redirect to Duitku Payment URL
+            if (data.paymentUrl) {
+                window.location.href = data.paymentUrl;
+            } else {
+                throw new Error('Payment URL tidak ditemukan');
+            }
+        } catch (err: any) {
             console.error('Upgrade error:', err);
+            alert(err.message || 'Gagal terhubung ke sistem pembayaran');
             throw err;
         } finally {
             setIsLoading(false);

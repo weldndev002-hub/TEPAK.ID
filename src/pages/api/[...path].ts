@@ -25,6 +25,11 @@ const getEnv = (key: string) => {
         return import.meta.env[key];
     }
 
+    // 3. Process ENV fallback (Local Node.js)
+    if (typeof process !== 'undefined' && process.env && process.env[key]) {
+        return process.env[key];
+    }
+
     return null;
 };
 
@@ -473,54 +478,9 @@ app.get('/profile', async (c) => {
   }
 });
 
-// UPGRADE SUBSCRIPTION (Simulated Activation)
-app.post('/subscription/upgrade', async (c) => {
-    const { supabase, user } = await getAuthContext(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+// Endpoints /subscription/upgrade dan /subscription/cancel lama telah dihapus
+// karena sudah digulirkan ke integrasi Duitku yang sesungguhnya di bagian bawah file ini.
 
-    try {
-        const now = new Date();
-        const expiry = new Date();
-        expiry.setDate(now.getDate() + 30); // Exactly 30 days from now
-
-        const { data, error } = await supabase
-            .from('user_settings')
-            .update({
-                plan_status: 'pro',
-                plan_activated_at: now.toISOString(),
-                plan_expiry: expiry.toISOString(),
-                auto_renewal: true
-            })
-            .eq('user_id', user.id)
-            .select()
-            .single();
-
-        if (error) throw error;
-        return c.json(data);
-    } catch (err: any) {
-        return c.json({ error: err.message }, 500);
-    }
-});
-
-// CANCEL SUBSCRIPTION (Disable Auto-Renewal)
-app.post('/subscription/cancel', async (c) => {
-    const { supabase, user } = await getAuthContext(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
-
-    try {
-        const { data, error } = await supabase
-            .from('user_settings')
-            .update({ auto_renewal: false })
-            .eq('user_id', user.id)
-            .select()
-            .single();
-
-        if (error) throw error;
-        return c.json(data);
-    } catch (err: any) {
-        return c.json({ error: err.message }, 500);
-    }
-});
 
 // UPLOAD AVATAR - Server-side using admin client to bypass storage RLS
 app.post('/profile/avatar', async (c) => {
@@ -1108,6 +1068,97 @@ app.post(
 );
 
 /**
+ * SUBSCRIPTION & PLAN MANAGEMENT
+ */
+
+// 1. Get Subscription Status
+app.get('/subscription/status', async (c) => {
+  const { supabase, user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('plan_status, plan_expiry, auto_renewal')
+    .eq('user_id', user.id)
+    .single();
+
+  if (error && error.code !== 'PGRST116') return c.json({ error: error.message }, 500);
+  return c.json(data || { plan_status: 'free', plan_expiry: null, auto_renewal: false });
+});
+
+// 2. Upgrade to PRO (Create Duitku Invoice)
+app.post('/subscription/upgrade', async (c) => {
+  console.log('[Subscription Upgrade] Request received');
+  const { supabase, user } = await getAuthContext(c);
+  
+  if (!user) {
+    console.warn('[Subscription Upgrade] Unauthorized access attempt');
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  console.log('[Subscription Upgrade] User authenticated:', user.email);
+
+  try {
+    const merchantCode = getEnv('PUBLIC_DUITKU_MERCHANT_CODE') || '';
+    const merchantKey = getEnv('PUBLIC_DUITKU_MERCHANT_KEY') || '';
+    const callbackUrl = getEnv('DUITKU_CALLBACK_URL') || '';
+    
+    console.log('[Subscription Upgrade] Config check:', { merchantCode: !!merchantCode, merchantKey: !!merchantKey, callbackUrl });
+
+    // Ambil pilihan metode pembayaran dari body (SP, OV, BT, dll)
+    let body: any = {};
+    try {
+        body = await c.req.json();
+    } catch (e) {
+        // Fallback jika tidak ada body JSON
+    }
+    
+    const selectedMethod = body.method || 'SP'; // Default ShopeePay untuk Sandbox jika tidak pilih
+
+    if (!merchantCode || !merchantKey) {
+        throw new Error(`Konfigurasi Duitku tidak ditemukan. Code: ${!!merchantCode}, Key: ${!!merchantKey}`);
+    }
+
+    const { DuitkuService } = await import('../../lib/duitku');
+    const duitkuService = new DuitkuService(merchantCode, merchantKey);
+
+    // Shorten orderId to fit Duitku limit (max 50 chars)
+    // Format: S-{uid8}-{timestamp}
+    // Duitku punya limit max 50 karakter untuk orderId.
+    // UUID (36) + SUB-- (5) + -- (2) + shortTime (4) = 47 karakter (AMAN)
+    const orderId = `SUB--${user.id}--${Date.now().toString().slice(-4)}`;
+    const amount = 50000; // Harga Paket PRO
+    
+    console.log('[Subscription Upgrade] Creating payment for:', user.email, orderId);
+
+    const paymentResponse = await duitkuService.createPayment({
+      merchantCode,
+      merchantKey,
+      paymentAmount: amount,
+      orderId: orderId,
+      productDetails: 'Orbit Site PRO Subscription (1 Month)',
+      customerEmail: user.email || '',
+      customerPhone: '',
+      customerName: user.user_metadata?.full_name || 'Creator',
+      returnUrl: `${new URL(c.req.url).origin}/plan-info?status=pending`,
+      callbackUrl: callbackUrl || 'https://tepak-id.weldn-ai-000.workers.dev/api/payments/duitku/webhook',
+      paymentMethod: selectedMethod,
+    });
+
+    console.log('[Subscription Upgrade] Duitku response:', paymentResponse);
+
+    return c.json(paymentResponse);
+  } catch (err: any) {
+    console.error('[Subscription Upgrade] FATAL ERROR:', err);
+    return c.json({ 
+      error: 'Internal Server Error', 
+      message: err.message, 
+      stack: err.stack 
+    }, 500);
+  }
+});
+
+/**
  * ENDPOINT GATEWAY PEMBAYARAN DUITKU
  */
 
@@ -1165,20 +1216,60 @@ app.post(
 
 // 2. Handler Webhook DuitKu (untuk notifikasi pembayaran)
 app.post('/payments/duitku/webhook', async (c) => {
-  const body = await c.req.json();
+  // Duitku bisa mengirim JSON atau Form-UrlEncoded. Kita gunakan parseBody() yang mendukung keduanya.
+  const body = await c.req.parseBody();
+  console.log('[Webhook DuitKu] Request Received (Parsed):', JSON.stringify(body, null, 2));
 
   try {
-    const { supabase } = await getAuthContext(c);
+    // Webhook dipanggil oleh server Duitku, tidak ada session user.
+    // Kita harus menggunakan supabase secara langsung.
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL') || '';
+    const supabaseKey = getEnv('SUPABASE_SERVICE_ROLE_KEY') || getEnv('PUBLIC_SUPABASE_ANON_KEY') || '';
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Validasi tanda tangan webhook
     const { DuitkuService } = await import('../../lib/duitku');
     
     // Dapatkan kunci merchant dari pengaturan pengguna - untuk produksi, query dari database
-    const merchantKey = body.merchantKey; // Harus berasal dari permintaan untuk keamanan
+    const merchantKey = getEnv('PUBLIC_DUITKU_MERCHANT_KEY') || '';
     const duitkuService = new DuitkuService(body.merchantCode, merchantKey);
 
     if (!duitkuService.validateWebhook(body)) {
       return c.json({ error: 'Tanda tangan webhook tidak valid' }, 401);
+    }
+
+    // Duitku Callback V2 mengirim 'merchantOrderId' dan 'resultCode'
+    const merchantOrderId = (body.merchantOrderId || body.orderId || '') as string;
+    const resultCode = (body.resultCode || body.statusCode || '') as string;
+
+    if (merchantOrderId.startsWith('SUB--')) {
+        const parts = merchantOrderId.split('--');
+        const targetUserId = parts[1];
+        
+        if (resultCode === '00' && targetUserId) {
+            // Update user_settings directly
+            const expiryDate = new Date();
+            expiryDate.setDate(expiryDate.getDate() + 30); // Tambah 30 hari
+
+            const { error: subError } = await supabase
+                .from('user_settings')
+                .update({
+                    plan_status: 'pro',
+                    plan_expiry: expiryDate.toISOString(),
+                    auto_renewal: true,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('user_id', targetUserId);
+
+            if (subError) {
+                console.error('[Webhook DuitKu] Gagal update paket user:', subError);
+                return c.json({ error: 'Gagal memperbarui paket' }, 500);
+            }
+
+            console.log(`[Webhook DuitKu] BERHASIL! User ${targetUserId} sekarang PRO.`);
+            return c.json({ success: true, message: 'Subscription upgraded successfully' });
+        }
     }
 
     // Perbarui status pesanan berdasarkan respons DuitKu

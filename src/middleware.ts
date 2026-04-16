@@ -2,6 +2,13 @@ import { defineMiddleware } from 'astro:middleware';
 import { getServerClient } from './lib/supabase';
 
 export const onRequest = defineMiddleware(async ({ locals, cookies, request, redirect }, next) => {
+  const url = new URL(request.url);
+  
+  // BYPASS: Jangan memblokir Webhook Duitku (harus bisa dihubungi server luar)
+  if (url.pathname.includes('/api/payments/duitku/webhook')) {
+    return next();
+  }
+
   const supabase = getServerClient(cookies, request);
 
   // Set supabase and getUser in locals for use in .astro files
@@ -17,7 +24,6 @@ export const onRequest = defineMiddleware(async ({ locals, cookies, request, red
     }
   };
 
-  const url = new URL(request.url);
   const isAuthPage = ['/login', '/signup', '/forgot-password', '/callback'].includes(url.pathname);
   const isAdminGate = url.pathname === '/admin/auth';
   

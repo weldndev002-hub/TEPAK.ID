@@ -7,9 +7,8 @@ const client = new Client({ connectionString: process.env.DIRECT_URL });
 
 async function run() {
   await client.connect();
-  // Check user_settings columns
-  const res = await client.query("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'user_settings' ORDER BY ordinal_position");
-  console.log('=== user_settings ===');
+  const res = await client.query("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'orders' ORDER BY ordinal_position");
+  console.log('=== orders ===');
   console.log(res.rows);
   await client.end();
 }
