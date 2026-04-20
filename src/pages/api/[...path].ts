@@ -79,6 +79,21 @@ app.put('/settings/domain', zValidator('json', z.object({ domain_name: z.string(
   const { domain_name } = c.req.valid('json');
 
   try {
+    // 1. Check if the domain is already taken by ANOTHER user
+    const { data: existingDomain } = await supabase
+      .from('user_settings')
+      .select('user_id')
+      .eq('domain_name', domain_name)
+      .neq('user_id', user.id)
+      .maybeSingle();
+
+    if (existingDomain) {
+      return c.json({ 
+        error: 'Nama outlet ini sudah digunakan. Silakan pilih nama lain.' 
+      }, 400);
+    }
+
+    // 2. Perform the update
     const { data, error } = await supabase
       .from('user_settings')
       .update({
@@ -90,10 +105,29 @@ app.put('/settings/domain', zValidator('json', z.object({ domain_name: z.string(
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+        // If update failed because record doesn't exist, try upsert
+        if (error.code === 'PGRST116') { // No rows found
+             const { data: upsertData, error: upsertError } = await supabase
+                .from('user_settings')
+                .upsert({
+                    user_id: user.id,
+                    domain_name,
+                    domain_verified: true,
+                    updated_at: new Date().toISOString()
+                })
+                .select()
+                .single();
+            if (upsertError) throw upsertError;
+            return c.json(upsertData);
+        }
+        throw error;
+    }
+    
     return c.json(data);
   } catch (err: any) {
-    return c.json({ error: err.message }, 500);
+    console.error('[Domain API Error]', err);
+    return c.json({ error: 'Gagal menyimpan domain: ' + err.message }, 500);
   }
 });
 
