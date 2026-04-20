@@ -14,6 +14,8 @@ const supabase = getServerClient(cookies, Astro.request);
 
 let merchantData = null;
 let products = [];
+let formatted_products = [];
+let blocks = [];
 
 try {
     // 1. Fetch Profile Data (Robust Lookup: Username OR Subdomain)
@@ -48,15 +50,34 @@ try {
             profiles: { ...profileData }
         };
 
-        // 2. Fetch Products for this merchant
-        const { data: productList } = await supabase
-            .from('products')
-            .select('*')
-            .eq('merchant_id', profileData.id || profileData.user_id)
-            .eq('status', 'published')
-            .order('created_at', { ascending: false });
+        // 2. Fetch Products & Analytics for this merchant
+        const [{ data: productList }, { data: viewsData }] = await Promise.all([
+            supabase
+                .from('products')
+                .select('*')
+                .eq('merchant_id', profileData.id || profileData.user_id)
+                .eq('status', 'published')
+                .order('created_at', { ascending: false }),
+            supabase
+                .from('analytics_events')
+                .select('product_id, event_type')
+                .eq('merchant_id', profileData.id || profileData.user_id)
+                .in('event_type', ['view', 'page_view'])
+        ]);
         
         products = productList || [];
+        const viewCounts = viewsData || [];
+
+        formatted_products = products.map(p => ({
+            id: p.id,
+            title: p.title,
+            price: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p.price),
+            description: p.description,
+            image: p.cover_url || "https://images.unsplash.com/photo-1544006659-f0b21f04cb1b?w=400&h=400&fit=crop",
+            views_count: viewCounts.filter(v => v.product_id === p.id).length
+        }));
+
+        blocks = merchantData.profiles?.blocks || [];
     }
 } catch (err) {
     console.error('[Public Profile Error]', err);
@@ -105,15 +126,7 @@ const socials = [
     { icon: BrandIcons.whatsapp, url: merchantData.profiles?.phone ? `https://wa.me/${merchantData.profiles.phone.replace(/[^0-9]/g, '')}` : null }
 ].filter(s => s.url);
 
-const blocks = merchantData.profiles?.blocks || [];
-
-const formatted_products = products.map(p => ({
-    id: p.id,
-    title: p.title,
-    price: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p.price),
-    description: p.description,
-    image: p.cover_url || "https://images.unsplash.com/photo-1544006659-f0b21f04cb1b?w=400&h=400&fit=crop"
-}));
+// Data mapping complete
 
 const is_banned = merchantData?.plan_status === 'banned' || merchantData?.profiles?.is_banned;
 ---
@@ -197,6 +210,7 @@ const is_banned = merchantData?.plan_status === 'banned' || merchantData?.profil
                                     price={product.price}
                                     description={product.description}
                                     merchantId={merchantData.profiles.id}
+                                    viewsCount={product.views_count}
                                 />
                             ))}
                         </div>

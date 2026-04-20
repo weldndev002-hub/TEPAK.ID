@@ -1,14 +1,29 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { CheckoutForm } from '../components/checkout/CheckoutForm';
-import { 
-    ShieldCheckIcon, 
-    LockClosedIcon, 
-    FingerPrintIcon 
-} from '@heroicons/react/24/solid';
+import { ShieldCheckIcon, LockClosedIcon, FingerPrintIcon } from '@heroicons/react/24/solid';
+import { AnalyticsTracker } from '../components/analytics/AnalyticsTracker';
+import { getServerClient } from '../lib/supabase';
+
+const productId = Astro.url.searchParams.get('product_id');
+let merchantId = '';
+
+if (productId) {
+    const supabase = getServerClient(Astro.cookies, Astro.request);
+    const { data: product } = await supabase
+        .from('products')
+        .select('merchant_id')
+        .eq('id', productId)
+        .single();
+    
+    if (product) {
+        merchantId = product.merchant_id;
+    }
+}
 ---
 
 <BaseLayout title="Checkout Aman | tepak.id Ecosystem">
+    {merchantId && <AnalyticsTracker client:only="react" merchantId={merchantId} productId={productId || undefined} eventType="page_view" />}
     <div class="min-h-screen bg-[#F8F9FB] text-[#191C1E] font-['Funnel_Display',sans-serif] antialiased flex flex-col">
         
         {/* MAIN CHECKOUT FORM AREA */}

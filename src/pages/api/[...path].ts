@@ -639,16 +639,24 @@ app.get('/products', async (c) => {
 
   if (error) return c.json({ error: error.message }, 500);
 
-  // Get sold counts for all products
-  const { data: orders } = await supabase
-    .from('orders')
-    .select('product_id, status')
-    .eq('merchant_id', user.id)
-    .in('status', ['success', 'paid']);
+  // Get sold counts & views counts for all products
+  const [{ data: orders }, { data: events }] = await Promise.all([
+    supabase
+      .from('orders')
+      .select('product_id, status')
+      .eq('merchant_id', user.id)
+      .in('status', ['success', 'paid']),
+    supabase
+      .from('analytics_events')
+      .select('product_id, event_type')
+      .eq('merchant_id', user.id)
+      .in('event_type', ['view', 'page_view'])
+  ]);
 
   const productsWithStats = products.map(p => {
     const soldCount = orders?.filter(o => o.product_id === p.id).length || 0;
-    return { ...p, sold_count: soldCount };
+    const viewsCount = events?.filter(e => e.product_id === p.id).length || 0;
+    return { ...p, sold_count: soldCount, views_count: viewsCount };
   });
 
   return c.json(productsWithStats);
@@ -775,6 +783,7 @@ app.get('/products/:id/stats', async (c) => {
             .from('analytics_events')
             .select('event_type, created_at')
             .eq('merchant_id', user.id)
+            .eq('product_id', id)
             .in('event_type', ['view', 'page_view', 'click'])
     ]);
 
@@ -1517,6 +1526,7 @@ app.post(
       // Filter and map to actual DB columns (Lowercased to avoid check constraint violations)
       const insertData = {
           merchant_id: body.merchant_id,
+          product_id: body.product_id || null,
           event_type: String(body.event_type || 'page_view').toLowerCase() === 'view' ? 'page_view' : String(body.event_type || 'page_view').toLowerCase(),
           traffic_source: String(body.traffic_source || 'direct').toLowerCase(),
           device_type: String(body.device_type || 'desktop').toLowerCase(),

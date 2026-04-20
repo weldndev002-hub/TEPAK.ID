@@ -8,6 +8,7 @@ interface ProductWithTrackingProps {
   price: string;
   description: string;
   merchantId: string;
+  viewsCount?: number;
 }
 
 export const ProductCardWithTracking: React.FC<ProductWithTrackingProps> = ({
@@ -16,7 +17,8 @@ export const ProductCardWithTracking: React.FC<ProductWithTrackingProps> = ({
   title,
   price,
   description,
-  merchantId
+  merchantId,
+  viewsCount = 0
 }) => {
   const handleProductClick = async () => {
     try {

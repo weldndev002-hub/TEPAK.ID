@@ -12,8 +12,16 @@ export interface ProductCardProps {
   ctaText?: string;
   onBuy?: () => void | Promise<void>;
   onProductClick?: () => void | Promise<void>;
+  viewsCount?: number;
   className?: string;
 }
+
+const EyeIcon = () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+        <circle cx="12" cy="12" r="3"></circle>
+    </svg>
+);
 
 export const ProductCard: React.FC<ProductCardProps> = ({ 
   id,
@@ -25,6 +33,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   ctaText = "Beli Sekarang", 
   onBuy,
   onProductClick,
+  viewsCount = 0,
   className 
 }) => {
   const handleBuyClick = async () => {
@@ -60,9 +69,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <h3 className="font-bold text-lg text-slate-900 leading-tight">{title}</h3>
         <p className="text-slate-500 text-sm mt-2 line-clamp-2 flex-1">{description}</p>
         
-        <div className="mt-4 flex items-center justify-between">
+        <div className="mt-4 flex items-center justify-between border-t border-slate-50 pt-4">
           <div>
-            <span className="block text-[10px] uppercase font-bold text-slate-400">Harga</span>
+            <div className="flex items-center gap-1.5 text-slate-400 mb-1">
+                <EyeIcon />
+                <span className="text-[10px] font-bold uppercase tracking-widest">{viewsCount} dilihat</span>
+            </div>
             <span className="text-xl font-black text-slate-900">{price}</span>
           </div>
           

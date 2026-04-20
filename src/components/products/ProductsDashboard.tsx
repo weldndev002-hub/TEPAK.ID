@@ -220,7 +220,7 @@ export const ProductsDashboard = () => {
                                         <TableCell className="hidden md:table-cell">
                                             <div className="flex flex-col gap-1">
                                                 <div className="flex items-center text-xs font-medium text-slate-600">
-                                                    <EyeIcon className="w-4 h-4 mr-1.5 opacity-60" /> 0 dilihat
+                                                    <EyeIcon className="w-4 h-4 mr-1.5 opacity-60" /> {product.views_count || 0} dilihat
                                                 </div>
                                                 <div className="flex items-center text-xs font-medium text-slate-600">
                                                     <ShoppingBagIcon className="w-4 h-4 mr-1.5 opacity-60" /> {product.sold_count || 0} terjual
