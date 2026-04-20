@@ -11,6 +11,8 @@ interface SubscriptionContextType {
     upgradeToPro: (method?: string) => Promise<void>;
     cancelSubscription: () => Promise<void>;
     refreshStatus: () => Promise<void>;
+    transactions: any[];
+    syncStatus: () => Promise<void>;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
@@ -20,6 +22,19 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const [expiryDate, setExpiryDate] = useState<string | null>(null);
     const [autoRenewal, setAutoRenewal] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [transactions, setTransactions] = useState<any[]>([]);
+
+    const fetchHistory = async () => {
+        try {
+            const res = await fetch('/api/subscription/history');
+            if (res.ok) {
+                const data = await res.json();
+                setTransactions(data);
+            }
+        } catch (err) {
+            console.error('[SubscriptionContext] Failed to fetch history:', err);
+        }
+    };
 
     const refreshStatus = async () => {
         try {
@@ -41,7 +56,14 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     useEffect(() => {
         refreshStatus();
+        fetchHistory();
     }, []);
+
+    const syncStatus = async () => {
+        setIsLoading(true);
+        await Promise.all([refreshStatus(), fetchHistory()]);
+        setIsLoading(false);
+    };
 
     const upgradeToPro = async (method?: string) => {
         setIsLoading(true);
@@ -93,7 +115,9 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
             isLoading,
             upgradeToPro, 
             cancelSubscription,
-            refreshStatus
+            refreshStatus,
+            transactions,
+            syncStatus
         }}>
             {children}
         </SubscriptionContext.Provider>

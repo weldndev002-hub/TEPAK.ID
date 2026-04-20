@@ -26,7 +26,7 @@ const Skeleton = ({ className }: { className?: string }) => (
 );
 
 const WalletDashboardContent = () => {
-    const { transactions: subscriptionTx, syncStatus } = useSubscription();
+    const { transactions: subscriptionTx, syncStatus, isLoading: isLoadingSub } = useSubscription();
     const [withdrawals, setWithdrawals] = useState<any[]>([]);
     const [recentOrders, setRecentOrders] = useState<any[]>([]);
     const [balanceData, setBalanceData] = useState<any>({ available: 0, pending: 0, total_net: 0 });
@@ -234,10 +234,11 @@ const WalletDashboardContent = () => {
                             <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Riwayat Berlangganan</h3>
                             <button 
                                 onClick={syncStatus}
-                                className="flex items-center gap-2 text-primary text-[10px] font-black hover:bg-primary/5 px-3 py-1.5 rounded-lg transition-all uppercase tracking-widest border border-primary/20"
+                                disabled={isLoadingSub}
+                                className="flex items-center gap-2 text-primary text-[10px] font-black hover:bg-primary/5 px-3 py-1.5 rounded-lg transition-all uppercase tracking-widest border border-primary/20 disabled:opacity-50"
                             >
-                                <ArrowPathIcon className="w-3.5 h-3.5" />
-                                Sync Status
+                                <ArrowPathIcon className={cn("w-3.5 h-3.5", isLoadingSub && "animate-spin")} />
+                                {isLoadingSub ? 'Syncing...' : 'Sync Status'}
                             </button>
                         </div>
 
@@ -259,9 +260,11 @@ const WalletDashboardContent = () => {
                                     <TableBody>
                                         {subscriptionTx && subscriptionTx.map(tx => (
                                             <TableRow key={tx.id}>
-                                                <TableCell className="font-black text-slate-900 uppercase text-xs">Orbit {tx.plan}</TableCell>
-                                                <TableCell className="font-bold text-slate-600">Rp {tx.amount}</TableCell>
-                                                <TableCell className="text-slate-400 text-[11px]">{tx.date}</TableCell>
+                                                <TableCell className="font-black text-slate-900 uppercase text-xs">Orbit {tx.plan_id}</TableCell>
+                                                <TableCell className="font-bold text-slate-600">Rp {Number(tx.amount).toLocaleString('id-ID')}</TableCell>
+                                                <TableCell className="text-slate-400 text-[11px]">
+                                                    {new Date(tx.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                </TableCell>
                                                 <TableCell>
                                                     <Badge 
                                                         variant={
@@ -270,7 +273,7 @@ const WalletDashboardContent = () => {
                                                         }
                                                     >
                                                         {tx.status === 'SUCCESS' ? 'Berhasil' : 
-                                                         tx.status === 'PENDING' ? 'Diproses' : 'Dibatalkan'}
+                                                         tx.status === 'PENDING' ? 'Diproses' : 'Gagal'}
                                                     </Badge>
                                                 </TableCell>
                                             </TableRow>

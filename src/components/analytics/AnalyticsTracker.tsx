@@ -15,6 +15,16 @@ export const AnalyticsTracker: React.FC<AnalyticsTrackerProps> = ({
         const trackEvent = async (type: string = eventType) => {
             if (typeof window === 'undefined') return;
 
+            // DEDUPLICATION LOGIC: Prevent counting multiple times in the same session
+            const path = window.location.pathname;
+            const trackKey = `track_${merchantId}_${productId || 'profile'}_${type}_${path}`;
+            const hasTracked = sessionStorage.getItem(trackKey);
+
+            if (hasTracked) {
+                // Already tracked in this session, skip
+                return;
+            }
+
             // Simple Device & Browser Detection
             const ua = navigator.userAgent;
             let deviceType = 'desktop';
@@ -31,20 +41,25 @@ export const AnalyticsTracker: React.FC<AnalyticsTrackerProps> = ({
             const finalType = type === 'view' ? 'page_view' : type;
 
             try {
-                await fetch('/api/analytics/track', {
+                const response = await fetch('/api/analytics/track', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         merchant_id: merchantId,
                         product_id: productId,
                         event_type: finalType,
-                        path: window.location.pathname,
+                        path: path,
                         browser,
                         device_type: deviceType,
                         referrer: document.referrer || ''
                     })
                 });
-                console.log('[Analytics] Tracked:', finalType);
+                
+                if (response.ok) {
+                    // Mark as tracked in this session
+                    sessionStorage.setItem(trackKey, 'true');
+                    console.log('[Analytics] Tracked successfully:', finalType);
+                }
             } catch (err) {
                 console.warn('[Analytics] Tracking failed:', err);
             }

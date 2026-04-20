@@ -920,23 +920,61 @@ app.get('/customers', async (c) => {
     const { user } = await getAuthContext(c);
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
-    console.log(`[API] Fetching customers for merchant_id: ${user.id}`);
+    const filter = c.req.query('filter') || 'all';
+    
+    console.log(`[API] Fetching customers for merchant_id: ${user.id} with filter: ${filter}`);
     const { getSupabaseAdmin } = await import('../../lib/supabase');
     const supabase = getSupabaseAdmin(cfEnv);
 
-    const { data, error } = await supabase
+    // Fetch with orders to calculate LTV (LifeTime Value)
+    let query = supabase
         .from('customers')
-        .select('*')
-        .eq('merchant_id', user.id)
-        .order('created_at', { ascending: false });
+        .select(`
+            *,
+            orders (amount, status)
+        `)
+        .eq('merchant_id', user.id);
+
+    // Apply time-based filters
+    if (filter === 'this_month') {
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        query = query.gte('created_at', startOfMonth.toISOString());
+    } else if (filter === '30_days') {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        query = query.gte('created_at', thirtyDaysAgo.toISOString());
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
 
     if (error) {
         console.error('[API] Error fetching customers:', error);
         return c.json({ error: error.message }, 500);
     }
     
-    console.log(`[API] Found ${data?.length || 0} customers for ${user.id}`);
-    return c.json(data);
+    // Add stats to each customer
+    let customersWithStats = (data || []).map(item => {
+        const successfulOrders = (item.orders || []).filter((o: any) => o.status === 'success' || o.status === 'paid');
+        const totalSpent = successfulOrders.reduce((sum: number, o: any) => sum + Number(o.amount), 0);
+        
+        // Remove the full orders list to keep response small
+        const { orders, ...customerData } = item;
+        return {
+            ...customerData,
+            total_spent: totalSpent,
+            order_count: successfulOrders.length
+        };
+    });
+
+    // Special sort for Biggest filter
+    if (filter === 'biggest') {
+        customersWithStats.sort((a, b) => b.total_spent - a.total_spent);
+    }
+    
+    console.log(`[API] Found ${customersWithStats.length} customers for ${user.id}`);
+    return c.json(customersWithStats);
 });
 
 // 2. Customer Detail (with Order History)
@@ -1143,6 +1181,24 @@ app.get('/subscription/status', async (c) => {
   return c.json(data || { plan_status: 'free', plan_expiry: null, auto_renewal: false });
 });
 
+// 1.1 Get Subscription History
+app.get('/subscription/history', async (c) => {
+  const { supabase, user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  const { data, error } = await supabase
+    .from('subscription_history')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[Subscription History API] Error:', error);
+    return c.json({ error: error.message }, 500);
+  }
+  return c.json(data || []);
+});
+
 // 2. Upgrade to PRO (Create Duitku Invoice)
 app.post('/subscription/upgrade', async (c) => {
   console.log('[Subscription Upgrade] Request received');
@@ -1179,12 +1235,25 @@ app.post('/subscription/upgrade', async (c) => {
     const { DuitkuService } = await import('../../lib/duitku');
     const duitkuService = new DuitkuService(merchantCode, merchantKey);
 
-    // Shorten orderId to fit Duitku limit (max 50 chars)
-    // Format: S-{uid8}-{timestamp}
-    // Duitku punya limit max 50 karakter untuk orderId.
-    // UUID (36) + SUB-- (5) + -- (2) + shortTime (4) = 47 karakter (AMAN)
+    const amount = 99000; // Harga Paket PRO (Updated)
     const orderId = `SUB--${user.id}--${Date.now().toString().slice(-4)}`;
-    const amount = 50000; // Harga Paket PRO
+    
+    // Create initial record in history
+    try {
+        await supabase
+            .from('subscription_history')
+            .insert({
+                user_id: user.id,
+                invoice_id: orderId,
+                plan_id: 'pro',
+                amount: amount,
+                status: 'PENDING',
+                payment_method: selectedMethod,
+                created_at: new Date().toISOString()
+            });
+    } catch (e) {
+        console.error('[Subscription Upgrade] Failed to create history record:', e);
+    }
     
     console.log('[Subscription Upgrade] Creating payment for:', user.email, orderId);
 
@@ -1306,13 +1375,25 @@ app.post('/payments/duitku/webhook', async (c) => {
     if (merchantOrderId.startsWith('SUB--')) {
         const parts = merchantOrderId.split('--');
         const targetUserId = parts[1];
-        
         if (resultCode === '00' && targetUserId) {
             console.log(`[Webhook DuitKu] UPGRADING USER ${targetUserId} TO PRO...`);
             
+            // 1. Get Expiry Date
             const expiryDate = new Date();
             expiryDate.setDate(expiryDate.getDate() + 30);
 
+            // 2. Update Subscription History
+            const { error: histError } = await supabase
+                .from('subscription_history')
+                .update({ 
+                    status: 'SUCCESS',
+                    updated_at: new Date().toISOString()
+                })
+                .eq('invoice_id', merchantOrderId);
+            
+            if (histError) console.error('[Webhook Duitku] Failed to update hist SUCCESS:', histError);
+
+            // 3. Update User Settings
             const { error: subError } = await supabase
                 .from('user_settings')
                 .update({
@@ -1330,6 +1411,23 @@ app.post('/payments/duitku/webhook', async (c) => {
 
             console.log(`[Webhook DuitKu] BERHASIL! User ${targetUserId} sekarang PRO.`);
             return c.json({ success: true, message: 'Subscription upgraded successfully' });
+        } else if (targetUserId) {
+            // Failed/Cancelled status tracking for SUB--
+            const statusMap: Record<string, string> = {
+                '02': 'CANCELED',
+                '03': 'EXPIRED',
+            };
+            const subsStatus = statusMap[resultCode] || 'FAILED';
+
+            await supabase
+                .from('subscription_history')
+                .update({ 
+                    status: subsStatus,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('invoice_id', merchantOrderId);
+            
+            return c.json({ success: false, status: subsStatus });
         }
     }
 

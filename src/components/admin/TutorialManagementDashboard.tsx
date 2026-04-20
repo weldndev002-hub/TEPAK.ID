@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Card } from '../ui/Card';
 import Button from '../ui/Button';
-import { CheckCircleIcon, XCircleIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { CheckCircleIcon, XCircleIcon, TrashIcon, MagnifyingGlassIcon, FunnelIcon } from '@heroicons/react/24/outline';
 import { cn } from '../../lib/utils';
+import { Select } from '../ui/Select';
+import { Input } from '../ui/Input';
 
 export const TutorialManagementDashboard = () => {
     const [tutorials, setTutorials] = useState<any[]>([]);
@@ -138,9 +140,22 @@ export const TutorialManagementDashboard = () => {
         }
     };
 
-    const filteredTutorials = activeFilter === 'All' 
-        ? tutorials 
-        : tutorials.filter(t => t.category === activeFilter);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredTutorials = React.useMemo(() => {
+        return tutorials.filter(t => {
+            const title = t.title || '';
+            const category = t.category || 'General';
+            
+            const matchesSearch = title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                 (t.description && t.description.toLowerCase().includes(searchTerm.toLowerCase()));
+            
+            const matchesCategory = activeFilter === 'All' || 
+                                   category.toLowerCase().trim() === activeFilter.toLowerCase().trim();
+            
+            return matchesSearch && matchesCategory;
+        });
+    }, [searchTerm, activeFilter, tutorials]);
 
     const openAddModal = () => {
         setModalMode('add');
@@ -193,23 +208,32 @@ export const TutorialManagementDashboard = () => {
                 </Button>
             </div>
 
-            {/* Filter Bar */}
-            <div className="bg-white/80 backdrop-blur-md p-2 rounded-2xl mb-8 flex flex-wrap items-center gap-2 shadow-sm border border-slate-100 sticky top-20 z-10">
-                {categories.map(cat => (
-                    <button 
-                        key={cat}
-                        onClick={() => setActiveFilter(cat)}
-                        className={`px-5 py-2.5 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all ${activeFilter === cat ? 'bg-[#005ab4] text-white shadow-lg shadow-blue-500/20' : 'bg-transparent hover:bg-slate-50 text-slate-500'}`}
+            {/* Filter Bar (Synchronized with Creator) */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10">
+                {/* Search Bar */}
+                <div className="w-full lg:max-w-md">
+                    <Input 
+                        placeholder="Search by title or description..." 
+                        className="h-14 bg-white border-slate-100 shadow-sm rounded-2xl text-[13px] font-medium"
+                        iconLeft={MagnifyingGlassIcon}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+
+                {/* Categories Dropdown (Synchronized) */}
+                <div className="w-full lg:max-w-[240px]">
+                    <Select 
+                        value={activeFilter}
+                        onChange={(e) => setActiveFilter(e.target.value)}
+                        className="h-14 font-black shadow-sm"
                     >
-                        {cat} {cat === 'All' ? `(${tutorials.length})` : `(${tutorials.filter(t => t.category === cat).length})`}
-                    </button>
-                ))}
-                
-                <div className="ml-auto pr-2">
-                    <button className="flex items-center gap-2 text-slate-400 text-[10px] font-black uppercase tracking-widest hover:text-[#005ab4] transition-colors">
-                        <span className="material-symbols-outlined text-lg">sort</span>
-                        <span>Sort by Date</span>
-                    </button>
+                        {categories.map((cat) => (
+                            <option key={cat} value={cat}>
+                                {cat.toUpperCase()} {cat === 'All' ? `(${tutorials.length})` : `(${tutorials.filter(t => (t.category || '').toLowerCase() === cat.toLowerCase()).length})`}
+                            </option>
+                        ))}
+                    </Select>
                 </div>
             </div>
 
@@ -308,8 +332,8 @@ export const TutorialManagementDashboard = () => {
                                 </div>
                                 <div className="space-y-3">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Category</label>
-                                    <select 
-                                        className="w-full bg-slate-50 border-none rounded-2xl py-4 px-6 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-bold text-[#001b3e]"
+                                    <Select 
+                                        className="h-14 font-bold"
                                         value={newTutorial.category}
                                         onChange={(e) => {
                                             setNewTutorial({...newTutorial, category: e.target.value});
@@ -320,7 +344,7 @@ export const TutorialManagementDashboard = () => {
                                         {categories.filter(c => c !== 'All').map(cat => (
                                             <option key={cat} value={cat}>{cat}</option>
                                         ))}
-                                    </select>
+                                    </Select>
                                 </div>
                             </div>
 

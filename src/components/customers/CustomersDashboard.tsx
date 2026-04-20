@@ -19,11 +19,12 @@ import { Input } from '../ui/Input';
 
 export const CustomersDashboard = () => {
     const [searchTerm, setSearchTerm] = useState('');
-    const [customers, setCustomers] = useState<any[]>([]);
+    const [allCustomers, setAllCustomers] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [stats, setStats] = useState<any>(null);
     const [toast, setToast] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState('all');
 
     const showToast = (msg: string) => {
         setToast(msg);
@@ -31,9 +32,9 @@ export const CustomersDashboard = () => {
     };
 
     useEffect(() => {
-        fetchCustomers();
+        fetchCustomers(activeTab);
         fetchStats();
-    }, []);
+    }, [activeTab]);
 
     const fetchStats = async () => {
         try {
@@ -47,12 +48,13 @@ export const CustomersDashboard = () => {
         }
     };
 
-    const fetchCustomers = async () => {
+    const fetchCustomers = async (filter = 'all') => {
+        setIsLoading(true);
         try {
-            const res = await fetch('/api/customers');
+            const res = await fetch(`/api/customers?filter=${filter}`);
             if (res.ok) {
                 const data = await res.json();
-                setCustomers(data);
+                setAllCustomers(data);
             }
         } catch (error) {
             console.error('Error fetching customers:', error);
@@ -65,7 +67,7 @@ export const CustomersDashboard = () => {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val);
     };
 
-    const filteredCustomers = customers.filter(customer => 
+    const filteredCustomers = allCustomers.filter(customer => 
         customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         customer.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -78,7 +80,7 @@ export const CustomersDashboard = () => {
             const res = await fetch(`/api/customers/${id}`, { method: 'DELETE' });
             if (res.ok) {
                 showToast(`Pelanggan ${name} berhasil dihapus`);
-                setCustomers(customers.filter(c => c.id !== id));
+                setAllCustomers(allCustomers.filter(c => c.id !== id));
             } else {
                 alert('Gagal menghapus pelanggan');
             }
@@ -91,17 +93,28 @@ export const CustomersDashboard = () => {
     };
 
     const handleExportCSV = () => {
-        const headers = ["ID", "Name", "Email", "Location", "Status"];
-        const rows = filteredCustomers.map(c => [c.id, c.name, c.email, 'Indonesia', 'Active']);
+        const headers = ["ID", "Name", "Email", "Phone", "Location", "Joined Date", "Total Orders", "Total Spent (IDR)"];
+        const rows = filteredCustomers.map(c => [
+            c.id, 
+            `"${c.name || ''}"`, 
+            c.email, 
+            `'${c.phone || ''}`, // Prepend apostrophe to prevent Excel from converting to scientific notation
+            "Indonesia", 
+            new Date(c.created_at).toLocaleDateString(),
+            c.order_count || 0,
+            c.total_spent || 0
+        ]);
         
-        let csvContent = "data:text/csv;charset=utf-8," 
-            + headers.join(",") + "\n"
+        // Use semicolon for better European/Global Excel compatibility, or comma for standard CSV
+        const csvContent = headers.join(",") + "\n"
             + rows.map(e => e.join(",")).join("\n");
-
-        const encodedUri = encodeURI(csvContent);
+            
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        
         const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "tepak_customers_export.csv");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `tepak_customers_${activeTab}_${new Date().toISOString().split('T')[0]}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -130,7 +143,11 @@ export const CustomersDashboard = () => {
                     <h2 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Customer Management</h2>
                 </div>
                 <div className="flex items-center gap-3">
-                    <FilterTabs tabs={filterTabsData} activeTab="all" />
+                    <FilterTabs 
+                        tabs={filterTabsData} 
+                        activeTab={activeTab} 
+                        onTabChange={(val) => setActiveTab(val)}
+                    />
                     
                     <Button 
                         variant="primary" 
@@ -155,7 +172,7 @@ export const CustomersDashboard = () => {
                     </div>
                     <div>
                         <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Total Customers</p>
-                        <h3 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">{customers.length}</h3>
+                        <h3 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">{allCustomers.length}</h3>
                     </div>
                 </Card>
 
