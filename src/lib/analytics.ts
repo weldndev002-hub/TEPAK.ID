@@ -1,9 +1,11 @@
 import { supabase } from './supabase';
 
 export interface TrackEventOptions {
-  eventType?: 'page_view' | 'click' | 'add_to_cart' | 'purchase' | 'conversion';
+  eventType?: 'page_view' | 'click' | 'add_to_cart' | 'purchase' | 'conversion' | 'view';
   trafficSource?: 'direct' | 'social' | 'search' | 'referral' | 'email' | 'other';
   deviceType?: 'desktop' | 'mobile' | 'tablet';
+  productId?: string;
+  path?: string;
   metadata?: Record<string, any>;
 }
 
@@ -94,6 +96,24 @@ function getSessionId(): string {
 export async function trackAnalyticsEvent(options: TrackEventOptions = {}) {
   try {
     // Get current user
+    if (typeof window !== 'undefined') {
+      const pathname = window.location.pathname;
+      const excludedPaths = [
+        '/dashboard', '/admin', '/settings', '/orders', '/products', 
+        '/wallet', '/withdraw', '/bank-info', '/add-product', '/edit-product', 
+        '/login', '/signup', '/forgot-password', '/reset-password', '/reset-sent', 
+        '/onboarding', '/verify-email', '/uikit', '/demo', '/api'
+      ];
+      
+      const isExcluded = excludedPaths.some(path => 
+        pathname === path || pathname.startsWith(path + '/')
+      );
+
+      if (isExcluded) {
+        return; // Silent return for internal paths
+      }
+    }
+
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session?.user?.id) {
@@ -133,6 +153,7 @@ export async function trackAnalyticsEvent(options: TrackEventOptions = {}) {
       .from('analytics_events')
       .insert({
         merchant_id: merchantId,
+        product_id: options.productId || null,
         event_type: eventType,
         traffic_source: trafficSource,
         device_type: deviceType,
@@ -140,6 +161,7 @@ export async function trackAnalyticsEvent(options: TrackEventOptions = {}) {
         country: country,
         city: 'Unknown',
         session_id: sessionId,
+        path: options.path || (typeof window !== 'undefined' ? window.location.pathname : null),
         referrer: typeof document !== 'undefined' ? document.referrer : null,
       });
 

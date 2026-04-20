@@ -1515,7 +1515,25 @@ app.post(
       const { getSupabaseAdmin } = await import('../../lib/supabase');
       const supabase = getSupabaseAdmin(cfEnv);
 
-      const body = await c.req.json();
+      const body = c.req.valid('json') as any;
+      const path = body.path || '';
+
+      // Daftar halaman internal yang TIDAK boleh dilacak views-nya (Backend Safety)
+      const excludedPaths = [
+        '/dashboard', '/admin', '/settings', '/orders', '/products', 
+        '/wallet', '/withdraw', '/bank-info', '/add-product', '/edit-product', 
+        '/login', '/signup', '/forgot-password', '/reset-password', '/reset-sent', 
+        '/onboarding', '/verify-email', '/uikit', '/demo', '/api'
+      ];
+
+      const isExcluded = excludedPaths.some(p => 
+        path === p || path.startsWith(p + '/')
+      );
+
+      if (isExcluded) {
+        console.log('[analytics/track] Skipping internal path:', path);
+        return c.json({ success: true, skipped: true }, 200);
+      }
 
       const mid = String(body.merchant_id || '');
       if (!mid || mid === 'undefined' || mid === 'null' || mid.length < 10) {
@@ -1534,8 +1552,8 @@ app.post(
           country: String(body.country || 'id').toLowerCase(),
           city: String(body.city || 'unknown').toLowerCase(),
           session_id: body.session_id || `sess_${Date.now()}`,
-          referrer: body.referrer || '',
-          visitor_ip: c.req.header('x-forwarded-for') || '127.0.0.1'
+          path: body.path || '',
+          referrer: body.referrer || ''
       };
 
       const { error } = await supabase
@@ -1601,8 +1619,21 @@ app.get('/analytics/dashboard', async (c) => {
         }, 500);
     }
 
-    const eventList = events || [];
+    const rawEventList = events || [];
     const orderList = orders || [];
+
+    // STRICT AUDIT: Filter out any internal paths from the counts
+    const excludedPaths = [
+      '/dashboard', '/admin', '/settings', '/orders', '/products', 
+      '/wallet', '/withdraw', '/bank-info', '/add-product', '/edit-product', 
+      '/login', '/signup', '/forgot-password', '/reset-password', '/reset-sent', 
+      '/onboarding', '/verify-email', '/uikit', '/demo', '/api'
+    ];
+
+    const eventList = rawEventList.filter(e => {
+      const path = e.path || '';
+      return !excludedPaths.some(p => path === p || path.startsWith(p + '/'));
+    });
 
     // Aggregate Stats
     const totalViews = eventList.filter(e => e.event_type === 'view' || e.event_type === 'page_view').length;
