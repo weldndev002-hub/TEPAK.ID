@@ -50,6 +50,12 @@ export const LightSidebar: React.FC<LightSidebarProps> = ({ activePage = 'dashbo
 
   React.useEffect(() => {
     const fetchUser = async () => {
+      // Safety Check: Avoid crash if supabase is null
+      if (!supabase) {
+        console.warn('Supabase client is not initialized in the browser. Check PUBLIC_SUPABASE_URL.');
+        return;
+      }
+
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -99,13 +105,17 @@ export const LightSidebar: React.FC<LightSidebarProps> = ({ activePage = 'dashbo
             type="button"
             onClick={async () => {
               console.log('Logout button clicked - Creator');
-              try {
-                const { error } = await supabase.auth.signOut();
-                if (error) console.error('SignOut error:', error);
-              } catch (e) {
-                console.error('SignOut Exception:', e);
+              
+              if (supabase) {
+                try {
+                  const { error } = await supabase.auth.signOut();
+                  if (error) console.error('SignOut error:', error);
+                } catch (e) {
+                  console.error('SignOut Exception:', e);
+                }
               }
-              // Force redirect to login even if signOut fails
+              
+              // Force redirect to login even if signOut fails or supabase is missing
               window.location.replace('/login');
             }}
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-rose-500 hover:bg-rose-50 hover:text-rose-700 font-bold transition-all w-full group text-left"

@@ -28,9 +28,16 @@ const getEnv = (key: string): string | undefined => {
   } catch (e) {}
 
   try {
-    // 3. Cloudflare Workers (Fallback)
+    // 3. Cloudflare Workers (Fallback/Global)
+    // Often in CF, secrets are attached to globalThis or the worker's context
     if (typeof globalThis !== 'undefined') {
-      return (globalThis as any)[key];
+      const val = (globalThis as any)[key];
+      if (val) return val;
+      
+      // Also check for env object in some worker templates
+      if ((globalThis as any).env && (globalThis as any).env[key]) {
+        return (globalThis as any).env[key];
+      }
     }
   } catch (e) {}
 
@@ -71,8 +78,8 @@ export const getServerClient = (cookies: any, request: Request, runtimeEnv?: any
   const key = runtimeEnv?.PUBLIC_SUPABASE_ANON_KEY || getEnv('PUBLIC_SUPABASE_ANON_KEY') || supabaseAnonKey;
 
   if (!url || !key) {
-    console.error('❌ Supabase Server Client: Missing URL or Key. Check ENV.');
-    throw new Error('Supabase configuration missing. Please set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY.');
+    console.error('❌ Supabase Server Client: Missing URL or Key. Check Cloudflare Dashboard Variables.');
+    return null as any;
   }
 
   return createServerClient(url, key, {
@@ -100,7 +107,8 @@ export const getSupabaseAdmin = (runtimeEnv?: any) => {
   console.log(`[Supabase Admin Init] URL: ${url ? 'Found' : 'Missing'}, Key: ${serviceKey ? `Found (${serviceKey.length} chars)` : 'Missing'}`);
 
   if (!url || !serviceKey) {
-      throw new Error('Supabase Admin configuration missing. Please set SUPABASE_SERVICE_ROLE_KEY.');
+      console.error('❌ Supabase Admin: Missing Service Role Key.');
+      return null as any;
   }
 
   return createClient(url, serviceKey, {

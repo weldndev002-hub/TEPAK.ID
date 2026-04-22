@@ -19,13 +19,22 @@ const getEnv = (key: string) => {
     if (typeof cfEnv !== 'undefined' && cfEnv && cfEnv[key]) return cfEnv[key];
 
     // 2. Vite / Astro Build-time (PUBLIC_ vars)
-    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
-        return import.meta.env[key];
+    if (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env as any)[key]) {
+        return (import.meta.env as any)[key];
     }
 
     // 3. Process ENV fallback (Local Node.js)
     if (typeof process !== 'undefined' && process.env && process.env[key]) {
         return process.env[key];
+    }
+
+    // 4. Global Fallback (Cloudflare Workers Standard)
+    if (typeof globalThis !== 'undefined') {
+      const val = (globalThis as any)[key];
+      if (val) return val;
+      if ((globalThis as any).env && (globalThis as any).env[key]) {
+        return (globalThis as any).env[key];
+      }
     }
 
     return null;
