@@ -44,14 +44,26 @@ const getServerEnv = async (key: string): Promise<string | undefined> => {
 const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL');
 const supabaseAnonKey = getEnv('PUBLIC_SUPABASE_ANON_KEY');
 
-/**
- * BROWSER CLIENT
- * Digunakan di komponen React client-side.
- * Jika variabel build-time tidak tersedia, akan di-override melalui props di masing-masing form.
- */
-export const supabase = (supabaseUrl && supabaseAnonKey) 
-  ? createBrowserClient(supabaseUrl, supabaseAnonKey)
-  : null as any;
+// 1. Browser Client (Lazy initialization)
+let browserClient: any = null;
+
+export const getSupabaseBrowserClient = (url?: string, key?: string) => {
+  const isBrowser = typeof window !== 'undefined';
+  if (!isBrowser) return null as any;
+
+  if (browserClient) return browserClient;
+
+  const finalUrl = url || getEnv('PUBLIC_SUPABASE_URL');
+  const finalKey = key || getEnv('PUBLIC_SUPABASE_ANON_KEY');
+
+  if (!finalUrl || !finalKey) return null as any;
+
+  browserClient = createBrowserClient(finalUrl, finalKey);
+  return browserClient;
+};
+
+// Keep the export for backward compatibility but make it a proxy or safe null
+export const supabase = typeof window !== 'undefined' ? getSupabaseBrowserClient() : null as any;
 
 // 2. Server Client untuk Middleware atau .astro files (SSR)
 export const getServerClient = (cookies: any, request: Request, runtimeEnv?: any) => {

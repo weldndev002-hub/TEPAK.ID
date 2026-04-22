@@ -24,10 +24,9 @@ if (supabase) {
 const siteName = branding?.site_name || 'Tepak.ID';
 const logoUrl = branding?.logo_url || '/logo-light.png';
 
-// Pass Env to Client Component (to avoid missing env in browser bundle)
-const runtime = (Astro.locals as any).runtime;
-const supabaseUrl = runtime?.env?.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = runtime?.env?.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+// Pass Env to Client Component
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 ---
 
 <BaseLayout title={`Daftar Gratis | ${siteName}`}>
@@ -75,7 +74,7 @@ const supabaseAnonKey = runtime?.env?.PUBLIC_SUPABASE_ANON_KEY || import.meta.en
                     {/* INTERACTIVE COMPONENT */}
                     {branding?.registration_enabled !== false ? (
                         <SignupForm 
-                            client:load 
+                            client:only="react" 
                             supabaseUrl={supabaseUrl} 
                             supabaseAnonKey={supabaseAnonKey} 
                         />

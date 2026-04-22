@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import SocialButton from '../ui/SocialButton';
-import { EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
-import { supabase as globalSupabase } from '../../lib/supabase';
+import { getSupabaseBrowserClient } from '../../lib/supabase';
 import { createBrowserClient } from '@supabase/ssr';
 
 interface LoginFormProps {
@@ -14,10 +13,7 @@ interface LoginFormProps {
 export const LoginForm: React.FC<LoginFormProps> = ({ supabaseUrl, supabaseAnonKey }) => {
     // Initialized client: use passed props if available, otherwise fallback to global client
     const [supabase] = useState(() => {
-        if (supabaseUrl && supabaseAnonKey) {
-            return createBrowserClient(supabaseUrl, supabaseAnonKey);
-        }
-        return globalSupabase;
+        return getSupabaseBrowserClient(supabaseUrl, supabaseAnonKey);
     });
 
     const [email, setEmail] = useState('');
@@ -117,7 +113,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ supabaseUrl, supabaseAnonK
                         Alamat Email
                     </label>
                     <Input 
-                        iconLeft={EnvelopeIcon}
                         placeholder="test@gmail.com" 
                         type="email"
                         value={email}
@@ -144,7 +139,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ supabaseUrl, supabaseAnonK
                         </a>
                     </div>
                     <Input 
-                        iconLeft={LockClosedIcon}
                         placeholder="••••••••" 
                         type={showPassword ? "text" : "password"}
                         value={password}
@@ -153,17 +147,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ supabaseUrl, supabaseAnonK
                         className="h-16 rounded-2xl border-slate-100 bg-slate-50/50 shadow-inner tracking-widest font-sans"
                         required
                         iconRight={
-                            showPassword ? (
-                                <EyeIcon 
-                                    onClick={() => setShowPassword(false)}
-                                    className="w-6 h-6 cursor-pointer text-primary p-0.5"
-                                />
-                            ) : (
-                                <EyeSlashIcon 
-                                    onClick={() => setShowPassword(true)}
-                                    className="w-6 h-6 cursor-pointer text-slate-300 hover:text-slate-500 p-0.5"
-                                />
-                            )
+                            <span 
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="text-[10px] font-black cursor-pointer text-slate-400 p-2"
+                            >
+                                {showPassword ? "HIDE" : "SHOW"}
+                            </span>
                         }
                     />
                     {passwordError && (
