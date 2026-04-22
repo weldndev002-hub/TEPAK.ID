@@ -9,7 +9,10 @@ import { BrandingProvider } from '../hooks/useBranding';
 // Fetch Branding Settings
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Use Service Role key on server if available to bypass RLS for branding
+const supabase = createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey);
 
 const { data: branding } = await supabase
   .from('platform_configs')

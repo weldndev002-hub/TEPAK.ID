@@ -1,34 +1,63 @@
-import React, { useState } from 'react';
-import { z } from 'zod';
-import Input from '../ui/Input';
-import Button from '../ui/Button';
-import Stepper from '../ui/Stepper';
-import ThemeCard from '../ui/ThemeCard';
-import AvatarUpload from '../ui/AvatarUpload';
+import React, { useState, useEffect } from 'react';
+import { cn } from '../../lib/utils';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
 import { 
     CheckCircleIcon, 
-    LinkIcon, 
-    AtSymbolIcon, 
-    MusicalNoteIcon, 
-    PlayCircleIcon, 
-    CheckBadgeIcon, 
-    ArrowRightIcon 
+    ArrowRightIcon, 
+    SparklesIcon,
+    CameraIcon,
+    GlobeAltIcon,
+    FingerPrintIcon
 } from '@heroicons/react/24/outline';
+import { z } from 'zod';
+import { AvatarUpload } from '../ui/AvatarUpload';
+import { BrandingProvider, type BrandingData } from '../../hooks/useBranding';
+
+interface OnboardingFormProps {
+    initialBranding?: BrandingData | null;
+}
 
 const ONBOARDING_STEPS = [
-    { label: 'Profile' },
-    { label: 'Content' },
-    { label: 'Finish' },
+    { label: 'Step 01 — Identity' },
+    { label: 'Step 02 — Personalize' },
+    { label: 'Step 03 — Finish' }
 ];
-
-const MOCK_EXISTING_DOMAINS = ['admin', 'orbit', 'tepak', 'studio'];
 
 const domainSchema = z.string()
     .min(3, "Minimal 3 karakter")
-    .regex(/^[a-zA-Z0-9-]+$/, "Error format")
-    .refine((val) => !MOCK_EXISTING_DOMAINS.includes(val.toLowerCase()), "Subdomain telah digunakan");
+    .regex(/^[a-zA-Z0-9-]+$/, "Error format");
 
-export const OnboardingForm: React.FC = () => {
+const themes = [
+    { id: 'atelier-dark', name: 'Atelier Dark', gradient: 'bg-slate-900 shadow-2xl' },
+    { id: 'minimal-light', name: 'Minimal Light', gradient: 'bg-white shadow-xl border border-slate-100' },
+    { id: 'sunrise-glow', name: 'Sunrise Glow', gradient: 'bg-gradient-to-br from-amber-100 to-rose-200 shadow-xl' },
+];
+
+const ThemeCard: React.FC<{ id: string; name: string; previewGradient: string; isActive: boolean; onSelect: (id: string) => void }> = ({ id, name, previewGradient, isActive, onSelect }) => (
+    <button 
+        onClick={() => onSelect(id)}
+        className={cn(
+            "group relative flex flex-col items-center gap-4 transition-all duration-500",
+            isActive ? "scale-105" : "hover:scale-102 grayscale-[40%] hover:grayscale-0 opacity-60 hover:opacity-100"
+        )}
+    >
+        <div className={cn(
+            "w-full aspect-[4/5] rounded-[2rem] p-1 transition-all duration-500",
+            isActive ? "bg-primary shadow-2xl shadow-primary/20" : "bg-slate-100"
+        )}>
+            <div className={cn("w-full h-full rounded-[1.8rem] transition-all duration-500 flex items-center justify-center overflow-hidden", previewGradient)}>
+                {isActive && <CheckCircleIcon className="w-10 h-10 text-primary bg-white rounded-full p-2 animate-in zoom-in duration-500" />}
+            </div>
+        </div>
+        <span className={cn(
+            "text-[10px] font-black uppercase tracking-[0.3em] transition-colors duration-300",
+            isActive ? "text-primary" : "text-slate-400 group-hover:text-slate-600"
+        )}>{name}</span>
+    </button>
+);
+
+export const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialBranding }) => {
     const [currentStep, setCurrentStep] = useState(0);
     const [domain, setDomain] = useState('yourname');
     const [selectedTheme, setSelectedTheme] = useState('atelier-dark');
@@ -36,26 +65,86 @@ export const OnboardingForm: React.FC = () => {
     // STEP 2 STATES
     const [fullName, setFullName] = useState('');
     const [bio, setBio] = useState('');
+    const [avatarUrl, setAvatarUrl] = useState('');
     const [socials, setSocials] = useState({ ig: '', tt: '', yt: '' });
 
     // VALIDATION STATES
     const [errors, setErrors] = useState<{ domain?: string }>({});
     const [apiError, setApiError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isCheckingDomain, setIsCheckingDomain] = useState(false);
+    const [isDomainAvailable, setIsDomainAvailable] = useState<boolean | null>(null);
 
-    const themes = [
-        { id: 'atelier-dark', name: 'Atelier Dark', gradient: 'bg-slate-900 shadow-2xl' },
-        { id: 'clean-minimal', name: 'Clean Minimal', gradient: 'bg-white border-2 border-slate-100 shadow-sm' },
-        { id: 'sunrise-glow', name: 'Sunrise Glow', gradient: 'bg-gradient-to-br from-amber-100 to-rose-200' },
-    ];
+    // REAL-TIME VALIDATION WITH DEBOUNCE
+    useEffect(() => {
+        if (currentStep !== 0) return;
+
+        const checkDomainAvailability = async () => {
+            if (!domain || domain.length < 3) {
+                setErrors({});
+                setIsDomainAvailable(null);
+                return;
+            }
+
+            // Sync Regex Check
+            const result = domainSchema.safeParse(domain);
+            if (!result.success) {
+                setErrors({ domain: result.error.issues?.[0]?.message || "Error format" });
+                setIsDomainAvailable(false);
+                return;
+            }
+
+            setErrors({});
+            setIsCheckingDomain(true);
+            try {
+                const res = await fetch(`/api/public/check-domain?name=${domain}`);
+                const data = await res.json();
+                if (!data.available) {
+                    setErrors({ domain: data.error || 'Subdomain telah digunakan' });
+                    setIsDomainAvailable(false);
+                } else {
+                    setErrors({});
+                    setIsDomainAvailable(true);
+                }
+            } catch (err) {
+                console.error('Check domain error:', err);
+            } finally {
+                setIsCheckingDomain(false);
+            }
+        };
+
+        const timer = setTimeout(checkDomainAvailability, 500);
+        return () => clearTimeout(timer);
+    }, [domain, currentStep]);
 
     const nextStep = async () => {
         setApiError(null);
         if (currentStep === 0) {
+            if (isCheckingDomain) return;
             const result = domainSchema.safeParse(domain);
             if (!result.success) {
-                setErrors({ domain: result.error.errors[0].message });
+                setErrors({ domain: result.error.issues?.[0]?.message || "Error format" });
                 return;
+            }
+            if (isDomainAvailable === false) return;
+            
+            if (isDomainAvailable === null) {
+                setIsSubmitting(true);
+                try {
+                    const res = await fetch(`/api/public/check-domain?name=${domain}`);
+                    const data = await res.json();
+                    if (!data.available) {
+                        setErrors({ domain: data.error || 'Subdomain telah digunakan' });
+                        setIsSubmitting(false);
+                        return;
+                    }
+                    setIsDomainAvailable(true);
+                } catch (err) {
+                    setApiError('Gagal memeriksa ketersediaan domain');
+                    setIsSubmitting(false);
+                    return;
+                }
+                setIsSubmitting(false);
             }
             setErrors({});
         }
@@ -63,42 +152,33 @@ export const OnboardingForm: React.FC = () => {
         if (currentStep === 1) {
             setIsSubmitting(true);
             try {
-                // Save domain
-                const domainRes = await fetch('/api/settings/domain', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ domain_name: domain })
-                });
-                
-                const domainData = await domainRes.json();
-                if (!domainRes.ok) {
-                    throw new Error(domainData.error || 'Terjadi kesalahan saat menyimpan domain');
-                }
-
-                // Save profile settings (name, bio, socials)
-                const profileRes = await fetch('/api/profile', {
-                    method: 'PUT',
+                // Save everything atomically using the new endpoint
+                const response = await fetch('/api/onboarding/complete', {
+                    method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        domain_name: domain,
                         full_name: fullName,
                         bio: bio,
+                        avatar_url: avatarUrl || null,
                         instagram_url: socials.ig || null,
                         tiktok_url: socials.tt || null,
-                        youtube_url: socials.yt || null,
-                        onboarding_completed: true
+                        youtube_url: socials.yt || null
                     })
                 });
 
-                if (!profileRes.ok) {
-                    const profileData = await profileRes.json();
-                    throw new Error(profileData.error || 'Terjadi kesalahan saat menyimpan profil');
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Gagal menyelesaikan onboarding');
                 }
 
-            } catch (err: any) {
-                console.error('Save Onboarding Error:', err);
-                setApiError(err.message);
                 setIsSubmitting(false);
-                return; // Stop and don't go to next step
+            } catch (err: any) {
+                console.error('Onboarding Finalization Error:', err);
+                const errorMsg = err instanceof Error ? err.message : String(err);
+                setApiError(errorMsg);
+                setIsSubmitting(false);
+                return;
             }
             setIsSubmitting(false);
         }
@@ -115,224 +195,296 @@ export const OnboardingForm: React.FC = () => {
     };
 
     return (
-        <div className="w-full max-w-4xl mx-auto ">
-            
-            {/* STEPPER */}
-            <Stepper steps={ONBOARDING_STEPS} currentStep={currentStep} className="mb-14" />
-
-            {/* MAIN CONTENT CARD */}
-            <div className="bg-white rounded-[3.5rem] p-10 md:p-20 shadow-sm border border-slate-100 animate-in fade-in zoom-in-95 duration-700">
+        <BrandingProvider initialData={initialBranding}>
+            <div className="max-w-6xl mx-auto w-full px-6">
                 
-                {currentStep === 0 && (
-                    <div className="space-y-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                        <header className="text-center space-y-6">
-                            <span className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Step 01 — Identity</span>
-                            <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter uppercase whitespace-pre-line leading-tight">Claim Your\nDomain Identity</h1>
-                            <p className="text-slate-400 font-medium tracking-tight max-w-lg mx-auto uppercase text-[10px] leading-relaxed">Secure your unique URL and choose a visual style that represents your creative soul.</p>
-                        </header>
+                {/* STEP INDICATOR */}
+                <div className="flex items-center justify-between mb-24 px-4 overflow-x-auto no-scrollbar py-4">
+                    {ONBOARDING_STEPS.map((s, i) => (
+                        <React.Fragment key={i}>
+                            <div className="flex items-center gap-4 group shrink-0">
+                                <div className={cn(
+                                    "w-12 h-12 rounded-2xl flex items-center justify-center text-[11px] font-black transition-all duration-500",
+                                    currentStep === i 
+                                        ? "bg-primary text-white shadow-2xl shadow-primary/20 scale-110 rotate-3" 
+                                        : currentStep > i 
+                                            ? "bg-slate-900 text-white" 
+                                            : "bg-white text-slate-300 border border-slate-100"
+                                )}>
+                                    {currentStep > i ? <CheckCircleIcon className="w-6 h-6" /> : `0${i + 1}`}
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className={cn(
+                                        "text-[9px] font-black uppercase tracking-[0.3em] transition-all duration-300",
+                                        currentStep === i ? "text-primary translate-x-1" : "text-slate-300"
+                                    )}>{s.label}</span>
+                                    {currentStep === i && <div className="h-[2px] w-4 bg-primary mt-1 rounded-full animate-in slide-in-from-left-2"></div>}
+                                </div>
+                            </div>
+                            {i < ONBOARDING_STEPS.length - 1 && (
+                                <div className={cn(
+                                    "hidden md:block w-16 lg:w-24 h-[1px] mx-4 transition-colors duration-500",
+                                    currentStep > i ? "bg-primary/30" : "bg-slate-100"
+                                )}></div>
+                            )}
+                        </React.Fragment>
+                    ))}
+                </div>
 
-                        <div className="space-y-12">
-                            {/* DOMAIN INPUT */}
-                            <div className="space-y-4">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1">Page URL (Public)</label>
-                                <div className="relative group">
-                                    <div className="absolute left-6 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
-                                        <span className="text-slate-300 font-black text-lg tracking-tight">tepak.id/</span>
-                                    </div>
-                                    <Input 
-                                        className="h-20 pl-24 text-xl font-black tracking-tight rounded-[1.5rem] border border-slate-100 focus:border-primary shadow-none bg-slate-50/30 uppercase"
-                                        value={domain}
-                                        onChange={(e) => setDomain(e.target.value.toLowerCase().replace(/\s/g, ''))}
-                                        placeholder="yourname"
-                                    />
-                                    <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center translate-y-[1px]">
-                                        {domain && !errors.domain ? (
-                                            <CheckCircleIcon className="w-8 h-8 text-emerald-500 animate-in zoom-in duration-300" />
-                                        ) : domain && errors.domain ? (
-                                            <div className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-500 animate-in zoom-in duration-300">
-                                                <span className="font-black text-xs">!</span>
+                <div className="bg-white rounded-[4rem] shadow-[0_40px_100px_-20px_rgba(15,23,42,0.08)] border border-slate-50 relative overflow-hidden">
+                    {/* PROGRESS BAR */}
+                    <div className="absolute top-0 left-0 right-0 h-1.5 bg-slate-50">
+                        <div 
+                            className="h-full bg-primary transition-all duration-1000 ease-out"
+                            style={{ width: `${((currentStep + 1) / ONBOARDING_STEPS.length) * 100}%` }}
+                        ></div>
+                    </div>
+
+                    <div className="p-10 md:p-24">
+                        {/* API ERROR BANNER */}
+                        {apiError && (
+                            <div className="mb-12 p-6 bg-rose-50 rounded-3xl border border-rose-100 flex items-center gap-4 text-rose-600 animate-in bounce-in duration-500">
+                                <div className="w-10 h-10 rounded-full bg-rose-500 text-white flex items-center justify-center shrink-0">!</div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black uppercase tracking-widest">Initialization Error</p>
+                                    <p className="text-sm font-bold tracking-tight">{apiError}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {currentStep === 0 && (
+                            <div className="space-y-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                                <header className="text-center space-y-6">
+                                    <span className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Essential Setup</span>
+                                    <h1 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter uppercase whitespace-pre-line leading-[1.05]">
+                                        {`Claim Your\nDomain Identity`}
+                                    </h1>
+                                    <p className="text-slate-400 font-medium tracking-tight max-w-lg mx-auto uppercase text-[10px] leading-relaxed">Secure your unique URL and choose a visual style that represents your creative soul.</p>
+                                </header>
+
+                                <div className="space-y-12">
+                                    {/* DOMAIN INPUT */}
+                                    <div className="space-y-6">
+                                        <div className="flex items-center justify-between px-1">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Page URL (Public)</label>
+                                            <GlobeAltIcon className="w-5 h-5 text-slate-200" />
+                                        </div>
+                                        <div className="relative group">
+                                            <div className="absolute left-8 top-1/2 -translate-y-1/2 flex items-center pointer-events-none z-10">
+                                                <span className="text-slate-300 font-black text-xl tracking-tight">tepak.id/</span>
                                             </div>
-                                        ) : null}
+                                            <Input 
+                                                className="h-24 pl-32 text-2xl font-black tracking-tight rounded-[2rem] border-2 border-slate-100 focus:border-primary shadow-none bg-slate-50/30 uppercase transition-all"
+                                                value={domain}
+                                                onChange={(e) => {
+                                                    const val = e.target.value.toLowerCase().replace(/\s/g, '');
+                                                    setDomain(val);
+                                                    setIsDomainAvailable(null);
+                                                    if (errors.domain) setErrors({});
+                                                }}
+                                                placeholder="yourname"
+                                            />
+                                            <div className="absolute right-8 top-1/2 -translate-y-1/2 flex items-center z-10">
+                                                {isCheckingDomain ? (
+                                                    <div className="w-6 h-6 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+                                                ) : domain && isDomainAvailable && !errors.domain ? (
+                                                    <div className="bg-emerald-500 rounded-full p-1.5 animate-in zoom-in duration-300 shadow-xl shadow-emerald-500/20">
+                                                        <CheckCircleIcon className="w-6 h-6 text-white" />
+                                                    </div>
+                                                ) : domain && (errors.domain || isDomainAvailable === false) ? (
+                                                    <div className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-500 animate-in zoom-in duration-300 ring-4 ring-white">
+                                                        <span className="font-black text-xs">!</span>
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                        </div>
+                                        {errors.domain ? (
+                                            <p className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] px-4 animate-in fade-in slide-in-from-top-1">
+                                                {errors.domain}
+                                            </p>
+                                        ) : isDomainAvailable && !isCheckingDomain && (
+                                            <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] px-4 animate-in fade-in">
+                                                <SparklesIcon className="w-3.5 h-3.5 inline mr-2 -mt-0.5" />
+                                                Domain is available! 
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* THEME PICKER */}
+                                    <div className="space-y-10 pt-8">
+                                        <div className="flex items-center gap-3 ml-1">
+                                            <FingerPrintIcon className="w-5 h-5 text-slate-200" />
+                                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Visual Signature</div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                                            {themes.map((theme) => (
+                                                <ThemeCard 
+                                                    key={theme.id}
+                                                    id={theme.id}
+                                                    name={theme.name}
+                                                    previewGradient={theme.gradient}
+                                                    isActive={selectedTheme === theme.id}
+                                                    onSelect={setSelectedTheme}
+                                                />
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
-                                {errors.domain ? (
-                                    <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest px-2 animate-in fade-in slide-in-from-top-1">
-                                        {errors.domain}
-                                    </p>
-                                ) : domain && (
-                                    <p className="text-[10px] font-black text-primary uppercase tracking-widest px-2">Domain is available! This will be your primary store link.</p>
-                                )}
                             </div>
+                        )}
 
-                            {/* THEME PICKER */}
-                            <div className="space-y-10 pt-4">
-                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1 mb-10 block">Select Visual Signature</div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-                                    {themes.map((theme) => (
-                                        <ThemeCard 
-                                            key={theme.id}
-                                            id={theme.id}
-                                            name={theme.name}
-                                            previewGradient={theme.gradient}
-                                            isActive={selectedTheme === theme.id}
-                                            onSelect={setSelectedTheme}
+                        {currentStep === 1 && (
+                            <div className="space-y-20 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                                <header className="text-center space-y-6">
+                                    <span className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Personalization</span>
+                                    <h1 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter uppercase whitespace-pre-line leading-[1.05]">
+                                        {`Design Your\nCreator Profile`}
+                                    </h1>
+                                    <p className="text-slate-400 font-medium tracking-tight max-w-lg mx-auto uppercase text-[10px] leading-relaxed">Let your audience know who you are. These details will appear on your public landing page.</p>
+                                </header>
+
+                                <div className="flex flex-col lg:flex-row gap-20">
+                                    {/* PHOTO & BIO */}
+                                    <div className="lg:w-1/2 space-y-12">
+                                        <AvatarUpload 
+                                            className="mb-14" 
+                                            image={avatarUrl}
+                                            onUpload={async (file: File) => {
+                                                try {
+                                                    const formData = new FormData();
+                                                    formData.append('avatar', file);
+                                                    const res = await fetch('/api/profile/avatar', {
+                                                        method: 'POST',
+                                                        body: formData,
+                                                    });
+                                                    if (res.ok) {
+                                                        const data = await res.json();
+                                                        setAvatarUrl(data.url);
+                                                    } else {
+                                                        const err = await res.json().catch(() => ({}));
+                                                        alert('Gagal upload foto: ' + (err?.error || 'Unknown error'));
+                                                    }
+                                                } catch (e: any) {
+                                                    alert('Error: ' + e.message);
+                                                }
+                                            }}
                                         />
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {currentStep === 1 && (
-                    <div className="space-y-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                        <header className="text-center space-y-6">
-                            <span className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Step 02 — Personalize</span>
-                            <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-tight">Craft Your Profile</h2>
-                            <p className="text-slate-400 font-medium tracking-tight max-w-lg mx-auto uppercase text-[10px] leading-relaxed">Let your audience know who you are and where to find your other creative works.</p>
-                        </header>
-
-                        <div className="flex flex-col lg:flex-row gap-16">
-                            {/* PHOTO & BIO */}
-                            <div className="lg:w-1/2 space-y-12">
-                                <AvatarUpload className="mb-14" />
-                                
-                                <div className="space-y-4">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1">Profile Full Name</label>
-                                    <Input 
-                                        placeholder="Ex: Alexandra Quinn"
-                                        value={fullName}
-                                        onChange={(e) => setFullName(e.target.value)}
-                                        className="h-16 font-black uppercase tracking-tight rounded-2xl border-slate-100 bg-slate-50/30 px-6"
-                                    />
-                                </div>
-
-                                <div className="space-y-4">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1">Short Bio</label>
-                                    <textarea 
-                                        placeholder="Describe yourself in one short, impactful sentence..."
-                                        value={bio}
-                                        onChange={(e) => setBio(e.target.value)}
-                                        className="w-full min-h-[140px] p-6 rounded-2xl border border-slate-100 focus:border-primary outline-none font-medium text-sm transition-all resize-none bg-slate-50/30"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* SOCIAL LINKS */}
-                            <div className="lg:w-1/2 space-y-10">
-                                <div className="p-10 bg-slate-50 rounded-[3rem] border border-slate-100 space-y-10">
-                                    <header className="flex items-center gap-4 mb-4">
-                                        <div className="p-2 bg-white rounded-xl shadow-sm">
-                                            <LinkIcon className="w-5 h-5 text-primary" />
-                                        </div>
-                                        <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Social Connections</h3>
-                                    </header>
-
-                                    <div className="space-y-8">
-                                        <div className="space-y-3">
-                                            <div className="flex items-center justify-between px-1">
-                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Instagram</span>
-                                                <AtSymbolIcon className="w-4 h-4 text-slate-300" />
+                                        
+                                        <div className="space-y-6">
+                                            <div className="space-y-4">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1">Profile Full Name</label>
+                                                <Input 
+                                                    className="h-16 rounded-2xl border-slate-100 bg-slate-50/30 text-lg font-bold tracking-tight" 
+                                                    placeholder="Tepak Creator" 
+                                                    value={fullName}
+                                                    onChange={(e) => setFullName(e.target.value)}
+                                                />
                                             </div>
-                                            <Input 
-                                                placeholder="Instagram handle"
-                                                value={socials.ig}
-                                                onChange={(e) => setSocials({...socials, ig: e.target.value})}
-                                                className="h-14 text-xs font-black uppercase tracking-tight bg-white border-slate-100 rounded-xl"
-                                            />
-                                        </div>
-
-                                        <div className="space-y-3">
-                                            <div className="flex items-center justify-between px-1">
-                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">TikTok</span>
-                                                <MusicalNoteIcon className="w-4 h-4 text-slate-300" />
+                                            <div className="space-y-4 pt-4">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1">Short Biography</label>
+                                                <textarea 
+                                                    className="w-full h-40 rounded-[2rem] border border-slate-100 bg-slate-50/30 text-sm font-medium p-8 focus:ring-1 focus:ring-primary focus:border-primary transition-all resize-none outline-none"
+                                                    placeholder="Tell the world your story..."
+                                                    value={bio}
+                                                    onChange={(e) => setBio(e.target.value)}
+                                                ></textarea>
                                             </div>
-                                            <Input 
-                                                placeholder="TikTok handle"
-                                                value={socials.tt}
-                                                onChange={(e) => setSocials({...socials, tt: e.target.value})}
-                                                className="h-14 text-xs font-black uppercase tracking-tight bg-white border-slate-100 rounded-xl"
-                                            />
                                         </div>
+                                    </div>
 
-                                        <div className="space-y-3">
-                                            <div className="flex items-center justify-between px-1">
-                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">YouTube</span>
-                                                <PlayCircleIcon className="w-4 h-4 text-slate-300" />
+                                    {/* SOCIALS */}
+                                    <div className="lg:w-1/2 space-y-10">
+                                        <div className="p-10 rounded-[3rem] bg-slate-50/50 border border-slate-100 space-y-10">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                                                <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.4em]">Presence & Socials</h3>
                                             </div>
-                                            <Input 
-                                                placeholder="Channel name / URL"
-                                                value={socials.yt}
-                                                onChange={(e) => setSocials({...socials, yt: e.target.value})}
-                                                className="h-14 text-xs font-black uppercase tracking-tight bg-white border-slate-100 rounded-xl"
-                                            />
+                                            
+                                            <div className="space-y-8">
+                                                {[
+                                                    { id: 'ig', label: 'Instagram Username', icon: 'IG' },
+                                                    { id: 'tt', label: 'TikTok Username', icon: 'TT' },
+                                                    { id: 'yt', label: 'YouTube Handle', icon: 'YT' }
+                                                ].map((s) => (
+                                                    <div key={s.id} className="space-y-4">
+                                                        <div className="flex items-center justify-between px-1">
+                                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{s.label}</label>
+                                                            <span className="text-[9px] font-black text-primary opacity-30">{s.icon}</span>
+                                                        </div>
+                                                        <Input 
+                                                            className="h-14 rounded-xl border-slate-200 bg-white shadow-sm font-bold" 
+                                                            placeholder={`@username`}
+                                                            value={(socials as any)[s.id]}
+                                                            onChange={(e) => setSocials(prev => ({ ...prev, [s.id]: e.target.value }))}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                )}
+                        )}
 
-                {currentStep === 2 && (
-                    <div className="h-[400px] flex flex-col items-center justify-center space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                        <div className="w-24 h-24 bg-emerald-50 rounded-[2rem] flex items-center justify-center text-emerald-500 mb-6 shadow-sm border border-emerald-100/50">
-                            <CheckBadgeIcon className="w-12 h-12" />
-                        </div>
-                        <div className="text-center space-y-4">
-                            <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase whitespace-pre-line leading-tight">Masterfully\nCreated</h2>
-                            <p className="text-slate-400 font-medium text-center max-w-sm uppercase text-[10px] leading-relaxed tracking-widest mx-auto">The world can now experience your creations at\ntepak.id/{domain}</p>
-                        </div>
-                        <Button 
-                            variant="primary" 
-                            size="lg" 
-                            className="px-16 mt-6 font-black uppercase text-[11px] tracking-[0.2em] py-5 rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all"
-                            onClick={() => {
-                                window.location.href = '/dashboard';
-                            }}
-                        >
-                            Masuk ke Dashboard
-                        </Button>
-                    </div>
-                )}
+                        {currentStep === 2 && (
+                            <div className="text-center space-y-16 animate-in zoom-in-95 duration-1000 py-20">
+                                <div className="relative inline-block">
+                                    <div className="w-32 h-32 bg-primary rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-primary/20 animate-bounce cursor-default">
+                                        <CheckCircleIcon className="w-16 h-16 text-white" />
+                                    </div>
+                                    <div className="absolute -top-4 -right-4 w-12 h-12 bg-white rounded-2xl shadow-lg border border-slate-50 flex items-center justify-center animate-pulse">
+                                        <SparklesIcon className="w-6 h-6 text-amber-400" />
+                                    </div>
+                                </div>
+                                
+                                <div className="space-y-6">
+                                    <h2 className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter uppercase leading-tight">Manifestation<br/>Complete!</h2>
+                                    <p className="text-slate-400 font-bold uppercase tracking-[0.3em] text-[10px] max-w-sm mx-auto leading-relaxed">Your digital atelier is ready to welcome your audience. Step into your kingdom.</p>
+                                </div>
 
-                {/* NAVIGATION CTA */}
-                {apiError && (
-                    <div className="mt-8 p-4 bg-rose-50 border border-rose-100 rounded-xl">
-                        <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest text-center">{apiError}</p>
-                    </div>
-                )}
-                <div className="mt-12 pt-16 border-t border-slate-50 flex flex-col md:flex-row items-center justify-between gap-10">
-                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em] max-w-[240px] text-center md:text-left leading-relaxed">
-                        By continuing, you agree to the TEPAK.ID Ecosystem Terms & Conditions.
-                    </p>
-                    <div className="flex gap-4 w-full md:w-auto">
-                        <Button 
-                            variant="outline" 
-                            className="px-12 py-5 font-black uppercase text-[10px] tracking-widest border-2 border-slate-100 hover:border-primary rounded-2xl group transition-all"
-                            onClick={() => {
-                                if (currentStep > 0) prevStep();
-                                else window.history.back();
-                            }}
-                        >
-                            <span>Back</span>
-                        </Button>
+                                <Button 
+                                    size="lg" 
+                                    className="px-20 py-8 rounded-[2rem] font-black uppercase text-[11px] tracking-[0.3em] shadow-2xl shadow-primary/30 hover:scale-105 active:scale-95 transition-all group"
+                                    onClick={() => {
+                                        window.location.href = `/editor?theme=${selectedTheme || 'atelier-dark'}&subdomain=${domain}`;
+                                    }}
+                                >
+                                    Launch My Kingdom
+                                    <ArrowRightIcon className="w-5 h-5 ml-4 group-hover:translate-x-2 transition-transform" />
+                                </Button>
+                            </div>
+                        )}
+
+                        {/* NAV ACTIONS */}
                         {currentStep < 2 && (
-                            <Button 
-                                variant="primary" 
-                                disabled={isSubmitting}
-                                className="w-full md:w-auto px-16 py-5 font-black uppercase text-[10px] tracking-widest group shadow-2xl shadow-primary/20 rounded-2xl bg-primary text-white"
-                                onClick={nextStep}
-                            >
-                                <span>{isSubmitting ? 'Saving...' : 'Continue'}</span>
-                                {!isSubmitting && <ArrowRightIcon className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />}
-                            </Button>
+                            <div className="flex items-center justify-between mt-24 pt-16 border-t border-slate-50">
+                                <button 
+                                    onClick={prevStep}
+                                    className={cn(
+                                        "text-[10px] font-black uppercase tracking-[0.4em] transition-all",
+                                        currentStep === 0 ? "opacity-0 pointer-events-none" : "text-slate-300 hover:text-slate-900"
+                                    )}
+                                >
+                                    Go Back
+                                </button>
+                                
+                                <Button 
+                                    onClick={nextStep}
+                                    disabled={isSubmitting || (currentStep === 0 && (isDomainAvailable === false || isCheckingDomain))}
+                                    className="min-w-[240px] h-20 rounded-[2rem] font-black uppercase text-[10px] tracking-[0.4em] shadow-xl group"
+                                >
+                                    {isSubmitting ? 'Syncing...' : (
+                                        <>
+                                            {currentStep === 1 ? 'Build My Kingdom' : 'Next Epoch'}
+                                            <ArrowRightIcon className="w-5 h-5 ml-4 group-hover:translate-x-2 transition-transform" />
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
                         )}
                     </div>
                 </div>
             </div>
-        </div>
+        </BrandingProvider>
     );
 };
-
-export default OnboardingForm;

@@ -1,10 +1,21 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { CreatorAtelierEditor } from '../components/editor/CreatorAtelierEditor';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+const { data: branding } = await supabase
+  .from('platform_configs')
+  .select('*')
+  .eq('id', 1)
+  .single();
 ---
 
 <BaseLayout title="Creator Atelier Editor | Orbit Site">
   <main class="min-h-screen bg-slate-50">
-    <CreatorAtelierEditor client:load />
+    <CreatorAtelierEditor initialBranding={branding} client:load />
   </main>
 </BaseLayout>

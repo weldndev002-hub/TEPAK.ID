@@ -513,3 +513,6 @@ export const AdminSettingsDashboard = () => {
                     </div>
                 </div>
             )}
+        </div>
+    );
+};

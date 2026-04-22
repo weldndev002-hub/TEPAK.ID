@@ -15,8 +15,14 @@ import { TrashIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { AddBlockDrawer } from './AddBlockDrawer';
 import { BlockSettingsForm } from './BlockSettingsForm';
 import { PhoneFrame } from './PhoneFrame';
+import { OnboardingForm } from '../onboarding/OnboardingForm';
+import { BrandingProvider, type BrandingData } from '../../hooks/useBranding';
 
-export const CreatorAtelierEditor: React.FC = () => {
+interface CreatorAtelierEditorProps {
+    initialBranding?: BrandingData | null;
+}
+
+export const CreatorAtelierEditor: React.FC<CreatorAtelierEditorProps> = ({ initialBranding }) => {
     // URL Search Params
     const queryParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
     const initialTheme = queryParams?.get('theme') || 'atelier-dark';
@@ -44,7 +50,7 @@ export const CreatorAtelierEditor: React.FC = () => {
     React.useEffect(() => {
         const fetchProfile = async () => {
             try {
-                const res = await fetch('/api/profile/me');
+                const res = await fetch(`/api/profile/me?t=${Date.now()}`);
                 if (res.ok) {
                     const data = await res.json();
                     if (data.user_settings?.domain_name) {
@@ -59,7 +65,12 @@ export const CreatorAtelierEditor: React.FC = () => {
                     if (data.tiktok_url) setTiktokUrl(data.tiktok_url);
                     if (data.twitter_url) setTwitterUrl(data.twitter_url);
                     if (data.youtube_url) setYoutubeUrl(data.youtube_url);
-                    if (data.blocks && Array.isArray(data.blocks)) setBlocks(data.blocks);
+                    if (data.blocks && Array.isArray(data.blocks) && data.blocks.length > 0) setBlocks(data.blocks);
+                } else if (initialBranding) {
+                    // Fallback to initial branding if API fails
+                    if (initialBranding.fullName) setFullName(initialBranding.fullName);
+                    if (initialBranding.avatarUrl) setAvatarUrl(initialBranding.avatarUrl);
+                    if (initialBranding.bio) setBio(initialBranding.bio);
                 }
             } catch (err) {
                 console.error('Failed to fetch profile:', err);
@@ -151,7 +162,7 @@ export const CreatorAtelierEditor: React.FC = () => {
     };
 
     return (
-        <>
+        <BrandingProvider initialData={initialBranding}>
             <div className="flex min-h-screen bg-white ">
                 {/* Sidebar B (Light) */}
                 <SidebarB activePage="editor" />
@@ -192,7 +203,7 @@ export const CreatorAtelierEditor: React.FC = () => {
                                                         });
                                                         if (res.ok) {
                                                             const data = await res.json();
-                                                            setAvatarUrl(data.avatar_url);
+                                                            setAvatarUrl(data.avatar_url || data.url);
                                                         } else {
                                                             const err = await res.json().catch(() => ({}));
                                                             alert('Gagal upload foto: ' + (err?.error || 'Unknown error'));
@@ -487,7 +498,7 @@ export const CreatorAtelierEditor: React.FC = () => {
                 </div>
             )}
 
-        </>
+        </BrandingProvider>
     );
 };
 

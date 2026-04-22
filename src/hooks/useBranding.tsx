@@ -26,6 +26,11 @@ const BrandingContext = createContext<BrandingContextType | undefined>(undefined
 export const BrandingProvider: React.FC<{ children: React.ReactNode; initialData?: BrandingData | null }> = ({ children, initialData }) => {
   const [branding, setBranding] = useState<BrandingData | null>(initialData || null);
   const [loading, setLoading] = useState(!branding);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const fetchBranding = async () => {
     try {
@@ -72,11 +77,18 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode; initialData
 
 export const useBranding = () => {
   const context = useContext(BrandingContext);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   
   if (context === undefined) {
     // Return a safe default with injected branding if available
     let injectedBranding = null;
-    if (typeof window !== 'undefined') {
+    
+    // CRITICAL: Only use dynamic injected branding after mounting to avoid hydration mismatch
+    if (typeof window !== 'undefined' && isMounted) {
         injectedBranding = (window as any).__PLATFORM_BRANDING__;
     }
     

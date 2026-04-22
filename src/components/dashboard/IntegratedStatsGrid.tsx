@@ -13,15 +13,26 @@ export const IntegratedStatsGrid: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        let retryCount = 0;
+        const maxRetries = 3;
+
         const fetchStats = async () => {
             try {
                 const res = await fetch('/api/analytics/dashboard?range=30d');
+                
+                if (res.status === 401 && retryCount < maxRetries) {
+                    retryCount++;
+                    console.warn(`[Stats] Unauthorized, retrying... (${retryCount}/${maxRetries})`);
+                    setTimeout(fetchStats, 1000 * retryCount); // Exponential backoff
+                    return;
+                }
+
                 if (!res.ok) throw new Error('Failed to fetch dashboard stats');
                 const result = await res.json();
                 setData(result);
             } catch (err) {
                 console.error('Dashboard Stats Error:', err);
-                setError('Failed to load metrics');
+                setError('Gagal memuat statistik. Pastikan Anda sudah login atau coba muat ulang halaman.');
             } finally {
                 setIsLoading(false);
             }

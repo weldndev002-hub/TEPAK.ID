@@ -5,24 +5,18 @@ import { createServerClient, createBrowserClient, parseCookieHeader } from '@sup
 // Browser: uses import.meta.env (Vite/Astro build-time)
 // Server: uses import.meta.env or resolved CF env
 const getEnv = (key: string): string | undefined => {
+  // 1. Build-time (Vite/Astro)
   if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
     return import.meta.env[key];
   }
+  // 2. Runtime (Node.js)
   if (typeof process !== 'undefined' && process.env && process.env[key]) {
     return process.env[key];
   }
   return undefined;
 };
 
-// Helper for server-side: tries cloudflare:workers env first (runtime), then build-time env
 const getServerEnv = async (key: string): Promise<string | undefined> => {
-  try {
-    // @ts-ignore - only available in Cloudflare Workers runtime
-    const cf = await import('cloudflare:workers');
-    if (cf?.env?.[key]) return cf.env[key];
-  } catch (e) {
-    // Not in CF runtime, fall through
-  }
   return getEnv(key);
 };
 
@@ -61,10 +55,11 @@ export const getSupabaseAdmin = (runtimeEnv?: any) => {
   // Try to find the service key in multiple places (SSR context, process.env, or import.meta)
   const serviceKey = 
     runtimeEnv?.SUPABASE_SERVICE_ROLE_KEY || 
-    getEnv('SUPABASE_SERVICE_ROLE_KEY') || 
-    (typeof process !== 'undefined' ? process.env.SUPABASE_SERVICE_ROLE_KEY : undefined);
+    getEnv('SUPABASE_SERVICE_ROLE_KEY');
 
-  if (!serviceKey || serviceKey.startsWith('http') || serviceKey === 'placeholder-service-key') {
+  console.log(`[Supabase Admin Init] URL: ${url ? 'Found' : 'Missing'}, Key: ${serviceKey ? `Found (${serviceKey.length} chars)` : 'Missing'}`);
+
+  if (!serviceKey || serviceKey.length < 20) {
       console.warn('⚠️ [Supabase Admin] Valid SUPABASE_SERVICE_ROLE_KEY not found. Admin bypass will fail.');
   }
 
