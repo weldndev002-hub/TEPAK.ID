@@ -1,6 +1,16 @@
 import { defineMiddleware } from 'astro:middleware';
 import { getServerClient } from './lib/supabase';
 
+let runtimeEnv: any = {};
+try {
+  // @ts-ignore
+  const { env } = await import('cloudflare:workers');
+  runtimeEnv = env;
+} catch (e) {
+  // Fallback to import.meta.env for local development
+  runtimeEnv = import.meta.env;
+}
+
 export const onRequest = defineMiddleware(async ({ locals, cookies, request, redirect }, next) => {
   const url = new URL(request.url);
   
@@ -8,9 +18,6 @@ export const onRequest = defineMiddleware(async ({ locals, cookies, request, red
   if (url.pathname.includes('/api/payments/duitku/webhook')) {
     return next();
   }
-
-  // @ts-ignore - Support both Cloudflare Pages (locals.runtime.env) and Workers (locals.env)
-  const runtimeEnv = (locals as any).runtime?.env || (locals as any).env || globalThis;
   
   let supabase: any;
   try {

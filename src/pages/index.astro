@@ -21,16 +21,12 @@ import { getServerClient } from '../lib/supabase';
 import { AnalyticsTracker } from '../components/analytics/AnalyticsTracker';
 import { createClient } from '@supabase/supabase-js';
 
-// @ts-ignore
-const runtimeEnv = Astro.locals.runtime?.env || (Astro.locals as any).env || import.meta.env;
-const supabaseUrl = runtimeEnv.PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = runtimeEnv.PUBLIC_SUPABASE_ANON_KEY;
+const supabase = Astro.locals.supabase;
 
 let branding: any = null;
-if (supabaseUrl && supabaseAnonKey) {
+if (supabase) {
     try {
-        const brandingSupabase = createClient(supabaseUrl, supabaseAnonKey);
-        const { data } = await brandingSupabase
+        const { data } = await supabase
             .from('platform_configs')
             .select('*')
             .eq('id', 1)
@@ -48,7 +44,6 @@ const logoUrl = branding?.logo_url || '/logo-light.png';
 // 2. Detect Hostname & Identity Logic (Dynamic Routing)
 const hostname = Astro.url.hostname;
 const { cookies } = Astro;
-const supabase = getServerClient(cookies, Astro.request);
 const urlParams = Astro.url.searchParams;
 const testUsername = urlParams.get('u');
 

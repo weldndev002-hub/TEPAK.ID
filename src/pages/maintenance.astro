@@ -1,8 +1,5 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { createClient } from '@supabase/supabase-js';
-
-// Fetch Branding from locals (more resilient in Cloudflare)
 const supabase = Astro.locals.supabase;
 
 let branding: any = null;

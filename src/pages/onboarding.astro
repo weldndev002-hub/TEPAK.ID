@@ -2,8 +2,6 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { OnboardingForm } from '../components/onboarding/OnboardingForm';
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
-import { createClient } from '@supabase/supabase-js';
-
 const supabase = Astro.locals.supabase;
 
 let branding: any = null;

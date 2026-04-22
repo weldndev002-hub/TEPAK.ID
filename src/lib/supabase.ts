@@ -9,16 +9,18 @@ const getEnv = (key: string): string | undefined => {
   if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
     return import.meta.env[key];
   }
+
   // 2. Runtime (Node.js)
   if (typeof process !== 'undefined' && process.env && process.env[key]) {
     return process.env[key];
   }
-  // 3. Global (Cloudflare Workers / Pages)
-  // @ts-ignore
-  if (typeof globalThis !== 'undefined' && globalThis[key]) {
-    // @ts-ignore
-    return globalThis[key];
+
+  // 3. Cloudflare Workers (Astro 6+)
+  // Note: We try to use globalThis first as a fallback for some environments
+  if (typeof globalThis !== 'undefined' && (globalThis as any)[key]) {
+    return (globalThis as any)[key];
   }
+
   return undefined;
 };
 
