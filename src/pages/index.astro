@@ -106,8 +106,8 @@ const profile = merchantData ? {
 } : null;
 
 const seo = merchantData ? {
-    title: merchantData.seo_title || `${profile.name} | ${siteName} Ecosystem`,
-    description: merchantData.seo_description || profile.bio
+    title: merchantData.seo_title || `${profile?.name || 'Merchant'} | ${siteName} Ecosystem`,
+    description: merchantData.seo_description || profile?.bio || ''
 } : {
     title: `${siteName} - ${siteTagline}`,
     description: branding?.site_tagline || "Satu Link. Semua Kebutuhan Digitalmu. Bangun halaman profesional, jual aset digital, dan kelola event tanpa coding."
