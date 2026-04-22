@@ -1,7 +1,7 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "tepak-id"
 main = "./dist/_worker.js/index.js"
-compatibility_date = "2024-04-03"
+compatibility_date = "2025-04-22"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]

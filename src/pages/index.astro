@@ -52,9 +52,8 @@ let products = [];
 
 try {
     if (!supabase) {
-        console.error('[Routing Error] Supabase is null. Check Environment Variables in Cloudflare.');
-        throw new Error('Database connection not initialized');
-    }
+        console.warn('[Routing Warning] Supabase is null. Some features may not work.');
+    } else {
     const isMainDomain = hostname.includes('tepak.id') || hostname.includes('workers.dev') || hostname === 'localhost' || hostname === '127.0.0.1';
     
     if (!isMainDomain) {
@@ -86,6 +85,7 @@ try {
     if (merchantData) {
         const { data: productList } = await supabase.from('products').select('*').eq('merchant_id', merchantData.user_id || merchantData.profiles.id).eq('status', 'published').order('created_at', { ascending: false });
         products = productList || [];
+    }
     }
 } catch (err) {
     console.error('[Routing Error]', err);
