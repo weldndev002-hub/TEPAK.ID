@@ -2,178 +2,120 @@ import { defineMiddleware } from 'astro:middleware';
 import { getServerClient } from './lib/supabase';
 
 export const onRequest = defineMiddleware(async ({ locals, cookies, request, redirect }, next) => {
-  const url = new URL(request.url);
-  
-  // Capture Environment (Astro 6+ Cloudflare style)
-  // 1. Priority: Astro Locals Runtime (Populated by Cloudflare Adapter)
-  // 2. Fallback: cloudflare:workers import
-  // 3. Last Resort: import.meta.env (Build-time / Local)
-  let runtimeEnv: Record<string, any> = (locals as any).runtime?.env || {};
-  
-  if (!runtimeEnv.PUBLIC_SUPABASE_URL) {
-    try {
-      // @ts-ignore
-      const cf = await import('cloudflare:workers');
-      runtimeEnv = cf.env || {};
-    } catch (e) {
-      // Ignore if not in CF environment
-    }
-  }
-
-  // Final fallback to build-time env
-  if (!runtimeEnv.PUBLIC_SUPABASE_URL) {
-    runtimeEnv = import.meta.env || {};
-  }
-
-  // Debug log (remove later)
-  console.log(`[Middleware] Env Check: URL=${!!runtimeEnv.PUBLIC_SUPABASE_URL}, Key=${!!runtimeEnv.PUBLIC_SUPABASE_ANON_KEY}`);
-
-  // BYPASS: Jangan memblokir Webhook Duitku (harus bisa dihubungi server luar)
-  if (url.pathname.includes('/api/payments/duitku/webhook')) {
-    return next();
-  }
-  
-  let supabase: any;
   try {
-    supabase = getServerClient(cookies, request, runtimeEnv);
-  } catch (e) {
-    console.error('[Middleware] Supabase Init Failed:', e);
-    // Return early or continue with dummy if it's not a protected page
-    // But for safety, we let it throw if it's a critical error
-    supabase = null;
-  }
-
-  // Set supabase and getUser in locals for use in .astro files
-  locals.supabase = supabase;
-  locals.getUser = async () => {
-    if (!supabase) return null;
-    try {
-      const { data, error } = await supabase.auth.getUser();
-      if (error || !data) return null;
-      return data.user;
-    } catch (e) {
-      console.error('[Middleware] getUser error:', e);
-      return null;
-    }
-  };
-
-  // Fetch Platform Configs (Maintenance & Registration Toggles)
-  let platformConfigs = { maintenance_mode: false, registration_enabled: true };
-  if (supabase) {
-    try {
-      const { data: configs } = await supabase
-        .from('platform_configs')
-        .select('maintenance_mode, registration_enabled')
-        .eq('id', 1)
-        .single();
-      if (configs) platformConfigs = configs;
-    } catch (e) {
-      console.error('[Middleware] Config fetch error:', e);
-    }
-  }
-
-  const isAuthPage = ['/login', '/signup', '/forgot-password', '/callback'].includes(url.pathname);
-  const isAdminGate = url.pathname === '/admin/auth';
-  
-  // Master Admin Passcode Check
-  const adminAccessToken = cookies.get('admin_access_token')?.value;
-  const MASTER_PASSCODE = runtimeEnv.ADMIN_PASSCODE || import.meta.env.ADMIN_PASSCODE || 'admin123';
-  const isMasterAdmin = adminAccessToken === MASTER_PASSCODE;
-
-  // Set in locals
-  locals.isMasterAdmin = isMasterAdmin;
-
-  // Define protected prefixes
-  const protectedPrefixes = [
-    '/dashboard', 
-    '/admin', 
-    '/settings', 
-    '/products', 
-    '/orders', 
-    '/customers', 
-    '/wallet', 
-    '/academy',
-    '/account-management',
-    '/analytics',
-    '/bank-info',
-    '/domain-settings',
-    '/seo-settings',
-    '/add-product',
-    '/edit-product'
-  ];
-  
-  const isProtectedPage = protectedPrefixes.some(prefix => url.pathname.startsWith(prefix));
-
-  const user = await locals.getUser();
-  let isBanned = false;
-  let isAdmin = isMasterAdmin;
-
-  if (user && supabase) {
-    const { data: profile, error: pError } = await supabase
-      .from('profiles')
-      .select('is_banned, role, settings:user_settings(plan_status)')
-      .eq('id', user.id)
-      .single();
+    const url = new URL(request.url);
     
-    const settings = Array.isArray(profile?.settings) ? profile?.settings[0] : profile?.settings;
-    const isAdminRole = profile?.role === 'admin';
-    const isBannedFlag = profile?.is_banned || settings?.plan_status === 'banned';
+    // Capture Environment
+    const runtime = (locals as any).runtime;
+    let runtimeEnv: Record<string, any> = runtime?.env || {};
     
-    isBanned = isBannedFlag && !isAdminRole && !isMasterAdmin;
-    isAdmin = isAdminRole || isMasterAdmin;
-    locals.isAdmin = isAdmin;
-  } else {
-    locals.isAdmin = isMasterAdmin;
-  }
+    if (!runtimeEnv.PUBLIC_SUPABASE_URL) {
+      // @ts-ignore
+      runtimeEnv = import.meta.env || {};
+    }
 
-  // --- MAINTENANCE MODE CHECK ---
-  if (platformConfigs.maintenance_mode && !isAdmin && url.pathname !== '/maintenance' && !url.pathname.startsWith('/api')) {
-    const returnUrl = encodeURIComponent(url.pathname + url.search);
-    return redirect(`/maintenance?redirect_to=${returnUrl}`);
-  }
+    // BYPASS: Jangan memblokir Webhook Duitku
+    if (url.pathname.includes('/api/payments/duitku/webhook')) {
+      return next();
+    }
+    
+    let supabase: any;
+    try {
+      supabase = getServerClient(cookies, request, runtimeEnv);
+    } catch (e) {
+      supabase = null;
+    }
 
-  // --- REGISTRATION TOGGLE CHECK ---
-  if (url.pathname === '/signup' && !platformConfigs.registration_enabled && !isAdmin) {
-    return redirect('/login?error=registration_disabled');
-  }
+    // Set supabase and getUser in locals
+    locals.supabase = supabase;
+    locals.getUser = async () => {
+      if (!supabase) return null;
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        if (error || !data) return null;
+        return data.user;
+      } catch (e) {
+        return null;
+      }
+    };
 
-  // Redirect logic
-  if (isProtectedPage && !isAdminGate) {
-    // If accessing /admin, allow if Master Admin OR Logged In Admin
-    if (url.pathname.startsWith('/admin')) {
-        if (isMasterAdmin) return next(); // Full bypass for master
-        if (!user) return redirect('/admin/auth');
+    // Fetch Platform Configs
+    let platformConfigs = { maintenance_mode: false, registration_enabled: true };
+    if (supabase) {
+      try {
+        const { data: configs } = await supabase
+          .from('platform_configs')
+          .select('maintenance_mode, registration_enabled')
+          .eq('id', 1)
+          .single();
+        if (configs) platformConfigs = configs;
+      } catch (e) {}
+    }
+
+    const isAuthPage = ['/login', '/signup', '/forgot-password', '/callback'].includes(url.pathname);
+    const isAdminGate = url.pathname === '/admin/auth';
+    
+    // Master Admin Passcode Check
+    const adminAccessToken = cookies.get('admin_access_token')?.value;
+    const MASTER_PASSCODE = runtimeEnv.ADMIN_PASSCODE || 'admin123';
+    const isMasterAdmin = adminAccessToken === MASTER_PASSCODE;
+
+    locals.isMasterAdmin = isMasterAdmin;
+
+    const protectedPrefixes = ['/dashboard', '/admin', '/settings', '/products', '/orders', '/customers', '/wallet', '/academy', '/account-management', '/analytics', '/bank-info', '/domain-settings', '/seo-settings', '/add-product', '/edit-product'];
+    const isProtectedPage = protectedPrefixes.some(prefix => url.pathname.startsWith(prefix));
+
+    const user = await locals.getUser();
+    let isBanned = false;
+    let isAdmin = isMasterAdmin;
+
+    if (user && supabase) {
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_banned, role, settings:user_settings(plan_status)')
+          .eq('id', user.id)
+          .single();
         
-        // Final role check for admin pages
-        if (supabase) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('role')
-              .eq('id', user.id)
-              .single();
-              
-            if (profile?.role !== 'admin' && !isMasterAdmin) {
-              return redirect('/dashboard');
-            }
-        }
+        const settings = Array.isArray(profile?.settings) ? profile?.settings[0] : profile?.settings;
+        const isAdminRole = profile?.role === 'admin';
+        const isBannedFlag = profile?.is_banned || settings?.plan_status === 'banned';
+        
+        isBanned = isBannedFlag && !isAdminRole && !isMasterAdmin;
+        isAdmin = isAdminRole || isMasterAdmin;
+        locals.isAdmin = isAdmin;
+      } catch (e) {}
+    } else {
+      locals.isAdmin = isMasterAdmin;
     }
 
-    if (!user && !isMasterAdmin) {
-      return redirect('/login');
+    if (platformConfigs.maintenance_mode && !isAdmin && url.pathname !== '/maintenance' && !url.pathname.startsWith('/api')) {
+      const returnUrl = encodeURIComponent(url.pathname + url.search);
+      return redirect(`/maintenance?redirect_to=${returnUrl}`);
     }
 
-    // FINAL FAILSAFE
-    const isAccessingAdmin = url.pathname.startsWith('/admin');
-    const shouldBypass = isMasterAdmin && isAccessingAdmin;
-
-    if (isBanned && !shouldBypass && url.pathname !== '/banned') {
-      return redirect('/banned');
+    if (url.pathname === '/signup' && !platformConfigs.registration_enabled && !isAdmin) {
+      return redirect('/login?error=registration_disabled');
     }
+
+    if (isProtectedPage && !isAdminGate) {
+      if (url.pathname.startsWith('/admin')) {
+          if (isMasterAdmin) return next();
+          if (!user) return redirect('/admin/auth');
+          if (supabase) {
+              const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+              if (profile?.role !== 'admin' && !isMasterAdmin) return redirect('/dashboard');
+          }
+      }
+      if (!user && !isMasterAdmin) return redirect('/login');
+      if (isBanned && url.pathname !== '/banned') return redirect('/banned');
+    }
+
+    if (isAuthPage && user && !isBanned) return redirect('/dashboard');
+
+    return next();
+  } catch (criticalError) {
+    console.error('[Middleware Critical Failure]:', criticalError);
+    return next(); // Fail gracefully to let the page try to load
   }
-
-  if (isAuthPage && user && !isBanned) {
-    return redirect('/dashboard');
-  }
-
-  return next();
 });

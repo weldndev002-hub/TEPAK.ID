@@ -5,26 +5,34 @@ import { createServerClient, createBrowserClient, parseCookieHeader } from '@sup
 // Browser: uses import.meta.env (Vite/Astro build-time)
 // Server: uses import.meta.env or resolved CF env
 const getEnv = (key: string): string | undefined => {
-  // 1. Build-time (Vite/Astro) - Priority for Browser
-  if (key === 'PUBLIC_SUPABASE_URL') return import.meta.env.PUBLIC_SUPABASE_URL;
-  if (key === 'PUBLIC_SUPABASE_ANON_KEY') return import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-  if (key === 'SUPABASE_SERVICE_ROLE_KEY') return import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (key === 'ADMIN_PASSCODE') return import.meta.env.ADMIN_PASSCODE;
+  try {
+    // 1. Build-time (Vite/Astro) - Priority for Browser
+    if (key === 'PUBLIC_SUPABASE_URL') return import.meta.env.PUBLIC_SUPABASE_URL;
+    if (key === 'PUBLIC_SUPABASE_ANON_KEY') return import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+    if (key === 'SUPABASE_SERVICE_ROLE_KEY') return import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (key === 'ADMIN_PASSCODE') return import.meta.env.ADMIN_PASSCODE;
 
-  // Fallback for other keys using bracket notation (only works in dev/server usually)
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
-    return import.meta.env[key];
+    // Fallback for other keys
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+      return (import.meta.env as any)[key];
+    }
+  } catch (e) {
+    // Suppress errors during initialization
   }
 
-  // 2. Runtime (Node.js)
-  if (typeof process !== 'undefined' && process.env && process.env[key]) {
-    return process.env[key];
-  }
+  try {
+    // 2. Runtime (Node.js)
+    if (typeof process !== 'undefined' && process.env) {
+      return process.env[key];
+    }
+  } catch (e) {}
 
-  // 3. Cloudflare Workers (Fallback)
-  if (typeof globalThis !== 'undefined' && (globalThis as any)[key]) {
-    return (globalThis as any)[key];
-  }
+  try {
+    // 3. Cloudflare Workers (Fallback)
+    if (typeof globalThis !== 'undefined') {
+      return (globalThis as any)[key];
+    }
+  } catch (e) {}
 
   return undefined;
 };
