@@ -4,15 +4,21 @@ import { OnboardingForm } from '../components/onboarding/OnboardingForm';
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase = Astro.locals.supabase;
 
-const { data: branding } = await supabase
-  .from('platform_configs')
-  .select('*')
-  .eq('id', 1)
-  .single();
+let branding: any = null;
+if (supabase) {
+    try {
+        const { data } = await supabase
+          .from('platform_configs')
+          .select('*')
+          .eq('id', 1)
+          .single();
+        branding = data;
+    } catch (e) {
+        console.error('[Onboarding] Branding Fetch Error:', e);
+    }
+}
 ---
 
 <BaseLayout title="Onboarding - tepak.id Ecosystem">

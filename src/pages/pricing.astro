@@ -11,34 +11,41 @@ import {
 import { getServerClient } from '../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 
-// 1. Fetch Branding (Reusing logic from index.astro)
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-const brandingSupabase = createClient(supabaseUrl, supabaseAnonKey);
+// Fetch Branding from locals (more resilient in Cloudflare)
+const supabase = Astro.locals.supabase;
 
-const { data: branding } = await brandingSupabase
-  .from('platform_configs')
-  .select('*')
-  .eq('id', 1)
-  .single();
+let branding: any = null;
+let plans: any[] = [];
+
+if (supabase) {
+    try {
+        // 1. Fetch Branding
+        const { data: bData } = await supabase
+          .from('platform_configs')
+          .select('*')
+          .eq('id', 1)
+          .single();
+        branding = bData;
+
+        // 2. Fetch Dynamic Plans
+        const { data: pData } = await supabase
+            .from('subscription_plans')
+            .select('*')
+            .eq('is_active', true)
+            .order('price_monthly', { ascending: true });
+        plans = pData || [];
+    } catch (e) {
+        console.error('[Pricing] Data Fetch Error:', e);
+    }
+}
 
 const siteName = branding?.site_name || 'Tepak.ID';
 const logoUrl = branding?.logo_url || '/logo-light.png';
 
-// 2. Fetch Dynamic Plans
-const { cookies } = Astro;
-const supabase = getServerClient(cookies, Astro.request);
-
-const { data: plans } = await supabase
-    .from('subscription_plans')
-    .select('*')
-    .eq('is_active', true)
-    .order('price_monthly', { ascending: true });
-
-const formattedPlans = plans?.map(plan => ({
+const formattedPlans = plans.map(plan => ({
     ...plan,
     features: Array.isArray(plan.features) ? plan.features : []
-})) || [];
+}));
 
 const seo = {
     title: `Pricing - Pilih Paket Terbaik Anda | ${siteName}`,
