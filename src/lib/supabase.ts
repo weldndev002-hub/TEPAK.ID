@@ -13,6 +13,12 @@ const getEnv = (key: string): string | undefined => {
   if (typeof process !== 'undefined' && process.env && process.env[key]) {
     return process.env[key];
   }
+  // 3. Global (Cloudflare Workers / Pages)
+  // @ts-ignore
+  if (typeof globalThis !== 'undefined' && globalThis[key]) {
+    // @ts-ignore
+    return globalThis[key];
+  }
   return undefined;
 };
 
@@ -24,7 +30,9 @@ const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL');
 const supabaseAnonKey = getEnv('PUBLIC_SUPABASE_ANON_KEY');
 
 // 1. Browser Client for React Components (uses build-time env only — no CF workers)
-export const supabase = createBrowserClient(supabaseUrl || '', supabaseAnonKey || '');
+export const supabase = (supabaseUrl && supabaseAnonKey) 
+  ? createBrowserClient(supabaseUrl, supabaseAnonKey)
+  : null as any;
 
 // 2. Server Client untuk Middleware atau .astro files (SSR)
 export const getServerClient = (cookies: any, request: Request, runtimeEnv?: any) => {
@@ -33,9 +41,10 @@ export const getServerClient = (cookies: any, request: Request, runtimeEnv?: any
 
   if (!url || !key) {
     console.error('❌ Supabase Server Client: Missing URL or Key. Check ENV.');
+    throw new Error('Supabase configuration missing. Please set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY.');
   }
 
-  return createServerClient(url || '', key || '', {
+  return createServerClient(url, key, {
     cookies: {
       getAll() {
         return parseCookieHeader(request.headers.get('Cookie') ?? '');
@@ -59,11 +68,11 @@ export const getSupabaseAdmin = (runtimeEnv?: any) => {
 
   console.log(`[Supabase Admin Init] URL: ${url ? 'Found' : 'Missing'}, Key: ${serviceKey ? `Found (${serviceKey.length} chars)` : 'Missing'}`);
 
-  if (!serviceKey || serviceKey.length < 20) {
-      console.warn('⚠️ [Supabase Admin] Valid SUPABASE_SERVICE_ROLE_KEY not found. Admin bypass will fail.');
+  if (!url || !serviceKey) {
+      throw new Error('Supabase Admin configuration missing. Please set SUPABASE_SERVICE_ROLE_KEY.');
   }
 
-  return createClient(url || '', serviceKey || 'missing-key', {
+  return createClient(url, serviceKey, {
     auth: {
         autoRefreshToken: false,
         persistSession: false
