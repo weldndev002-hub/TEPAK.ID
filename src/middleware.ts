@@ -5,12 +5,23 @@ export const onRequest = defineMiddleware(async ({ locals, cookies, request, red
   const url = new URL(request.url);
   
   // Capture Environment (Astro 6+ Cloudflare style)
-  let runtimeEnv: any = {};
-  try {
-    // @ts-ignore
-    const cf = await import('cloudflare:workers');
-    runtimeEnv = cf.env || {};
-  } catch (e) {
+  // 1. Priority: Astro Locals Runtime (Populated by Cloudflare Adapter)
+  // 2. Fallback: cloudflare:workers import
+  // 3. Last Resort: import.meta.env (Build-time / Local)
+  let runtimeEnv: Record<string, any> = (locals as any).runtime?.env || {};
+  
+  if (!runtimeEnv.PUBLIC_SUPABASE_URL) {
+    try {
+      // @ts-ignore
+      const cf = await import('cloudflare:workers');
+      runtimeEnv = cf.env || {};
+    } catch (e) {
+      // Ignore if not in CF environment
+    }
+  }
+
+  // Final fallback to build-time env
+  if (!runtimeEnv.PUBLIC_SUPABASE_URL) {
     runtimeEnv = import.meta.env || {};
   }
 

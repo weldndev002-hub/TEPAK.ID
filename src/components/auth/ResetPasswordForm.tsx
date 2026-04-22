@@ -12,11 +12,25 @@ import {
     LockClosedIcon
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleIconSolid, XCircleIcon as XCircleIconSolid } from '@heroicons/react/24/solid';
-import { supabase } from '../../lib/supabase';
+import { supabase as globalSupabase } from '../../lib/supabase';
+import { createBrowserClient } from '@supabase/ssr';
 import { cn } from '../../lib/utils';
 import { useBranding } from '../../hooks/useBranding';
 
-export const ResetPasswordForm = () => {
+interface ResetPasswordFormProps {
+    supabaseUrl?: string;
+    supabaseAnonKey?: string;
+}
+
+export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ supabaseUrl, supabaseAnonKey }) => {
+    // Initialized client
+    const [supabase] = useState(() => {
+        if (supabaseUrl && supabaseAnonKey) {
+            return createBrowserClient(supabaseUrl, supabaseAnonKey);
+        }
+        return globalSupabase;
+    });
+
     const { branding } = useBranding();
     const siteName = branding?.site_name || 'Orbit Site';
 

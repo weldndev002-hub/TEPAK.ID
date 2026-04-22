@@ -5,7 +5,13 @@ import { createServerClient, createBrowserClient, parseCookieHeader } from '@sup
 // Browser: uses import.meta.env (Vite/Astro build-time)
 // Server: uses import.meta.env or resolved CF env
 const getEnv = (key: string): string | undefined => {
-  // 1. Build-time (Vite/Astro)
+  // 1. Build-time (Vite/Astro) - Priority for Browser
+  if (key === 'PUBLIC_SUPABASE_URL') return import.meta.env.PUBLIC_SUPABASE_URL;
+  if (key === 'PUBLIC_SUPABASE_ANON_KEY') return import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+  if (key === 'SUPABASE_SERVICE_ROLE_KEY') return import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (key === 'ADMIN_PASSCODE') return import.meta.env.ADMIN_PASSCODE;
+
+  // Fallback for other keys using bracket notation (only works in dev/server usually)
   if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
     return import.meta.env[key];
   }
@@ -15,8 +21,7 @@ const getEnv = (key: string): string | undefined => {
     return process.env[key];
   }
 
-  // 3. Cloudflare Workers (Astro 6+)
-  // Note: We try to use globalThis first as a fallback for some environments
+  // 3. Cloudflare Workers (Fallback)
   if (typeof globalThis !== 'undefined' && (globalThis as any)[key]) {
     return (globalThis as any)[key];
   }
@@ -31,7 +36,11 @@ const getServerEnv = async (key: string): Promise<string | undefined> => {
 const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL');
 const supabaseAnonKey = getEnv('PUBLIC_SUPABASE_ANON_KEY');
 
-// 1. Browser Client for React Components (uses build-time env only — no CF workers)
+/**
+ * BROWSER CLIENT
+ * Digunakan di komponen React client-side.
+ * Jika variabel build-time tidak tersedia, akan di-override melalui props di masing-masing form.
+ */
 export const supabase = (supabaseUrl && supabaseAnonKey) 
   ? createBrowserClient(supabaseUrl, supabaseAnonKey)
   : null as any;

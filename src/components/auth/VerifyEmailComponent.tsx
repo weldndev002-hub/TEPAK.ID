@@ -1,11 +1,25 @@
 import React, { useState } from 'react';
 import { EnvelopeOpenIcon, ArrowTopRightOnSquareIcon, ArrowLeftIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import Button from '../ui/Button';
-import { supabase } from '../../lib/supabase';
+import { supabase as globalSupabase } from '../../lib/supabase';
+import { createBrowserClient } from '@supabase/ssr';
 
 import { useBranding } from '../../hooks/useBranding';
 
-export const VerifyEmailComponent: React.FC = () => {
+interface VerifyEmailProps {
+    supabaseUrl?: string;
+    supabaseAnonKey?: string;
+}
+
+export const VerifyEmailComponent: React.FC<VerifyEmailProps> = ({ supabaseUrl, supabaseAnonKey }) => {
+    // Initialized client
+    const [supabase] = useState(() => {
+        if (supabaseUrl && supabaseAnonKey) {
+            return createBrowserClient(supabaseUrl, supabaseAnonKey);
+        }
+        return globalSupabase;
+    });
+
     const { branding } = useBranding();
     const siteName = branding?.site_name || 'Orbit Site';
     const logoUrl = branding?.logo_url || '/logo-light.png';

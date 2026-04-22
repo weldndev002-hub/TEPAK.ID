@@ -23,6 +23,11 @@ if (supabase) {
 
 const siteName = branding?.site_name || 'Tepak.ID';
 const logoUrl = branding?.logo_url || '/logo-light.png';
+
+// Pass Env to Client Component (to avoid missing env in browser bundle)
+const runtime = (Astro.locals as any).runtime;
+const supabaseUrl = runtime?.env?.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = runtime?.env?.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 ---
 
 <BaseLayout title="Masuk ke Orbit Site - Precision Curator Dashboard">
@@ -71,7 +76,11 @@ const logoUrl = branding?.logo_url || '/logo-light.png';
                         </header>
 
                         {/* INTERACTIVE FORM COMPONENT */}
-                        <LoginForm client:load />
+                        <LoginForm 
+                            client:load 
+                            supabaseUrl={supabaseUrl} 
+                            supabaseAnonKey={supabaseAnonKey} 
+                        />
 
                         <div class="mt-12 pt-8 border-t border-slate-50 text-center">
                             <p class="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em]">

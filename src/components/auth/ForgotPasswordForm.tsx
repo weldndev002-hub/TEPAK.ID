@@ -2,9 +2,23 @@ import React, { useState } from 'react';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import { EnvelopeIcon, ArrowRightIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
-import { supabase } from '../../lib/supabase';
+import { supabase as globalSupabase } from '../../lib/supabase';
+import { createBrowserClient } from '@supabase/ssr';
 
-export const ForgotPasswordForm: React.FC = () => {
+interface ForgotPasswordFormProps {
+    supabaseUrl?: string;
+    supabaseAnonKey?: string;
+}
+
+export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ supabaseUrl, supabaseAnonKey }) => {
+    // Initialized client
+    const [supabase] = useState(() => {
+        if (supabaseUrl && supabaseAnonKey) {
+            return createBrowserClient(supabaseUrl, supabaseAnonKey);
+        }
+        return globalSupabase;
+    });
+
     const [email, setEmail] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isSent, setIsSent] = useState(false);

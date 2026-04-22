@@ -3,9 +3,23 @@ import Button from '../ui/Button';
 import Input from '../ui/Input';
 import SocialButton from '../ui/SocialButton';
 import { UserIcon, EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
-import { supabase } from '../../lib/supabase';
+import { supabase as globalSupabase } from '../../lib/supabase';
+import { createBrowserClient } from '@supabase/ssr';
 
-export const SignupForm: React.FC = () => {
+interface SignupFormProps {
+    supabaseUrl?: string;
+    supabaseAnonKey?: string;
+}
+
+export const SignupForm: React.FC<SignupFormProps> = ({ supabaseUrl, supabaseAnonKey }) => {
+    // Initialized client
+    const [supabase] = useState(() => {
+        if (supabaseUrl && supabaseAnonKey) {
+            return createBrowserClient(supabaseUrl, supabaseAnonKey);
+        }
+        return globalSupabase;
+    });
+
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -199,8 +213,16 @@ export const SignupForm: React.FC = () => {
 
             {/* OAuth Buttons */}
             <div className="grid grid-cols-2 gap-6">
-                <SocialButton provider="google" className="h-16 rounded-2xl border-slate-100 bg-white shadow-sm hover:shadow-md transition-all active:scale-[0.98]" />
-                <SocialButton provider="apple" className="h-16 rounded-2xl border-slate-100 bg-white shadow-sm hover:shadow-md transition-all active:scale-[0.98]" />
+                <SocialButton 
+                    supabase={supabase}
+                    provider="google" 
+                    className="h-16 rounded-2xl border-slate-100 bg-white shadow-sm hover:shadow-md transition-all active:scale-[0.98]" 
+                />
+                <SocialButton 
+                    supabase={supabase}
+                    provider="apple" 
+                    className="h-16 rounded-2xl border-slate-100 bg-white shadow-sm hover:shadow-md transition-all active:scale-[0.98]" 
+                />
             </div>
             
         </div>

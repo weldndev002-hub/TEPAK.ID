@@ -1,13 +1,15 @@
 import React from 'react';
 import Button from './Button';
-import { supabase } from '../../lib/supabase';
+import { supabase as globalSupabase } from '../../lib/supabase';
 
 interface SocialButtonProps {
     provider: 'google' | 'apple';
     className?: string;
+    supabase?: any;
 }
 
-export const SocialButton: React.FC<SocialButtonProps> = ({ provider, className }) => {
+export const SocialButton: React.FC<SocialButtonProps> = ({ provider, className, supabase: propSupabase }) => {
+    const supabase = propSupabase || globalSupabase;
     const isGoogle = provider === 'google';
 
     const handleLogin = async () => {
