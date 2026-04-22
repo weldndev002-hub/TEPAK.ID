@@ -5,6 +5,12 @@ import { LightTopNavbar } from '../components/layout/LightTopNavbar';
 import { AnalyticsDashboard } from '../components/analytics/AnalyticsDashboard';
 import { AnalyticsTracker } from '../components/analytics/AnalyticsTracker';
 import { BottomNavbar } from '../components/layout/BottomNavbar';
+
+// Require authentication
+const user = await Astro.locals.getUser?.();
+if (!user) {
+  return Astro.redirect('/login');
+}
 ---
 
 <BaseLayout title="Performance Insights — Orbit Site Analytics">
