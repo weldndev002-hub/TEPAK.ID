@@ -9,7 +9,7 @@ const productId = Astro.url.searchParams.get('product_id');
 let merchantId = '';
 
 if (productId) {
-    const supabase = getServerClient(Astro.cookies, Astro.request);
+    const supabase = Astro.locals.supabase;
     const { data: product } = await supabase
         .from('products')
         .select('merchant_id')
