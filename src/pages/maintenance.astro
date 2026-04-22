@@ -1,0 +1,102 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { createClient } from '@supabase/supabase-js';
+
+// Fetch Branding
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+const { data: branding } = await supabase
+  .from('platform_configs')
+  .select('*')
+  .eq('id', 1)
+  .single();
+
+// AUTO-REDIRECT BACK IF MAINTENANCE IS OFF
+if (branding && !branding.maintenance_mode) {
+  const redirectTo = Astro.url.searchParams.get('redirect_to') || '/';
+  return Astro.redirect(decodeURIComponent(redirectTo));
+}
+
+const siteName = branding?.site_name || 'Tepak.ID';
+const logoUrl = branding?.logo_url || '/logo-light.png';
+const supportEmail = branding?.support_email || 'support@orbitsite.com';
+const waNumber = branding?.whatsapp_number || '+62';
+---
+
+<BaseLayout title={`Maintenance | ${siteName}`}>
+    <div class="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 md:p-8 font-['Plus_Jakarta_Sans',sans-serif] relative overflow-hidden">
+        
+        {/* DESIGNER BACKGROUND ELEMENTS */}
+        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/[0.03] blur-[120px] rounded-full"></div>
+        <div class="absolute bottom-[20%] right-[-5%] w-[30%] h-[50%] bg-amber-200/[0.05] blur-[100px] rounded-full"></div>
+
+        {/* LOGO */}
+        <div class="mb-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
+            <img src={logoUrl} alt={siteName} class="w-40 h-auto" />
+        </div>
+
+        {/* MAIN CONTENT */}
+        <main class="w-full max-w-2xl bg-white rounded-[3rem] shadow-[0_48px_80px_-16px_rgba(0,0,0,0.08)] p-12 md:p-20 text-center relative z-10 border border-white animate-in zoom-in-95 duration-1000">
+            <div class="w-24 h-24 bg-primary/10 rounded-[2rem] flex items-center justify-center mx-auto mb-10 shadow-inner group">
+                <span class="material-symbols-outlined text-5xl text-primary animate-pulse">engineering</span>
+            </div>
+
+            <h1 class="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter leading-tight uppercase italic mb-6">
+                Peningkatan <span class="text-primary">Sistem</span>
+            </h1>
+            
+            <p class="text-slate-500 text-lg font-medium leading-relaxed mb-12 opacity-80">
+                Maaf atas ketidaknyamanan ini. Kami sedang melakukan pemeliharaan rutin untuk meningkatkan performa dan fitur platform demi pengalaman terbaik Anda.
+            </p>
+
+            <div class="h-px w-full bg-slate-50 mb-12"></div>
+
+            <div class="flex flex-col md:flex-row items-center justify-center gap-8">
+                <div class="flex flex-col items-center">
+                    <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-3">Butuh Bantuan Segera?</span>
+                    <div class="flex gap-4">
+                        <a href={`mailto:${supportEmail}`} class="w-12 h-12 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-sm">
+                            <span class="material-symbols-outlined text-xl">mail</span>
+                        </a>
+                        <a href={`https://wa.me/${waNumber.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" class="w-12 h-12 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all shadow-sm">
+                            <span class="material-symbols-outlined text-xl">chat</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        {/* FOOTER */}
+        <footer class="mt-12 text-[10px] font-black text-slate-300 uppercase tracking-widest text-center animate-in fade-in duration-1000">
+            © {new Date().getFullYear()} {siteName} - {branding?.site_tagline || 'Building the Future of Creator Economy'}
+        </footer>
+
+    </div>
+</BaseLayout>
+
+<script>
+    // Client-side auto-redirect when maintenance mode is turned off
+    const POLLING_INTERVAL = 5000; // 5 seconds
+    
+    async function checkMaintenanceStatus() {
+        try {
+            const res = await fetch('/api/public/settings');
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.maintenance_mode === false) {
+                    // Maintenance is over! Redirect back.
+                    const params = new URLSearchParams(window.location.search);
+                    const redirectTo = params.get('redirect_to') || '/';
+                    window.location.href = decodeURIComponent(redirectTo);
+                }
+            }
+        } catch (err) {
+            console.error('Failed to poll maintenance status:', err);
+        }
+    }
+
+    // Start polling
+    setInterval(checkMaintenanceStatus, POLLING_INTERVAL);
+</script>

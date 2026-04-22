@@ -15,6 +15,7 @@ export const PayoutForm: React.FC<PayoutFormProps> = ({ className }) => {
   const [loading, setLoading] = useState(false);
   const [initLoading, setInitLoading] = useState(true);
   const [successModal, setSuccessModal] = useState<{ amount: number; fee: number } | null>(null);
+  const [payoutsEnabled, setPayoutsEnabled] = useState(true);
   
   const fee = 5000;
   const minWithdrawal = 50000;
@@ -36,6 +37,11 @@ export const PayoutForm: React.FC<PayoutFormProps> = ({ className }) => {
                 if (bank.exists) {
                     setBankInfo(bank.details);
                 }
+            }
+            const publicRes = await fetch('/api/public/settings');
+            if (publicRes.ok) {
+                const publicSettings = await publicRes.json();
+                setPayoutsEnabled(publicSettings.payouts_enabled !== false);
             }
         } catch (err) {
             console.error('Failed to fetch payout data:', err);
@@ -166,14 +172,26 @@ export const PayoutForm: React.FC<PayoutFormProps> = ({ className }) => {
                     )}
                 </div>
 
-                <Button 
-                    variant="primary" 
-                    className="w-full h-16 rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all font-black uppercase text-[11px] tracking-[0.3em] mt-6"
-                    onClick={handleWithdraw}
-                    disabled={loading}
-                >
-                    {loading ? 'Processing...' : 'Initiate Withdrawal'}
-                </Button>
+                {payoutsEnabled ? (
+                    <Button 
+                        variant="primary" 
+                        className="w-full h-16 rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all font-black uppercase text-[11px] tracking-[0.3em] mt-6"
+                        onClick={handleWithdraw}
+                        disabled={loading}
+                    >
+                        {loading ? 'Processing...' : 'Initiate Withdrawal'}
+                    </Button>
+                ) : (
+                    <div className="mt-8 p-6 bg-slate-50 border border-slate-100 rounded-2xl text-center">
+                        <div className="w-10 h-10 bg-slate-200 text-slate-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+                            <span className="material-symbols-outlined text-xl">pause_circle</span>
+                        </div>
+                        <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-2">Penarikan Ditangguhkan</h4>
+                        <p className="text-[10px] text-slate-500 font-medium leading-relaxed uppercase tracking-tight">
+                            Maaf, proses penarikan saldo sedang ditangguhkan sementara untuk pemeliharaan sistem. Silakan coba lagi nanti.
+                        </p>
+                    </div>
+                )}
             </div>
         </div>
 

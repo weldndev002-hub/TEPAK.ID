@@ -1,11 +1,13 @@
-import React from 'react';
-import { WalletIcon } from '@heroicons/react/24/outline';
+import { useBranding } from '../../hooks/useBranding';
 
 export const WalletCard: React.FC = () => {
+    const { branding } = useBranding();
+    const siteName = branding?.site_name || 'Tepak.ID';
+    
     return (
         <div className="bg-slate-900 text-white p-12 rounded-[3.5rem] shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[360px] border border-white/5 shadow-primary/10 ">
             <div className="relative z-10">
-                <p className="text-primary text-[10px] font-black uppercase tracking-[0.4em] mb-3">Dompet Tepak</p>
+                <p className="text-primary text-[10px] font-black uppercase tracking-[0.4em] mb-3">Dompet {siteName}</p>
                 <h4 className="text-4xl lg:text-5xl font-black mb-2 tracking-tighter uppercase tabular-nums">Rp 12,850,000</h4>
                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest italic opacity-80">Available for withdrawal</p>
             </div>

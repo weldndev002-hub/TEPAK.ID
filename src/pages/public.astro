@@ -146,6 +146,10 @@ const formatted_products = products.map(p => ({
 
 const is_banned = merchantData?.plan_status === 'banned' || merchantData?.profiles?.is_banned;
 const merchant_id = merchantData?.user_id || merchantData?.profiles?.id;
+
+if (is_banned) {
+    Astro.response.status = 404;
+}
 ---
 
 <BaseLayout title={seo.title} description={seo.description}>
@@ -181,12 +185,12 @@ const merchant_id = merchantData?.user_id || merchantData?.profiles?.id;
                                 />
                             </div>
                             {profile.is_verified && (
-                                <div class="absolute bottom-2 right-2 bg-[#465f89] text-white p-1.5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                                <div class="absolute bottom-2 right-2 bg-primary text-white p-1.5 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
                                     <CheckBadgeIcon className="w-4 h-4" />
                                 </div>
                             )}
                         </div>
-                        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tighter text-[#005ab4] mb-3">{profile.name}</h1>
+                        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tighter text-primary mb-3">{profile.name}</h1>
                         <p class="text-[#414753] max-w-lg leading-relaxed text-lg mb-8">
                             {profile.bio}
                         </p>
@@ -194,7 +198,7 @@ const merchant_id = merchantData?.user_id || merchantData?.profiles?.id;
                         {/* Social Links */}
                         <div class="flex flex-wrap justify-center gap-4 mb-12">
                             {socials.map((social) => (
-                                <a href={social.url} target="_blank" rel="noopener noreferrer" class="w-12 h-12 flex items-center justify-center rounded-full bg-red-500 text-white hover:bg-[#0873df] hover:text-white transition-all duration-300">
+                                <a href={social.url} target="_blank" rel="noopener noreferrer" class="w-12 h-12 flex items-center justify-center rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-300">
                                     <Fragment set:html={social.icon} />
                                 </a>
                             ))}
@@ -206,10 +210,10 @@ const merchant_id = merchantData?.user_id || merchantData?.profiles?.id;
                         <section class="mb-20" id="shop">
                             <div class="flex justify-between items-end mb-10">
                                 <div>
-                                    <span class="text-[10px] font-black uppercase tracking-[0.2em] text-[#00458d] mb-2 block">Premium Assets</span>
-                                    <h2 class="text-3xl font-bold tracking-tighter text-[#005ab4]">Digital Products</h2>
+                                    <span class="text-[10px] font-black uppercase tracking-[0.2em] text-primary/80 mb-2 block">Premium Assets</span>
+                                    <h2 class="text-3xl font-bold tracking-tighter text-primary">Digital Products</h2>
                                 </div>
-                                <a class="text-[#465f89] font-bold text-sm hover:underline" href="#">Lihat Semua</a>
+                                <a class="text-primary font-bold text-sm hover:underline" href="#">Lihat Semua</a>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 {formatted_products.map((product) => (
@@ -229,7 +233,7 @@ const merchant_id = merchantData?.user_id || merchantData?.profiles?.id;
                         {blocks.map((block: any) => (
                             <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all group">
                                 <div class="flex items-center gap-6">
-                                    <div class="w-12 h-12 rounded-2xl bg-[#005ab4]/5 text-[#005ab4] flex items-center justify-center shrink-0">
+                                    <div class="w-12 h-12 rounded-2xl bg-primary/5 text-primary flex items-center justify-center shrink-0">
                                         <span class="material-symbols-outlined">{
                                             block.type === 'link' ? 'link' : 
                                             block.type === 'video' ? 'play_circle' : 
@@ -240,7 +244,7 @@ const merchant_id = merchantData?.user_id || merchantData?.profiles?.id;
                                         <h3 class="text-lg font-bold text-slate-900 truncate uppercase tracking-tight">{block.title}</h3>
                                         <p class="text-sm text-slate-500 truncate">{block.subtitle}</p>
                                     </div>
-                                    <a href={block.url || '#'} target="_blank" class="w-10 h-10 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-[#005ab4] group-hover:text-white transition-all">
+                                    <a href={block.url || '#'} target="_blank" class="w-10 h-10 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all">
                                         <ArrowRightIcon className="w-5 h-5" />
                                     </a>
                                 </div>
@@ -261,9 +265,9 @@ const merchant_id = merchantData?.user_id || merchantData?.profiles?.id;
                 </div>
                 
                 <div class="flex flex-wrap justify-center gap-8 md:gap-12">
-                    <a class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-[#005ab4] transition-all" href="#">Kebijakan Privasi</a>
-                    <a class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-[#005ab4] transition-all" href="#">Syarat & Ketentuan</a>
-                    <a class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-[#005ab4] transition-all" href="#">Kontak Kami</a>
+                    <a class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-primary transition-all" href="#">Kebijakan Privasi</a>
+                    <a class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-primary transition-all" href="#">Syarat & Ketentuan</a>
+                    <a class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-primary transition-all" href="#">Kontak Kami</a>
                 </div>
             </div>
         </footer>

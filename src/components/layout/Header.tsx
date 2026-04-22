@@ -1,7 +1,30 @@
 import React from 'react';
 import { MagnifyingGlassIcon, BellIcon } from '@heroicons/react/24/outline';
+import { supabase } from '../../lib/supabase';
 
 export const Header: React.FC = () => {
+  const [profile, setProfile] = React.useState<any>(null);
+  const [plan, setPlan] = React.useState('STANDARD');
+
+  React.useEffect(() => {
+    const fetchProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+        setProfile(data);
+        
+        const { data: settings } = await supabase.from('user_settings').select('plan_status').eq('user_id', user.id).single();
+        if (settings?.plan_status) setPlan(settings.plan_status.toUpperCase());
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const getInitials = (name: string) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+  };
+
   return (
     <header className="fixed top-0 right-0 left-0 md:left-64 h-16 md:h-20 bg-white/80 backdrop-blur-xl flex justify-between items-center px-4 md:px-10 z-40 border-b border-slate-50 ">
       {/* SEARCH BAR */}
@@ -35,16 +58,26 @@ export const Header: React.FC = () => {
           </button>
           
           <div className="flex items-center gap-2 md:gap-4 pl-1 md:pl-4 group cursor-pointer">
-            <div className="w-9 h-9 md:w-11 md:h-11 rounded-xl md:rounded-2xl bg-white p-0.5 border border-slate-100 shadow-sm group-hover:border-primary/30 group-hover:shadow-md transition-all duration-300 overflow-hidden">
-                <img 
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuCXF2MpFB4nN_m8dR-SL77ffo6TlEu09VF5HWh973JYlkiA69LT6exvZJ9xA3remAFPkFHR0lgyGDXxtLoxzagn5Zy4CJCW7fwO-PhAUJaXkV7tizX8scPU8h_u6QbclqJUcQVD_FFj44PmCqsblGnlaAUv1bnK1uAoOGJ25nLCBM8aHyFmwHh_tQ4jb_8HskKVkTv2iS2V0PVS89QJ56mvJzrtch-g2Xv6dTb2Q8JDM6RD8R7PLiHxat6lPLIoSA6dkd0088Mr0BE_" 
-                    alt="User" 
-                    className="w-full h-full object-cover rounded-[0.7rem] md:rounded-[0.9rem]"
-                />
+            <div className="w-9 h-9 md:w-11 md:h-11 rounded-xl md:rounded-2xl bg-white p-0.5 border border-slate-100 shadow-sm group-hover:border-primary/30 group-hover:shadow-md transition-all duration-300 overflow-hidden flex items-center justify-center">
+                {profile?.avatar_url ? (
+                  <img 
+                      src={profile.avatar_url} 
+                      alt="User" 
+                      className="w-full h-full object-cover rounded-[0.7rem] md:rounded-[0.9rem]"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-slate-100 flex items-center justify-center rounded-[0.7rem] md:rounded-[0.9rem] text-slate-400 font-black text-xs">
+                    {getInitials(profile?.full_name || profile?.username || 'User')}
+                  </div>
+                )}
             </div>
             <div className="hidden lg:flex flex-col items-start -space-y-0.5">
-                <span className="text-[11px] font-black text-slate-900 uppercase tracking-tight">Sinta Nusantara</span>
-                <span className="text-[9px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-md uppercase tracking-widest mt-1">PRO PLAN</span>
+                <span className="text-[11px] font-black text-slate-900 uppercase tracking-tight">
+                  {profile?.full_name || profile?.username || 'User Profile'}
+                </span>
+                <span className="text-[9px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-md uppercase tracking-widest mt-1">
+                  {plan} PLAN
+                </span>
             </div>
           </div>
         </div>
@@ -54,3 +87,4 @@ export const Header: React.FC = () => {
 };
 
 export default Header;
+

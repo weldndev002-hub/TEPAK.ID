@@ -12,9 +12,11 @@ import {
   TicketIcon,
   ChartBarIcon,
   UserIcon,
-  ArrowLeftOnRectangleIcon
+  ArrowLeftOnRectangleIcon,
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase';
+import { useBranding } from '../../hooks/useBranding.tsx';
 
 interface NavItemProps {
   icon: React.ElementType;
@@ -29,11 +31,11 @@ const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, active, href = "#"
     className={cn(
       "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300  group",
       active 
-        ? "bg-blue-50 text-[#005ab4] font-black shadow-sm" 
+        ? "bg-primary/5 text-primary font-black shadow-sm" 
         : "text-slate-500 hover:bg-slate-100/50 hover:text-slate-900 font-bold"
     )}
   >
-    <Icon className={cn("w-5 h-5 transition-transform duration-300", active ? "text-[#005ab4] scale-110" : "text-slate-400 group-hover:text-slate-600")} />
+    <Icon className={cn("w-5 h-5 transition-transform duration-300", active ? "text-primary scale-110" : "text-slate-400 group-hover:text-slate-600")} />
     <span className="text-[13px] uppercase tracking-tight">{label}</span>
   </a>
 );
@@ -44,40 +46,37 @@ interface LightSidebarProps {
 
 export const LightSidebar: React.FC<LightSidebarProps> = ({ activePage = 'dashboard' }) => {
   const [username, setUsername] = React.useState<string | null>(null);
+  const { branding } = useBranding();
 
   React.useEffect(() => {
     const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase.from('profiles').select('username').eq('id', user.id).single();
-        if (data) setUsername(data.username);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data } = await supabase.from('profiles').select('username').eq('id', user.id).single();
+          if (data) setUsername(data.username);
+        }
+      } catch (err) {
+        console.error('Failed to fetch user:', err);
       }
     };
     fetchUser();
   }, []);
 
+  const supportWA = branding?.whatsapp_number?.replace(/[^0-9]/g, '') || '628';
+
+
   return (
     <>
       {/* Fixed sidebar — never scrolls with page content */}
-      <aside className="hidden md:flex flex-col fixed left-0 top-0 z-40 h-screen shrink-0 w-64 p-4 gap-2 bg-slate-50 border-r border-slate-200 antialiased overflow-y-auto no-scrollbar">
-        {/* BRANDING */}
-        <div className="flex flex-col gap-4 px-3 py-6 mb-4">
-          <img src="/logo-light.png" alt="Orbit Site" className="w-32 h-auto" />
-          
-          {/* VIEW SITE LINK */}
-          <a 
-            href={username ? `/u/${username}` : '#'} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20"
-          >
-            <WindowIcon className="w-4 h-4" />
-            View My site
-          </a>
-        </div>
+      <aside 
+        style={{ top: 'var(--banner-height, 0px)' }}
+        className="hidden md:flex flex-col fixed left-0 z-40 h-screen shrink-0 w-64 p-4 gap-2 bg-slate-50 border-r border-slate-200 antialiased overflow-y-auto no-scrollbar transition-all duration-300"
+      >
+        {/* BRANDING - Logo handled by TopNavbar. Navigation starts immediately below */}
 
         {/* NAVIGATION */}
-        <nav className="flex-1 space-y-1">
+        <nav className="flex-1 space-y-1 pt-16 md:pt-20">
           <NavItem icon={Squares2X2Icon} label="Dashboard" href="/dashboard" active={activePage === 'dashboard'} />
           <NavItem icon={ChartBarIcon} label="Analytics" href="/analytics" active={activePage === 'analytics'} />
           <NavItem icon={WindowIcon} label="Editor" href="/editor" active={activePage === 'editor'} />
@@ -89,6 +88,9 @@ export const LightSidebar: React.FC<LightSidebarProps> = ({ activePage = 'dashbo
           <NavItem icon={UserIcon} label="Profile" href="/settings" active={activePage === 'profile'} />
           <NavItem icon={Cog6ToothIcon} label="Settings" href="/account-management" active={activePage === 'settings'} />
           <NavItem icon={TicketIcon} label="Informasi Paket" href="/plan-info" active={activePage === 'plan-info'} />
+          <div className="pt-4 mt-4 border-t border-slate-100 italic opacity-60">
+            <NavItem icon={ChatBubbleLeftRightIcon} label="Bantuan" href={`https://wa.me/${supportWA}`} />
+          </div>
         </nav>
 
         {/* BOTTOM ACTION */}

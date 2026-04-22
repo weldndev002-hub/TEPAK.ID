@@ -28,11 +28,21 @@ export const ImpersonationBanner: React.FC = () => {
         return () => {
             window.removeEventListener('storage', checkStorage);
             window.removeEventListener('impersonation-change', checkStorage);
+            document.documentElement.style.setProperty('--banner-height', '0px');
         };
     }, []);
 
+    useEffect(() => {
+        if (impersonatedUser) {
+            document.documentElement.style.setProperty('--banner-height', '44px');
+        } else {
+            document.documentElement.style.setProperty('--banner-height', '0px');
+        }
+    }, [impersonatedUser]);
+
     const handleExit = () => {
         localStorage.removeItem('impersonating_user');
+        document.cookie = "impersonate_user_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
         setImpersonatedUser(null);
         window.dispatchEvent(new Event('impersonation-change'));
         window.location.href = '/admin/users';
@@ -41,7 +51,7 @@ export const ImpersonationBanner: React.FC = () => {
     if (!impersonatedUser) return null;
 
     return (
-        <div className="sticky top-0 z-[100] bg-amber-500 text-slate-900 px-6 py-2.5 shadow-lg border-b border-amber-600 animate-in slide-in-from-top duration-500 ">
+        <div className="fixed top-0 left-0 right-0 z-[200] h-[44px] bg-amber-500 text-slate-900 px-6 py-2.5 shadow-lg border-b border-amber-600 animate-in slide-in-from-top duration-500 ">
             <div className="max-w-7xl mx-auto flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div className="flex items-center justify-center w-8 h-8 bg-white/20 rounded-lg">

@@ -3,7 +3,13 @@ import { EnvelopeOpenIcon, ArrowTopRightOnSquareIcon, ArrowLeftIcon, CheckCircle
 import Button from '../ui/Button';
 import { supabase } from '../../lib/supabase';
 
+import { useBranding } from '../../hooks/useBranding';
+
 export const VerifyEmailComponent: React.FC = () => {
+    const { branding } = useBranding();
+    const siteName = branding?.site_name || 'Orbit Site';
+    const logoUrl = branding?.logo_url || '/logo-light.png';
+
     const [isLoading, setIsLoading] = useState(false);
     const [isSent, setIsSent] = useState(false);
     const [error, setError] = useState('');
@@ -69,7 +75,7 @@ export const VerifyEmailComponent: React.FC = () => {
             {/* LOGO AREA */}
             <div className="mb-10">
                 <a href="/">
-                    <img src="/logo-light.png" alt="Orbit Site" className="w-28 h-auto" />
+                    <img src={logoUrl} alt={siteName} className="w-28 h-auto" />
                 </a>
             </div>
 
@@ -167,7 +173,7 @@ export const VerifyEmailComponent: React.FC = () => {
 
             {/* SHARED FOOTER COMPONENT */}
             <footer className="flex flex-col md:flex-row justify-center items-center gap-8 py-16 w-full text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                <span>© 2024 Orbit Site. All rights reserved.</span>
+                <span>© {new Date().getFullYear()} {siteName}. All rights reserved.</span>
                 <div className="flex gap-8">
                     <a className="hover:text-primary transition-colors" href="#">Privacy Policy</a>
                     <a className="hover:text-primary transition-colors" href="#">Terms of Service</a>

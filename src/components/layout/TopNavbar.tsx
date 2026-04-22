@@ -2,12 +2,17 @@ import React from 'react';
 import { cn } from '../../lib/utils';
 import Button from '../ui/Button';
 import { ShareIcon } from '@heroicons/react/24/outline';
+import { useBranding } from '../../hooks/useBranding';
 
 interface TopNavBarProps {
     className?: string;
 }
 
 export const TopNavBar: React.FC<TopNavBarProps> = ({ className }) => {
+    const { branding } = useBranding();
+    const siteName = branding?.site_name || 'Tepak.ID';
+    const logoUrl = branding?.logo_url || '/logo-light.png';
+
     return (
         <nav className={cn(
             "fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100/50 transition-all duration-500 ",
@@ -17,7 +22,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({ className }) => {
                 
                 {/* LOGO */}
                 <div className="flex items-center">
-                    <img src="/logo-light.png" alt="Orbit Site" className="w-32 h-auto" />
+                    <img src={logoUrl} alt={siteName} className="w-32 h-auto" />
                 </div>
 
                 {/* NAVIGATION LINKS */}

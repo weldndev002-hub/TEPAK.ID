@@ -2,16 +2,31 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SignupForm from '../components/auth/SignupForm';
 import { RocketLaunchIcon } from '@heroicons/react/24/outline';
+import { createClient } from '@supabase/supabase-js';
+
+// Fetch Branding
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+const { data: branding } = await supabase
+  .from('platform_configs')
+  .select('*')
+  .eq('id', 1)
+  .single();
+
+const siteName = branding?.site_name || 'Tepak.ID';
+const logoUrl = branding?.logo_url || '/logo-light.png';
 ---
 
-<BaseLayout title="Daftar Gratis - Orbit Site Ecosystem">
+<BaseLayout title={`Daftar Gratis | ${siteName}`}>
     
     <div class="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 md:p-8 font-['Plus_Jakarta_Sans',sans-serif]">
         
         {/* BRAND LOGO TOP LEFT */}
         <div class="fixed top-10 left-10 hidden lg:block">
             <a href="/">
-                <img src="/logo-light.png" alt="Orbit Site" class="w-32 h-auto" />
+                <img src={logoUrl} alt={siteName} class="w-32 h-auto" />
             </a>
         </div>
 
@@ -47,7 +62,22 @@ import { RocketLaunchIcon } from '@heroicons/react/24/outline';
                     </header>
 
                     {/* INTERACTIVE COMPONENT */}
-                    <SignupForm client:load />
+                    {branding?.registration_enabled !== false ? (
+                        <SignupForm client:load />
+                    ) : (
+                        <div class="bg-rose-50 border border-rose-100 p-8 rounded-3xl text-center space-y-6 animate-in fade-in zoom-in duration-500">
+                            <div class="w-16 h-16 bg-rose-500 text-white rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-rose-500/20">
+                                <span class="material-symbols-outlined text-3xl">lock</span>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-black text-slate-900 uppercase tracking-tight mb-2">Pendaftaran Ditutup</h3>
+                                <p class="text-slate-500 text-sm font-medium leading-relaxed">
+                                    Maaf, saat ini pendaftaran pengguna baru sedang ditutup sementara oleh sistem. Silakan coba lagi beberapa saat lagi atau hubungi dukungan kami.
+                                </p>
+                            </div>
+                            <a href="/" class="inline-block px-6 py-3 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-slate-800 transition-all">Kembali Beranda</a>
+                        </div>
+                    )}
 
                     <div class="pt-10 border-t border-slate-50">
                         <p class="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em] text-center">
@@ -61,7 +91,7 @@ import { RocketLaunchIcon } from '@heroicons/react/24/outline';
 
         {/* FOOTER */}
         <footer class="mt-12 text-[10px] font-black text-slate-300 uppercase tracking-widest text-center">
-            © 2024 Orbit Site - Building the Future of Creator Economy
+            © {new Date().getFullYear()} {siteName} - {branding?.site_tagline || 'Building the Future of Creator Economy'}
         </footer>
 
     </div>

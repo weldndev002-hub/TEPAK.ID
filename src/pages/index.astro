@@ -19,8 +19,24 @@ import {
 } from '@heroicons/react/24/outline';
 import { getServerClient } from '../lib/supabase';
 import { AnalyticsTracker } from '../components/analytics/AnalyticsTracker';
+import { createClient } from '@supabase/supabase-js';
 
-// 1. Detect Hostname & Identity Logic (Dynamic Routing)
+// 1. Fetch Branding
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+const brandingSupabase = createClient(supabaseUrl, supabaseAnonKey);
+
+const { data: branding } = await brandingSupabase
+  .from('platform_configs')
+  .select('*')
+  .eq('id', 1)
+  .single();
+
+const siteName = branding?.site_name || 'Tepak.ID';
+const siteTagline = branding?.site_tagline || 'Satu Link. Semua Kebutuhan Digitalmu.';
+const logoUrl = branding?.logo_url || '/logo-light.png';
+
+// 2. Detect Hostname & Identity Logic (Dynamic Routing)
 const hostname = Astro.url.hostname;
 const { cookies } = Astro;
 const supabase = getServerClient(cookies, Astro.request);
@@ -77,11 +93,11 @@ const profile = merchantData ? {
 } : null;
 
 const seo = merchantData ? {
-    title: merchantData.seo_title || `${profile.name} | tepak.id Ecosystem`,
+    title: merchantData.seo_title || `${profile.name} | ${siteName} Ecosystem`,
     description: merchantData.seo_description || profile.bio
 } : {
-    title: "tepak.id - Digital Atelier for Modern Creators",
-    description: "Satu Link. Semua Kebutuhan Digitalmu. Bangun halaman profesional, jual aset digital, dan kelola event tanpa coding."
+    title: `${siteName} - ${siteTagline}`,
+    description: branding?.site_tagline || "Satu Link. Semua Kebutuhan Digitalmu. Bangun halaman profesional, jual aset digital, dan kelola event tanpa coding."
 };
 
 const socials = merchantData ? [
@@ -201,11 +217,11 @@ const is_banned = merchantData?.plan_status === 'banned' || merchantData?.profil
                         </div>
                         
                         <h1 class="text-6xl md:text-[5.5rem] font-black tracking-tighter text-slate-900 mb-8 leading-[0.95] uppercase">
-                            Satu Link. <br/>Semua <span class="text-primary italic">Kebutuhan Digitalmu.</span>
+                            {siteName}. <br/>{siteTagline.split('.')[0]}. <span class="text-primary italic">{siteTagline.split('.')[1] || ''}</span>
                         </h1>
                         
                         <p class="text-lg md:text-xl text-slate-500 max-w-2xl mx-auto mb-16 font-medium leading-relaxed">
-                            Bangun halaman profesional, jual aset digital, dan kelola event tanpa coding. Platform andalan untuk kreator modern Indonesia.
+                            {branding?.seo_description || branding?.site_tagline || "Bangun halaman profesional, jual aset digital, dan kelola event tanpa coding. Platform andalan untuk kreator modern Indonesia."}
                         </p>
                         
                         <div class="flex flex-col sm:flex-row items-center justify-center gap-5">
@@ -245,7 +261,63 @@ const is_banned = merchantData?.plan_status === 'banned' || merchantData?.profil
                         </div>
                     </div>
                 </section>
-                {/* Note: Landing page sections truncated for brevity but restored to their original full glory in actual file */}
+                <footer class="py-20 px-8 bg-white border-t border-slate-100">
+                    <div class="max-w-7xl mx-auto">
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-12 mb-16">
+                            <div class="md:col-span-4">
+                                <img src={logoUrl} alt={siteName} class="w-32 h-auto mb-6" />
+                                <p class="text-slate-500 text-sm font-medium leading-relaxed mb-8 max-w-sm">
+                                    {branding?.site_tagline || 'Satu Link. Semua Kebutuhan Digitalmu. Bangun halaman profesional, jual aset digital, dan kelola event tanpa coding.'}
+                                </p>
+                                <div class="flex gap-4">
+                                    <a href={`mailto:${branding?.support_email}`} class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-sm">
+                                        <span class="material-symbols-outlined text-lg">mail</span>
+                                    </a>
+                                    <a href={`https://wa.me/${branding?.whatsapp_number?.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all shadow-sm">
+                                        <span class="material-symbols-outlined text-lg">chat</span>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="md:col-span-2">
+                                <h4 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-6">Platform</h4>
+                                <ul class="space-y-4 text-sm font-bold text-slate-500">
+                                    <li><a href="/pricing" class="hover:text-primary transition-colors uppercase tracking-tight">Pricing</a></li>
+                                    <li><a href="/academy" class="hover:text-primary transition-colors uppercase tracking-tight">Academy</a></li>
+                                    <li><a href="/login" class="hover:text-primary transition-colors uppercase tracking-tight">Login</a></li>
+                                    <li><a href="/signup" class="hover:text-primary transition-colors uppercase tracking-tight">Register</a></li>
+                                </ul>
+                            </div>
+                            <div class="md:col-span-3">
+                                <h4 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-6">Support & Contact</h4>
+                                <ul class="space-y-4 text-sm font-bold text-slate-500">
+                                    <li class="flex items-center gap-3">
+                                        <span class="material-symbols-outlined text-slate-300 text-lg">mail</span>
+                                        <span class="lowercase opacity-80">{branding?.support_email || 'support@tepak.id'}</span>
+                                    </li>
+                                    <li class="flex items-center gap-3">
+                                        <span class="material-symbols-outlined text-slate-300 text-lg">chat</span>
+                                        <span class="opacity-80">{branding?.whatsapp_number || '+62 8xx'}</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="md:col-span-3">
+                                <h4 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-6">Office</h4>
+                                <p class="text-sm font-bold text-slate-500 leading-relaxed italic opacity-80">
+                                    {branding?.office_address || 'Studio Nusantara Hub, 4th Floor, Jl. Sudirman No. 12, Jakarta'}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="pt-8 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                            <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                                © {new Date().getFullYear()} {siteName} - Building the Future of Creator Economy
+                            </p>
+                            <div class="flex gap-8 text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                                <a href="/terms" class="hover:text-slate-900 transition-colors">Terms</a>
+                                <a href="/privacy" class="hover:text-slate-900 transition-colors">Privacy</a>
+                            </div>
+                        </div>
+                    </div>
+                </footer>
             </>
         )}
     </div>

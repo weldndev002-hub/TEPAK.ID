@@ -11,11 +11,30 @@ import {
     QuestionMarkCircleIcon
 } from '@heroicons/react/24/outline';
 
+import { useBranding } from '../../hooks/useBranding';
+
 export const SideNavbar: React.FC = () => {
+    const { branding } = useBranding();
+
     return (
         <aside className="flex flex-col h-screen fixed left-0 top-0 z-50 w-72 bg-[#1e2939] text-white  tracking-tight antialiased">
             <div className="p-8 pb-4 flex flex-col items-start space-y-2">
-                <img src="/logo-dark.png" alt="Orbit Site" className="w-32 h-auto" />
+                {branding?.logo_url ? (
+                    <img 
+                      src={branding.logo_url} 
+                      alt={branding.site_name} 
+                      className="w-32 h-auto object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                ) : (
+                    <div className="flex items-center gap-2">
+                        <span className="text-lg md:text-xl font-black text-primary tracking-tighter uppercase italic">
+                            {branding?.site_name?.split('.')[0] || 'Tepak'}<span className="text-white">{branding?.site_name?.includes('.') ? `.${branding.site_name.split('.')[1]}` : '.ID'}</span>
+                        </span>
+                    </div>
+                )}
             </div>
             
             <nav className="flex-1 px-4 space-y-1 mt-4 overflow-y-auto no-scrollbar">

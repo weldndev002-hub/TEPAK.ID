@@ -3,6 +3,7 @@ import { getCookie } from 'hono/cookie';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import type { APIRoute } from 'astro';
+import { createClient } from '@supabase/supabase-js';
 import { createServerClient, parseCookieHeader } from '@supabase/ssr';
 
 // Get environment from Cloudflare v6 standard if available
@@ -158,7 +159,6 @@ app.delete('/settings/domain', async (c) => {
 // Helper untuk mendapatkan Supabase Client & User (Robust Cloudflare Compatibility)
 const getAuthContext = async (c: any) => {
   try {
-    // Prioritize global Cloudflare env from context if available
     const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
     const key = getEnv('PUBLIC_SUPABASE_ANON_KEY') || supabaseAnonKey;
 
@@ -179,7 +179,25 @@ const getAuthContext = async (c: any) => {
         console.warn('[getAuthContext] Auth error:', authError.message);
     }
     
-    const user = data?.user || null;
+    let user = data?.user || null;
+
+    // IMPERSONATION LOGIC FOR ADMINS
+    const impersonateId = c.req.header('X-Impersonate-User') || getCookie(c, 'impersonate_user_id');
+    if (user && impersonateId && impersonateId !== user.id) {
+        // Double check if physical user IS AN ADMIN
+        const { getSupabaseAdmin } = await import('../../lib/supabase');
+        const adminSupabase = getSupabaseAdmin(cfEnv);
+        const { data: profile } = await adminSupabase.from('profiles').select('role').eq('id', user.id).single();
+        
+        if (profile?.role === 'admin') {
+            const { data: targetData } = await adminSupabase.auth.admin.getUserById(impersonateId);
+            if (targetData?.user) {
+                console.log(`[Impersonation] Admin ${user.email} is now acting as ${targetData.user.email}`);
+                user = targetData.user;
+            }
+        }
+    }
+
     return { supabase, user };
   } catch (err: any) {
     console.error('[getAuthContext] Fatal Error:', err.message);
@@ -220,17 +238,20 @@ app.get('/wallet/stats', async (c) => {
 
     if (walletError && walletError.code !== 'PGRST116') throw walletError;
 
-    // 2. Get total net revenue from successful orders
+    // 2. Get total net revenue from net_amount column in orders
     const { data: orders, error: orderError } = await supabase
       .from('orders')
-      .select('amount, status')
+      .select('net_amount, amount')
       .eq('merchant_id', user.id)
       .in('status', ['success', 'paid']);
 
     if (orderError) throw orderError;
 
-    const totalRevenue = orders?.reduce((sum, o) => sum + Number(o.amount), 0) || 0;
-    const totalNet = Math.floor(totalRevenue * 0.95); // 5% platform fee
+    // Use net_amount if available, fallback to 5% calculation for old legacy data
+    const totalNet = orders?.reduce((sum, o) => {
+        const val = o.net_amount !== null ? Number(o.net_amount) : Math.floor(Number(o.amount) * 0.95);
+        return sum + val;
+    }, 0) || 0;
 
     return c.json({
       available: wallet?.available_balance || 0,
@@ -272,6 +293,19 @@ app.post('/wallet/withdraw', async (c) => {
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
     try {
+        // --- SECURITY: Check if Payouts are globally enabled ---
+        const { data: config } = await supabase
+            .from('platform_configs')
+            .select('payouts_enabled')
+            .eq('id', 1)
+            .single();
+        
+        if (config && config.payouts_enabled === false) {
+            return c.json({ 
+                error: 'Penarikan saldo sedang ditangguhkan sementara untuk pemeliharaan sistem. Harap coba lagi nanti.' 
+            }, 403);
+        }
+
         const { amount, bankAccountId } = await c.req.json();
         if (!amount || amount <= 0) throw new Error('Invalid amount');
         if (!bankAccountId) throw new Error('Bank account is required');
@@ -583,12 +617,59 @@ app.post('/profile/avatar', async (c) => {
 
     if (updateError) {
       console.error('[Avatar Upload] DB update error:', updateError.message);
-      throw updateError;
+      return c.json({ error: updateError.message }, 500);
+    }
+    
+    return c.json({ success: true, url: publicUrl });
+  } catch (err: any) {
+    console.error('[Avatar Upload] Error:', err);
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+// UPLOAD PLATFORM LOGO/ASSETS (Admin Only)
+app.post('/admin/upload-logo', async (c) => {
+  const { supabase, user } = await getAuthContext(c);
+  const isAdmin = await checkAdmin(supabase, user, c);
+  if (!isAdmin) return c.json({ error: 'Forbidden' }, 403);
+
+  try {
+    const formData = await c.req.formData();
+    const file = formData.get('file') as File | null;
+    if (!file) return c.json({ error: 'No file provided' }, 400);
+
+    const BUCKET = 'platform-assets';
+    const fileExt = file.name.split('.').pop() || 'png';
+    const filePath = `logo-${Date.now()}.${fileExt}`;
+    const arrayBuffer = await file.arrayBuffer();
+    const fileBuffer = new Uint8Array(arrayBuffer);
+
+    // Build an admin Supabase client (service_role key bypasses RLS)
+    const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL') || '';
+    const serviceKey = getEnv('SUPABASE_SERVICE_ROLE_KEY') || '';
+
+    const { createClient } = await import('@supabase/supabase-js');
+    const uploadClient = (serviceKey && serviceKey.length > 20)
+      ? createClient(supabaseUrl, serviceKey)
+      : supabase;
+
+    // Auto-create bucket if not exists
+    if (serviceKey && serviceKey.length > 20) {
+        await uploadClient.storage.createBucket(BUCKET, { public: true });
     }
 
-    return c.json({ avatar_url: publicUrl });
+    // Upload file
+    const { error: uploadError } = await uploadClient.storage
+      .from(BUCKET)
+      .upload(filePath, fileBuffer, { contentType: file.type || 'image/png', upsert: true });
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = uploadClient.storage.from(BUCKET).getPublicUrl(filePath);
+    
+    return c.json({ success: true, url: publicUrl });
   } catch (err: any) {
-    console.error('[Avatar Upload] Error:', err.message);
+    console.error('[Logo Upload] Error:', err);
     return c.json({ error: err.message }, 500);
   }
 });
@@ -932,10 +1013,13 @@ app.get('/orders/stats', async (c) => {
   const pendingOrders = orders.filter(o => o.status === 'pending').length;
   
   // Calculate Revenue (Success only)
-  // Deducting 5% fee as per simulation logic
+  // Use net_amount if available, fallback to 5% calculation for old legacy data
   const totalRevenue = orders
     .filter(o => o.status === 'success' || o.status === 'paid')
-    .reduce((sum, o) => sum + (Number(o.amount) * 0.95), 0);
+    .reduce((sum, o) => {
+        const val = o.net_amount !== null ? Number(o.net_amount) : (Number(o.amount) * 0.95);
+        return sum + val;
+    }, 0);
 
   return c.json({
     total_orders: totalOrders,
@@ -1136,7 +1220,17 @@ app.post(
 
     if (custError) return c.json({ error: custError.message }, 500);
 
-    // 2. Create Order (Status Pending)
+    // 2. Fetch current Platform Fee from Config
+    const { data: pConfig } = await supabase
+        .from('platform_configs')
+        .select('platform_fee')
+        .eq('id', 1)
+        .single();
+    
+    const currentFee = pConfig?.platform_fee || 5;
+    const netAmount = Math.floor(body.amount * (1 - (currentFee / 100)));
+
+    // 3. Create Order (Status Pending)
     const invoiceId = `TPK-${Math.floor(Math.random() * 1000000)}`;
     const { data: order, error: orderError } = await supabase
       .from('orders')
@@ -1146,6 +1240,8 @@ app.post(
         product_id: body.product_id,
         merchant_id: body.merchant_id,
         amount: body.amount,
+        platform_fee: currentFee,
+        net_amount: netAmount,
         status: 'pending', // Awalnya pending
         payment_method: body.payment_method
       })
@@ -1233,6 +1329,23 @@ app.get('/subscription/history', async (c) => {
   return c.json(data || []);
 });
 
+// 1.5 Get All Active Plans (Public)
+app.get('/plans', async (c) => {
+  try {
+    const { supabase } = await getAuthContext(c);
+    const { data, error } = await supabase
+      .from('subscription_plans')
+      .select('id, name, badge, price_monthly, price_yearly, description, features, config')
+      .eq('is_active', true)
+      .order('price_monthly', { ascending: true });
+
+    if (error) throw error;
+    return c.json(data || []);
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
 // 2. Upgrade to PRO (Create Duitku Invoice)
 app.post('/subscription/upgrade', async (c) => {
   console.log('[Subscription Upgrade] Request received');
@@ -1269,7 +1382,14 @@ app.post('/subscription/upgrade', async (c) => {
     const { DuitkuService } = await import('../../lib/duitku');
     const duitkuService = new DuitkuService(merchantCode, merchantKey);
 
-    const amount = 99000; // Harga Paket PRO (Updated)
+    // Fetch PRO plan for price content
+    const { data: proPlan } = await supabase
+      .from('subscription_plans')
+      .select('price_monthly')
+      .eq('id', 'pro')
+      .single();
+
+    const amount = proPlan ? Number(proPlan.price_monthly) : 99000; // Harga Paket PRO (Dynamic with Fallback)
     const orderId = `SUB--${user.id}--${Date.now().toString().slice(-4)}`;
     
     // Create initial record in history
@@ -1291,17 +1411,25 @@ app.post('/subscription/upgrade', async (c) => {
     
     console.log('[Subscription Upgrade] Creating payment for:', user.email, orderId);
 
+    // Fetch Branding for Product Details
+    const { data: branding } = await supabase
+      .from('platform_configs')
+      .select('site_name')
+      .eq('id', 1)
+      .single();
+    const siteName = branding?.site_name || 'Tepak.ID';
+
     const paymentResponse = await duitkuService.createPayment({
       merchantCode,
       merchantKey,
       paymentAmount: amount,
       orderId: orderId,
-      productDetails: 'Orbit Site PRO Subscription (1 Month)',
+      productDetails: `${siteName} PRO Subscription (1 Month)`,
       customerEmail: user.email || '',
       customerPhone: '',
       customerName: user.user_metadata?.full_name || 'Creator',
       returnUrl: `${new URL(c.req.url).origin}/plan-info?status=pending`,
-      callbackUrl: callbackUrl || 'https://tepak-id.weldn-ai-000.workers.dev/api/payments/duitku/webhook',
+      callbackUrl: callbackUrl || `${new URL(c.req.url).origin}/api/payments/duitku/webhook`,
       paymentMethod: selectedMethod,
     });
 
@@ -1982,19 +2110,48 @@ app.get('/admin/users', async (c) => {
     // Map emails by ID for fast lookup
     const emailMap = new Map(authUsers?.map(au => [au.id, au.email]) || []);
     
+    // Parallel fetch counts for performance
+    // Parallel fetch counts for performance (Standard Query fallback)
+    const [
+        { data: allPages },
+        { data: allProducts }
+    ] = await Promise.all([
+        adminSupabase.from('pages').select('user_id'),
+        adminSupabase.from('products').select('merchant_id')
+    ]);
+
+    // Map counts by ID
+    const pageMap = new Map();
+    allPages?.forEach(p => {
+        pageMap.set(p.user_id, (pageMap.get(p.user_id) || 0) + 1);
+    });
+
+    const productMap = new Map();
+    allProducts?.forEach(p => {
+        productMap.set(p.merchant_id, (productMap.get(p.merchant_id) || 0) + 1);
+    });
+
     // Map data to match Admin Dashboard structure
-    const formattedUsers = (profiles || []).map(u => ({
-        id: u.id,
-        name: u.full_name || u.username || 'Anonymous',
-        email: emailMap.get(u.id) || (u.username ? `${u.username}@tepak.id` : 'no-email@tepak.id'), 
-        username: u.username,
-        plan: u.settings?.plan_status?.toUpperCase() || 'FREE',
-        planExpiry: u.settings?.plan_expiry || 'N/A',
-        status: (u.is_banned || u.settings?.plan_status === 'banned') ? 'Banned' : 'Active',
-        is_banned: u.is_banned || u.settings?.plan_status === 'banned',
-        joined: new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-        total: 'Rp 0' // Placeholder for transaction sum
-    }));
+    const formattedUsers = (profiles || []).map(u => {
+        const setting = Array.isArray(u.settings) ? u.settings[0] : u.settings;
+        
+        return {
+            id: u.id,
+            name: u.full_name || u.username || 'Anonymous',
+            email: emailMap.get(u.id) || (u.username ? `${u.username}@tepak.id` : 'no-email@tepak.id'), 
+            username: u.username || 'unknown',
+            plan: setting?.plan_status?.toUpperCase() || 'FREE',
+            planExpiry: setting?.plan_expiry || 'N/A',
+            status: (u.is_banned || setting?.plan_status === 'banned') ? 'Banned' : 'Active',
+            is_banned: u.is_banned || setting?.plan_status === 'banned',
+            joined: u.created_at ? new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A',
+            total: 'Rp 0',
+            stats: {
+                pages: pageMap.get(u.id) || 0,
+                products: productMap.get(u.id) || 0
+            }
+        };
+    });
 
     return c.json(formattedUsers);
   } catch (err: any) {
@@ -2014,6 +2171,11 @@ app.post('/admin/users/ban', async (c) => {
     
     if (!userId) {
         return c.json({ error: 'User ID is required' }, 400);
+    }
+
+    // PREVENT SELF-BANNING
+    if (user && userId === user.id) {
+        return c.json({ error: 'Tidak dapat memblokir akun sendiri (Self-ban protection)' }, 400);
     }
 
     const plan_status = isBanned ? 'banned' : 'free';
@@ -2062,6 +2224,31 @@ app.post('/admin/users/ban', async (c) => {
   }
 });
 
+// 2. Public Platform Settings (Branding)
+app.get('/public/settings', async (c) => {
+  try {
+    const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
+    const key = getEnv('SUPABASE_SERVICE_ROLE_KEY') || getEnv('PUBLIC_SUPABASE_ANON_KEY') || supabaseAnonKey;
+    
+    if (!url || !key) throw new Error('Supabase URL/Key missing');
+
+    const targetClient = createClient(url, key);
+
+    const { data, error } = await targetClient
+      .from('platform_configs')
+      .select('site_name, site_tagline, logo_url, favicon_url, primary_color, maintenance_mode, registration_enabled, payouts_enabled, support_email, whatsapp_number, office_address, seo_description')
+      .eq('id', 1)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    
+    return c.json(data || { site_name: 'Tepak.ID' });
+  } catch (err: any) {
+    console.error('[Public Settings API] Error:', err);
+    return c.json({ error: err.message }, 500);
+  }
+});
+
 // 3. Platform Settings (Admin)
 app.get('/admin/settings', async (c) => {
   const { supabase, user } = await getAuthContext(c);
@@ -2069,7 +2256,15 @@ app.get('/admin/settings', async (c) => {
   if (!isAdmin) return c.json({ error: 'Forbidden' }, 403);
 
   try {
-    const { data, error } = await supabase
+    const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
+    const key = getEnv('SUPABASE_SERVICE_ROLE_KEY') || getEnv('PUBLIC_SUPABASE_ANON_KEY') || supabaseAnonKey;
+    
+    let targetClient = supabase;
+    if (key && key.length > 20 && key.startsWith('eyJ')) {
+        targetClient = createClient(url, key);
+    }
+
+    const { data, error } = await targetClient
       .from('platform_configs')
       .select('*')
       .eq('id', 1)
@@ -2077,9 +2272,9 @@ app.get('/admin/settings', async (c) => {
 
     if (error && error.code !== 'PGRST116') throw error;
     
-    // If not found, return default-like object or the record created in migration
     return c.json(data || { id: 1 });
   } catch (err: any) {
+    console.error('[Admin Settings GET] Error:', err);
     return c.json({ error: err.message }, 500);
   }
 });
@@ -2097,7 +2292,9 @@ app.put('/admin/settings', async (c) => {
       'site_name', 'site_tagline', 'logo_url', 'favicon_url', 
       'primary_color', 'support_email', 'whatsapp_number', 
       'office_address', 'platform_fee', 'maintenance_mode', 
-      'registration_enabled', 'payouts_enabled', 'seo_description'
+      'registration_enabled', 'payouts_enabled', 'seo_description',
+      'merchant_fee_fixed', 'payout_fee', 'min_withdrawal',
+      'webhook_url', 'webhook_config', 'security_config', 'payment_gateways_config'
     ];
 
     const updateData: any = {};
@@ -2105,18 +2302,27 @@ app.put('/admin/settings', async (c) => {
       if (body[field] !== undefined) updateData[field] = body[field];
     });
 
+    updateData.id = 1;
     updateData.updated_at = new Date().toISOString();
 
-    const { data, error } = await supabase
+    const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
+    const key = getEnv('SUPABASE_SERVICE_ROLE_KEY') || getEnv('PUBLIC_SUPABASE_ANON_KEY') || supabaseAnonKey;
+    
+    let targetClient = supabase;
+    if (key && key.length > 20 && key.startsWith('eyJ')) {
+        targetClient = createClient(url, key);
+    }
+
+    const { data, error } = await targetClient
       .from('platform_configs')
-      .update(updateData)
-      .eq('id', 1)
+      .upsert(updateData)
       .select()
       .single();
 
     if (error) throw error;
     return c.json(data);
   } catch (err: any) {
+    console.error('[Admin Settings PUT] Error:', err);
     return c.json({ error: err.message }, 500);
   }
 });
@@ -2338,7 +2544,7 @@ app.post('/admin/payouts/update-status', async (c) => {
     if (!isAdmin) return c.json({ error: 'Forbidden' }, 403);
 
     try {
-        const { id, status, notes } = await c.req.json();
+        const { id, status, notes, proof_url } = await c.req.json();
         
         // 1. Get the withdrawal record
         const { data: withdrawal, error: fetchErr } = await supabase
@@ -2360,7 +2566,8 @@ app.post('/admin/payouts/update-status', async (c) => {
                 .update({ 
                     status: 'completed', 
                     processed_at: new Date().toISOString(),
-                    notes 
+                    notes,
+                    proof_url
                 })
                 .eq('id', id);
             if (updateErr) throw updateErr;
@@ -2371,6 +2578,14 @@ app.post('/admin/payouts/update-status', async (c) => {
                 p_amount: amount
             });
             if (walletErr) throw walletErr;
+
+            // 3. Send Notification to Creator
+            await supabase.from('notifications').insert({
+                user_id: creatorId,
+                title: 'Withdrawal Successful',
+                message: `Pencairan dana sebesar Rp ${amount.toLocaleString('id-ID')} telah berhasil diproses.`,
+                type: 'success'
+            });
 
         } else if (status === 'rejected') {
             const { error: updateErr } = await supabase
@@ -2389,6 +2604,14 @@ app.post('/admin/payouts/update-status', async (c) => {
                 p_amount: amount
             });
             if (walletErr) throw walletErr;
+
+            // 3. Send Notification to Creator
+            await supabase.from('notifications').insert({
+                user_id: creatorId,
+                title: 'Withdrawal Rejected',
+                message: `Permintaan pencairan dana sebesar Rp ${amount.toLocaleString('id-ID')} ditolak. Alasan: ${notes}. Saldo telah dikembalikan ke Virtual Balance Anda.`,
+                type: 'error'
+            });
         }
 
         return c.json({ success: true });
@@ -2434,7 +2657,8 @@ app.post('/admin/plans/update', async (c) => {
         for (const plan of plans) {
             const { error } = await supabase
                 .from('subscription_plans')
-                .update({
+                .upsert({
+                    id: plan.id,
                     name: plan.name,
                     badge: plan.badge,
                     price_monthly: Number(plan.price_monthly),
@@ -2442,8 +2666,7 @@ app.post('/admin/plans/update', async (c) => {
                     features: plan.features,
                     config: plan.config,
                     updated_at: new Date().toISOString()
-                })
-                .eq('id', plan.id);
+                });
             
             if (error) throw error;
         }

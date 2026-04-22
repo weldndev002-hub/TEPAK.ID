@@ -24,6 +24,19 @@ export const onRequest = defineMiddleware(async ({ locals, cookies, request, red
     }
   };
 
+  // Fetch Platform Configs (Maintenance & Registration Toggles)
+  let platformConfigs = { maintenance_mode: false, registration_enabled: true };
+  try {
+    const { data: configs } = await supabase
+      .from('platform_configs')
+      .select('maintenance_mode, registration_enabled')
+      .eq('id', 1)
+      .single();
+    if (configs) platformConfigs = configs;
+  } catch (e) {
+    console.error('[Middleware] Config fetch error:', e);
+  }
+
   const isAuthPage = ['/login', '/signup', '/forgot-password', '/callback'].includes(url.pathname);
   const isAdminGate = url.pathname === '/admin/auth';
   
@@ -58,24 +71,35 @@ export const onRequest = defineMiddleware(async ({ locals, cookies, request, red
 
   const user = await locals.getUser();
   let isBanned = false;
+  let isAdmin = isMasterAdmin;
 
   if (user) {
-    // ... logic for banned users ...
-    if (isMasterAdmin) {
-        isBanned = false;
-    } else {
-        const { data: profile, error: pError } = await supabase
-          .from('profiles')
-          .select('is_banned, role, settings:user_settings(plan_status)')
-          .eq('id', user.id)
-          .single();
-        
-        const settings = Array.isArray(profile?.settings) ? profile?.settings[0] : profile?.settings;
-        const isAdminRole = profile?.role === 'admin';
-        const isBannedFlag = profile?.is_banned || settings?.plan_status === 'banned';
-        
-        isBanned = isBannedFlag && !isAdminRole && !isMasterAdmin;
-    }
+    const { data: profile, error: pError } = await supabase
+      .from('profiles')
+      .select('is_banned, role, settings:user_settings(plan_status)')
+      .eq('id', user.id)
+      .single();
+    
+    const settings = Array.isArray(profile?.settings) ? profile?.settings[0] : profile?.settings;
+    const isAdminRole = profile?.role === 'admin';
+    const isBannedFlag = profile?.is_banned || settings?.plan_status === 'banned';
+    
+    isBanned = isBannedFlag && !isAdminRole && !isMasterAdmin;
+    isAdmin = isAdminRole || isMasterAdmin;
+    locals.isAdmin = isAdmin;
+  } else {
+    locals.isAdmin = isMasterAdmin;
+  }
+
+  // --- MAINTENANCE MODE CHECK ---
+  if (platformConfigs.maintenance_mode && !isAdmin && url.pathname !== '/maintenance' && !url.pathname.startsWith('/api')) {
+    const returnUrl = encodeURIComponent(url.pathname + url.search);
+    return redirect(`/maintenance?redirect_to=${returnUrl}`);
+  }
+
+  // --- REGISTRATION TOGGLE CHECK ---
+  if (url.pathname === '/signup' && !platformConfigs.registration_enabled && !isAdmin) {
+    return redirect('/login?error=registration_disabled');
   }
 
   // Redirect logic

@@ -1,6 +1,9 @@
-import React from 'react';
+import { useBranding } from '../../hooks/useBranding';
 
 export const AcademyHero: React.FC = () => {
+  const { branding } = useBranding();
+  const siteName = branding?.site_name || 'Orbit Site';
+
   return (
     <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12 ">
       <div className="max-w-2xl">
@@ -15,7 +18,7 @@ export const AcademyHero: React.FC = () => {
         </h2>
         
         <p className="text-slate-500 text-lg max-w-xl leading-relaxed font-medium">
-          Kuasai setiap fitur <span className="text-primary font-black uppercase tracking-tight">Orbit Site</span> dengan panduan visual mendalam dari para ahli strategi digital.
+          Kuasai setiap fitur <span className="text-primary font-black uppercase tracking-tight">{siteName}</span> dengan panduan visual mendalam dari para ahli strategi digital.
         </p>
       </div>
 

@@ -11,6 +11,8 @@ import {
 } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase';
 
+import { useBranding } from '../../hooks/useBranding';
+
 interface NavItemProps {
   icon: React.ElementType;
   label: string;
@@ -24,7 +26,7 @@ const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, active, href = "#"
     className={cn(
       "flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 mx-2 my-0.5 ",
       active 
-        ? "text-white font-bold bg-[#3B82F6] shadow-lg shadow-blue-500/20" 
+        ? "text-white font-bold bg-primary shadow-lg shadow-primary/20" 
         : "text-slate-400 hover:text-white hover:bg-white/5 font-medium"
     )}
   >
@@ -39,13 +41,30 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ activePage = 'dashboard' }) => {
   const [isAdminAuth, setIsAdminAuth] = React.useState(false);
+  const { branding } = useBranding();
+  const [profile, setProfile] = React.useState<any>(null);
 
   React.useEffect(() => {
     // Check for admin cookie client-side
     const cookies = document.cookie.split(';');
     const adminCookie = cookies.find(c => c.trim().startsWith('admin_access_token='));
     if (adminCookie) setIsAdminAuth(true);
+
+    // Fetch profile
+    const fetchProfile = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+            setProfile(data);
+        }
+    };
+    fetchProfile();
   }, []);
+
+  const getInitials = (name: string) => {
+    if (!name) return 'A';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+  };
 
   const handleLogout = async () => {
     if (isAdminAuth) {
@@ -65,8 +84,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePage = 'dashboard' }) =>
   return (
     <aside className="hidden md:flex flex-col h-screen fixed left-0 top-0 z-50 w-64 bg-[#162138] text-white  antialiased overflow-hidden border-r border-white/5">
       <div className="p-7 mb-4 flex flex-col justify-center">
-        <img src="/logo-dark.png" alt="Orbit Site" className="w-32 h-auto" />
-        <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mt-3 ml-1">Admin Command Center</p>
+        {branding?.logo_url ? (
+            <img 
+              src={branding.logo_url} 
+              alt={branding.site_name} 
+              className="w-32 h-auto object-contain"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+        ) : (
+            <div className="flex items-center gap-2">
+                <span className="text-lg md:text-xl font-black text-primary tracking-tighter uppercase italic">
+                    {branding?.site_name?.split('.')[0] || 'Tepak'}<span className="text-white">{branding?.site_name?.includes('.') ? `.${branding.site_name.split('.')[1]}` : '.ID'}</span>
+                </span>
+            </div>
+        )}
+        <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mt-3 ml-1">
+            {branding?.site_name || 'Tepak.ID'} Command Center
+        </p>
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto no-scrollbar">
@@ -85,20 +121,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePage = 'dashboard' }) =>
         )}>
             <div className={cn(
                 "w-8 h-8 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center font-black text-[10px]",
-                isAdminAuth ? "bg-amber-500 text-white" : "bg-slate-600"
+                isAdminAuth ? "bg-amber-500 text-white" : "bg-blue-500 text-white"
             )}>
-                {isAdminAuth ? (
-                    <span>MA</span>
-                ) : (
-                    <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6yXzlkK9l1vGhNg8jieQYU1URZO7iB0E8eBY6apZr9DMuSPdDsLk8Wn8ZaLWFsNUhwscYUNR5v4QRbNkNqkxdD02jsVlcL1oa05ck_tuVlkw8sJ0lck1Zyy1SdpyEYTTQoq8pmJn5XIyVZXVokDkuc2ob8I7DE18EnXNZ-NMaso7yJM4Uy6zFRYe_KSj-8JufuNcMLVT4X45Ac_ONGP7G48AQxroItKCoSzxrDF3fXmnKzMU8Z5YH56xVFGRJh1nt7oeroYj2GYav" alt="Admin" />
-                )}
+                <span>{getInitials(profile?.full_name || (isAdminAuth ? 'Master Admin' : 'Admin'))}</span>
             </div>
             <div className="flex-1 min-w-0">
                 <p className="text-[11px] font-black text-white truncate">
-                    {isAdminAuth ? 'Master Admin' : 'Administrator'}
+                    {profile?.full_name || (isAdminAuth ? 'Master Admin' : 'Administrator')}
                 </p>
                 <p className="text-[9px] text-blue-200 truncate pr-1">
-                    {isAdminAuth ? 'Passcode Session' : 'admin@tepak.id'}
+                    {profile?.username ? `@${profile.username}` : (isAdminAuth ? 'Passcode Session' : 'admin@tepak.id')}
                 </p>
             </div>
         </div>

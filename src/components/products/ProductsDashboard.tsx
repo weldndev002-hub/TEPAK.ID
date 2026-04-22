@@ -128,10 +128,10 @@ export const ProductsDashboard = () => {
             <div className="px-8 mt-8 pb-12 overflow-y-auto">
                 <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h2 className="text-3xl font-extrabold text-[#005ab4] tracking-tight">Produk Digital</h2>
+                        <h2 className="text-3xl font-extrabold text-primary tracking-tight">Produk Digital</h2>
                         <p className="text-slate-500 mt-1 font-medium">Kelola semua aset digital dan kursus Anda dari satu tempat.</p>
                     </div>
-                    <a href="/add-product" className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-blue-900/20 active:scale-95 transition-transform bg-[#465f89] hover:bg-[#344d77] text-white">
+                    <a href="/add-product" className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-primary/20 active:scale-95 transition-transform bg-primary hover:bg-primary/90 text-white">
                         <PlusIcon className="w-5 h-5" />
                         Tambah Produk
                     </a>
@@ -142,10 +142,10 @@ export const ProductsDashboard = () => {
                     <Card className="p-6 flex items-start justify-between">
                         <div>
                             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Total Produk</p>
-                            <h3 className="text-4xl font-extrabold text-[#005ab4] leading-tight">{products.length}</h3>
+                            <h3 className="text-4xl font-extrabold text-primary leading-tight">{products.length}</h3>
                             <p className="text-xs text-slate-500 font-bold mt-2">Aset Aktif</p>
                         </div>
-                        <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
+                        <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
                             <ArchiveBoxIcon className="w-6 h-6" />
                         </div>
                     </Card>
@@ -153,7 +153,7 @@ export const ProductsDashboard = () => {
                     <Card className="p-6 flex items-start justify-between">
                         <div>
                             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Total Pendapatan</p>
-                            <h3 className="text-2xl font-extrabold text-[#005ab4] leading-tight">{formatCurrency(stats.totalSold)}</h3>
+                            <h3 className="text-2xl font-extrabold text-primary leading-tight">{formatCurrency(stats.totalSold)}</h3>
                             <p className="text-xs text-emerald-500 font-bold mt-2">Penjualan Terverifikasi</p>
                         </div>
                         <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-green-600">
@@ -164,7 +164,7 @@ export const ProductsDashboard = () => {
                     <Card className="p-6 flex items-start justify-between">
                         <div>
                             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Total Pelanggan</p>
-                            <h3 className="text-4xl font-extrabold text-[#005ab4] leading-tight">{stats.totalCustomers}</h3>
+                            <h3 className="text-4xl font-extrabold text-primary leading-tight">{stat.totalCustomers}</h3>
                             <p className="text-xs text-slate-500 font-bold mt-2">Pembeli Unik</p>
                         </div>
                         <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600">
@@ -212,7 +212,7 @@ export const ProductsDashboard = () => {
                                                     />
                                                 </div>
                                                 <div>
-                                                    <a href={`/product-detail?id=${product.id}`} className="text-sm font-bold text-[#005ab4] group-hover:text-[#465f89] transition-colors hover:underline line-clamp-1">{product.title}</a>
+                                                    <a href={`/product-detail?id=${product.id}`} className="text-sm font-bold text-primary group-hover:text-primary/80 transition-colors hover:underline line-clamp-1">{product.title}</a>
                                                     <p className="text-xs text-slate-500 font-medium uppercase tracking-tighter">{product.type}</p>
                                                 </div>
                                             </div>
@@ -228,7 +228,7 @@ export const ProductsDashboard = () => {
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <span className="text-sm font-bold text-[#005ab4]">
+                                            <span className="text-sm font-bold text-primary">
                                                 {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(product.price)}
                                             </span>
                                         </TableCell>

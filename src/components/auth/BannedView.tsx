@@ -14,8 +14,13 @@ const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+import { useBranding } from '../../hooks/useBranding';
+
 export const BannedView = () => {
+    const { branding } = useBranding();
+    const siteName = branding?.site_name || 'Tepak.ID';
     const [isChecking, setIsChecking] = React.useState(true);
+
 
     React.useEffect(() => {
         let channel: any;
@@ -109,7 +114,7 @@ export const BannedView = () => {
                             <div className="bg-primary/5 p-8 rounded-[2.5rem] border border-dashed border-primary/20 flex flex-col items-center">
                                 <p className="text-slate-500 text-[11px] font-black uppercase tracking-widest mb-6 opacity-60">Ingin Mengajukan Keberatan?</p>
                                 <Button variant="primary" className="w-full h-16 bg-primary text-white font-black uppercase tracking-[0.3em] rounded-2xl shadow-2xl shadow-primary/20 hover:scale-[1.02] transition-all active:scale-95">
-                                    Hubungi Admin Tepak.ID
+                                    Hubungi Admin {siteName}
                                 </Button>
                             </div>
                         </div>
@@ -133,7 +138,7 @@ export const BannedView = () => {
  
                 {/* FOOTER */}
                 <div className="mt-12 flex justify-between items-center px-8 opacity-30">
-                    <span className="text-2xl font-black text-slate-900 tracking-tighter uppercase">TEPAK.ID</span>
+                    <span className="text-2xl font-black text-slate-900 tracking-tighter uppercase">{siteName}</span>
                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.4em]">Global Enforcement Protection</span>
                 </div>
             </div>

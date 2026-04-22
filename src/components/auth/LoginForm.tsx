@@ -42,29 +42,36 @@ export const LoginForm: React.FC = () => {
                     setEmailError(error.message);
                 }
             } else {
-                // Berhasil login
-                setIsSuccess(true);
-                
-                // Get user role for smart redirection
+                // Berhasil login secara teknis di Supabase
                 const { data: { user } } = await supabase.auth.getUser();
-                let targetPath = '/dashboard';
                 
                 if (user) {
+                    // Check if banned
                     const { data: profile } = await supabase
                         .from('profiles')
-                        .select('role')
+                        .select('role, is_banned')
                         .eq('id', user.id)
                         .single();
                     
+                    if (profile?.is_banned) {
+                        await supabase.auth.signOut();
+                        setEmailError('Akun Anda telah dinonaktifkan (Banned). Silakan hubungi admin untuk bantuan.');
+                        setIsLoading(false);
+                        return;
+                    }
+
+                    // Proceed if not banned
+                    setIsSuccess(true);
+                    let targetPath = '/dashboard';
                     if (profile?.role === 'admin') {
                         targetPath = '/admin';
                     }
-                }
 
-                // Delay sejenak untuk menampilkan animasi sukses
-                setTimeout(() => {
-                    window.location.href = targetPath;
-                }, 2000);
+                    // Delay sejenak untuk menampilkan animasi sukses
+                    setTimeout(() => {
+                        window.location.href = targetPath;
+                    }, 2000);
+                }
             }
         } catch (err: any) {
             setEmailError('Terjadi kesalahan pada sistem. Silakan coba lagi.');

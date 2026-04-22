@@ -4,8 +4,71 @@ import Button from '../ui/Button';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '../ui/Table';
 import { Badge } from '../ui/Badge';
 
+import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import { cn } from '../../lib/utils';
+
 export const AdminSettingsDashboard = () => {
     const [activeTab, setActiveTab] = React.useState('fee');
+    const [settings, setSettings] = React.useState<any>({
+        platform_fee: 2.5,
+        merchant_fee_fixed: 0,
+        payout_fee: 0,
+        min_withdrawal: 0,
+        webhook_url: '',
+        webhook_config: { orders: true, subscriptions: true },
+        security_config: { two_factor: false, brute_force: true, session_timeout: false },
+        payment_gateways_config: []
+    });
+
+    const [loading, setLoading] = React.useState(true);
+    const [isSaving, setIsSaving] = React.useState(false);
+    const [saveConfirm, setSaveConfirm] = React.useState(false);
+    const [discardConfirm, setDiscardConfirm] = React.useState(false);
+
+    // Toast
+    const [toast, setToast] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const showToast = (type: 'success' | 'error', message: string) => {
+        setToast({ type, message });
+        setTimeout(() => setToast(null), 4000);
+    };
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/admin/settings');
+            if (res.ok) {
+                const data = await res.json();
+                setSettings((prev: any) => ({ ...prev, ...data }));
+            }
+        } catch (err) {
+            console.error('Failed to fetch settings:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        fetchData();
+    }, []);
+
+    const handleSave = async () => {
+        setSaveConfirm(false);
+        setIsSaving(true);
+        try {
+            const res = await fetch('/api/admin/settings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(settings)
+            });
+            if (!res.ok) throw new Error('Failed to update settings');
+            showToast('success', 'Configuration updated successfully!');
+            fetchData();
+        } catch (err: any) {
+            showToast('error', err.message);
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     const renderTabContent = () => {
         switch (activeTab) {
@@ -24,16 +87,16 @@ export const AdminSettingsDashboard = () => {
                             </div>
                             
                             <div className="space-y-6">
-                                {[
+                                {(settings.payment_gateways_config || [
                                     { name: 'DuitKu', status: 'Active', icon: 'account_balance_wallet', description: 'QRIS, Virtual Account, Credit Card' },
                                     { name: 'Midtrans', status: 'Active', icon: 'account_balance_wallet' },
                                     { name: 'Xendit', status: 'Inactive', icon: 'credit_card' },
                                     { name: 'Stripe', status: 'Development', icon: 'language' }
-                                ].map((pg) => (
+                                ]).map((pg: any) => (
                                     <div key={pg.name} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-slate-400 shadow-sm">
-                                                <span className="material-symbols-outlined">{pg.icon}</span>
+                                                <span className="material-symbols-outlined">{pg.icon || 'payments'}</span>
                                             </div>
                                             <div>
                                                 <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{pg.name}</p>
@@ -66,7 +129,12 @@ export const AdminSettingsDashboard = () => {
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Payload URL</label>
                                     <div className="relative">
-                                        <input className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-mono text-xs" defaultValue="https://api.orbitsite.com/v1/webhooks/orders" />
+                                        <input 
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-mono text-xs" 
+                                            value={settings.webhook_url || ''} 
+                                            onChange={(e) => setSettings({...settings, webhook_url: e.target.value})}
+                                            placeholder="https://your-api.com/webhooks"
+                                        />
                                         <button className="absolute right-3 top-2 p-1.5 hover:bg-slate-200 rounded-lg text-slate-400">
                                             <span className="material-symbols-outlined text-sm">content_copy</span>
                                         </button>
@@ -74,11 +142,27 @@ export const AdminSettingsDashboard = () => {
                                 </div>
                                 <div className="flex items-center gap-6 mt-4">
                                     <div className="flex items-center gap-2">
-                                        <input type="checkbox" defaultChecked className="rounded border-slate-300 text-[#005ab4]" />
+                                        <input 
+                                            type="checkbox" 
+                                            checked={settings.webhook_config?.orders} 
+                                            onChange={(e) => setSettings({
+                                                ...settings, 
+                                                webhook_config: { ...settings.webhook_config, orders: e.target.checked }
+                                            })}
+                                            className="rounded border-slate-300 text-[#005ab4]" 
+                                        />
                                         <span className="text-xs font-bold text-slate-600">Order Completed</span>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <input type="checkbox" defaultChecked className="rounded border-slate-300 text-[#005ab4]" />
+                                        <input 
+                                            type="checkbox" 
+                                            checked={settings.webhook_config?.subscriptions} 
+                                            onChange={(e) => setSettings({
+                                                ...settings, 
+                                                webhook_config: { ...settings.webhook_config, subscriptions: e.target.checked }
+                                            })}
+                                            className="rounded border-slate-300 text-[#005ab4]" 
+                                        />
                                         <span className="text-xs font-bold text-slate-600">Subscription Cancelled</span>
                                     </div>
                                 </div>
@@ -102,17 +186,23 @@ export const AdminSettingsDashboard = () => {
 
                             <div className="space-y-6">
                                 {[
-                                    { label: 'Two-Factor Authentication', desc: 'Require 2FA for all admin accounts', enabled: true },
-                                    { label: 'Brute Force Protection', desc: 'Lock account after 5 failed attempts', enabled: true },
-                                    { label: 'Session Management', desc: 'Auto-logout after 24 hours of inactivity', enabled: false }
+                                    { id: 'two_factor', label: 'Two-Factor Authentication', desc: 'Require 2FA for all admin accounts' },
+                                    { id: 'brute_force', label: 'Brute Force Protection', desc: 'Lock account after 5 failed attempts' },
+                                    { id: 'session_timeout', label: 'Session Management', desc: 'Auto-logout after 24 hours of inactivity' }
                                 ].map((item) => (
-                                    <div key={item.label} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <div key={item.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
                                         <div className="max-w-md">
                                             <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{item.label}</p>
                                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.desc}</p>
                                         </div>
-                                        <div className={`w-12 h-6 rounded-full relative transition-colors cursor-pointer ${item.enabled ? 'bg-emerald-500' : 'bg-slate-300'}`}>
-                                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${item.enabled ? 'right-1' : 'left-1'}`}></div>
+                                        <div 
+                                            onClick={() => setSettings({
+                                                ...settings,
+                                                security_config: { ...settings.security_config, [item.id]: !settings.security_config?.[item.id] }
+                                            })}
+                                            className={`w-12 h-6 rounded-full relative transition-colors cursor-pointer ${settings.security_config?.[item.id] ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                                        >
+                                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.security_config?.[item.id] ? 'right-1' : 'left-1'}`}></div>
                                         </div>
                                     </div>
                                 ))}
@@ -143,15 +233,25 @@ export const AdminSettingsDashboard = () => {
                                     <div className="space-y-2">
                                         <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Percentage (%)</label>
                                         <div className="relative group">
-                                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg py-3 px-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" type="number" defaultValue="2.5" />
-                                            <span className="absolute right-4 top-3 text-slate-400 font-bold">%</span>
+                                        <input 
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg py-3 px-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" 
+                                            type="number" 
+                                            value={settings.platform_fee || 0} 
+                                            onChange={(e) => setSettings({...settings, platform_fee: Number(e.target.value)})}
+                                        />
+                                        <span className="absolute right-4 top-3 text-slate-400 font-bold">%</span>
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Fixed Fee (USD)</label>
+                                        <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Fixed Fee (Rp)</label>
                                         <div className="relative group">
-                                            <span className="absolute left-4 top-3 text-slate-400 font-bold text-sm">$</span>
-                                            <input className="w-full bg-slate-50 border border-slate-200 rounded-lg py-3 pl-8 pr-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" type="number" defaultValue="1.50" step="0.01" />
+                                            <span className="absolute left-4 top-3 text-slate-400 font-bold text-sm">Rp</span>
+                                            <input 
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-lg py-3 pl-12 pr-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" 
+                                                type="number" 
+                                                value={settings.merchant_fee_fixed || 0} 
+                                                onChange={(e) => setSettings({...settings, merchant_fee_fixed: Number(e.target.value)})}
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -171,8 +271,13 @@ export const AdminSettingsDashboard = () => {
                                 <div className="space-y-2 max-w-sm">
                                     <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Flat Charge per Payout</label>
                                     <div className="relative group">
-                                        <span className="absolute left-4 top-3 text-slate-400 font-bold text-sm">$</span>
-                                        <input className="w-full bg-slate-50 border border-slate-200 rounded-lg py-3 pl-8 pr-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" type="number" defaultValue="4.50" step="0.01" />
+                                        <span className="absolute left-4 top-3 text-slate-400 font-bold text-sm">Rp</span>
+                                        <input 
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg py-3 pl-12 pr-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" 
+                                            type="number" 
+                                            value={settings.payout_fee || 0}
+                                            onChange={(e) => setSettings({...settings, payout_fee: Number(e.target.value)})}
+                                        />
                                     </div>
                                 </div>
                             </Card>
@@ -191,8 +296,13 @@ export const AdminSettingsDashboard = () => {
                                 <div className="space-y-2 max-w-sm">
                                     <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Minimum Amount</label>
                                     <div className="relative group">
-                                        <span className="absolute left-4 top-3 text-slate-400 font-bold text-sm">$</span>
-                                        <input className="w-full bg-slate-50 border border-slate-200 rounded-lg py-3 pl-8 pr-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" type="number" defaultValue="50.00" step="0.01" />
+                                        <span className="absolute left-4 top-3 text-slate-400 font-bold text-sm">Rp</span>
+                                        <input 
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg py-3 pl-12 pr-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" 
+                                            type="number" 
+                                            value={settings.min_withdrawal || 0}
+                                            onChange={(e) => setSettings({...settings, min_withdrawal: Number(e.target.value)})}
+                                        />
                                     </div>
                                 </div>
                             </Card>
@@ -212,21 +322,21 @@ export const AdminSettingsDashboard = () => {
                                     <div className="space-y-6">
                                         <div className="flex justify-between items-end border-b border-[#624000]/20 pb-4">
                                             <span className="text-[#624000] text-sm font-medium">Sample Transaction</span>
-                                            <span className="text-[#291800] text-xl font-extrabold tracking-tight">$1,000.00</span>
+                                            <span className="text-[#291800] text-xl font-extrabold tracking-tight">Rp 1.000.000</span>
                                         </div>
                                         <div className="space-y-3">
                                             <div className="flex justify-between text-sm">
-                                                <span className="text-[#624000]">Merchant Fee (2.5% + $1.50)</span>
-                                                <span className="text-[#291800] font-bold">-$26.50</span>
+                                                <span className="text-[#624000]">Merchant Fee ({settings.platform_fee}% + Rp {settings.merchant_fee_fixed.toLocaleString()})</span>
+                                                <span className="text-[#291800] font-bold">-Rp {(1000000 * settings.platform_fee / 100 + settings.merchant_fee_fixed).toLocaleString()}</span>
                                             </div>
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-[#624000]">Gateway Platform Margin</span>
-                                                <span className="text-[#291800] font-bold">-$2.00</span>
+                                                <span className="text-[#291800] font-bold">-Rp 2.500</span>
                                             </div>
                                         </div>
                                         <div className="bg-[#9f6a00] text-[#ffddb2] p-6 rounded-xl mt-4">
                                             <div className="text-[10px] uppercase font-bold tracking-widest text-[#fffbff] mb-2">Net Merchant Revenue</div>
-                                            <div className="text-3xl font-black tracking-tight">$971.50</div>
+                                            <div className="text-2xl font-black tracking-tight">Rp {(1000000 - (1000000 * settings.platform_fee / 100 + settings.merchant_fee_fixed) - 2500).toLocaleString()}</div>
                                             <div className="mt-4 flex items-center text-[11px] text-[#fffbff] font-medium opacity-90">
                                                 <span className="material-symbols-outlined text-xs mr-1">info</span>
                                                 Calculations based on current unsaved input values.
@@ -258,15 +368,15 @@ export const AdminSettingsDashboard = () => {
                                                 <TableCell>
                                                     <span className="text-[10px] bg-[#d6e3ff] text-[#001b3e] font-bold px-2 py-0.5 rounded uppercase">Merchant</span>
                                                 </TableCell>
-                                                <TableCell className="text-xs font-bold">2.5% + $1.50</TableCell>
-                                                <TableCell className="text-xs text-slate-500 text-right">R. Pratama</TableCell>
+                                                <TableCell className="text-xs font-bold">{settings.platform_fee}% + Rp {settings.merchant_fee_fixed.toLocaleString()}</TableCell>
+                                                <TableCell className="text-xs text-slate-500 text-right">SYSTEM</TableCell>
                                             </TableRow>
                                             <TableRow>
                                                 <TableCell className="text-xs text-slate-900 font-medium">Sep 05, 2023</TableCell>
                                                 <TableCell>
                                                     <span className="text-[10px] bg-slate-200 text-slate-700 font-bold px-2 py-0.5 rounded uppercase">Payout</span>
                                                 </TableCell>
-                                                <TableCell className="text-xs font-bold">$4.50</TableCell>
+                                                <TableCell className="text-xs font-bold">Rp 75.000</TableCell>
                                                 <TableCell className="text-xs text-slate-500 text-right">M. Sari</TableCell>
                                             </TableRow>
                                         </TableBody>
@@ -291,11 +401,20 @@ export const AdminSettingsDashboard = () => {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <h2 className="text-3xl font-extrabold text-[#005ab4] tracking-tight">Transaction Fee</h2>
                     <div className="flex gap-3">
-                        <Button variant="ghost" className="bg-slate-50 text-slate-700 hover:bg-slate-100 transition-all text-sm font-semibold border-transparent">
+                        <Button 
+                            variant="ghost" 
+                            className="bg-slate-50 text-slate-700 hover:bg-slate-100 transition-all text-sm font-semibold border-transparent"
+                            onClick={() => setDiscardConfirm(true)}
+                        >
                             Discard Changes
                         </Button>
-                        <Button variant="primary" className="bg-[#465f89] text-white hover:shadow-lg hover:shadow-[#465f89]/20 transition-all text-sm font-semibold shadow-sm">
-                            Save Parameters
+                        <Button 
+                            variant="primary" 
+                            className="bg-[#465f89] text-white hover:shadow-lg hover:shadow-[#465f89]/20 transition-all text-sm font-semibold shadow-sm"
+                            onClick={() => setSaveConfirm(true)}
+                            disabled={isSaving}
+                        >
+                            {isSaving ? 'Saving...' : 'Save Parameters'}
                         </Button>
                     </div>
                 </div>
@@ -334,7 +453,63 @@ export const AdminSettingsDashboard = () => {
                 </div>
             </div>
 
-            {renderTabContent()}
-        </div>
-    );
-};
+            {loading ? (
+                <div className="w-full py-32 flex flex-col items-center justify-center gap-4">
+                    <div className="w-10 h-10 border-4 border-slate-200 border-t-[#005ab4] rounded-full animate-spin"></div>
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Memuat Pengaturan...</p>
+                </div>
+            ) : renderTabContent()}
+
+            {/* Toast */}
+            {toast && (
+                <div className={cn(
+                    "fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl text-sm font-bold animate-in slide-in-from-right duration-300",
+                    toast.type === 'success' ? "bg-emerald-500 text-white" : "bg-rose-500 text-white"
+                )}>
+                    {toast.type === 'success'
+                        ? <CheckCircleIcon className="w-5 h-5 shrink-0" />
+                        : <XCircleIcon className="w-5 h-5 shrink-0" />
+                    }
+                    {toast.message}
+                </div>
+            )}
+
+            {/* Save Confirm Modal */}
+            {saveConfirm && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-md rounded-[24px] shadow-2xl overflow-hidden">
+                        <div className="p-8">
+                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-blue-100 mb-4">
+                                <CheckCircleIcon className="w-6 h-6 text-[#005ab4]" />
+                            </div>
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Save All Changes?</h3>
+                            <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                Konfigurasi parameter platform akan diperbarui secara global. Pastikan nilai biaya transaksi sudah benar.
+                            </p>
+                        </div>
+                        <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                            <button className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setSaveConfirm(false)}>Cancel</button>
+                            <button className="px-6 py-2.5 rounded-xl font-black bg-[#465f89] hover:bg-[#3a4f75] text-white shadow-lg shadow-[#465f89]/20 transition-all text-[10px] uppercase tracking-widest" onClick={handleSave}>Yes, Save</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Discard Confirm Modal */}
+            {discardConfirm && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-md rounded-[24px] shadow-2xl overflow-hidden">
+                        <div className="p-8">
+                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-rose-100 mb-4">
+                                <XCircleIcon className="w-6 h-6 text-rose-500" />
+                            </div>
+                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Discard Changes?</h3>
+                            <p className="text-sm text-slate-500 font-medium leading-relaxed">Semua perubahan yang belum disimpan akan hilang dan di-reset sesuai data di database.</p>
+                        </div>
+                        <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                            <button className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setDiscardConfirm(false)}>Cancel</button>
+                            <button className="px-6 py-2.5 rounded-xl font-black bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/20 transition-all text-[10px] uppercase tracking-widest" onClick={() => { fetchData(); setDiscardConfirm(false); }}>Yes, Discard</button>
+                        </div>
+                    </div>
+                </div>
+            )}

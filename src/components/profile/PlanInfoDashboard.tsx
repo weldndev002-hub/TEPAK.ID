@@ -136,7 +136,7 @@ const PlanInfoContent = () => {
                                     <Button 
                                         onClick={() => upgradeToPro(selectedMethod)} 
                                         disabled={isLoading}
-                                        className="w-full bg-[#0873df] hover:bg-[#005ab4] text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                        className="w-full bg-primary hover:opacity-90 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-2"
                                     >
                                         <BoltIcon className="w-5 h-5" />
                                         {isLoading ? 'Memproses...' : `Bayar via ${selectedMethod === 'SP' ? 'ShopeePay' : selectedMethod === 'OV' ? 'OVO' : selectedMethod === 'BT' ? 'Permata' : 'Alfamart'}`}

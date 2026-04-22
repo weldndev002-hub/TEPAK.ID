@@ -2,6 +2,21 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import LoginForm from '../components/auth/LoginForm';
 import { ChartBarIcon } from '@heroicons/react/24/outline';
+import { createClient } from '@supabase/supabase-js';
+
+// Fetch Branding
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+const { data: branding } = await supabase
+  .from('platform_configs')
+  .select('*')
+  .eq('id', 1)
+  .single();
+
+const siteName = branding?.site_name || 'Tepak.ID';
+const logoUrl = branding?.logo_url || '/logo-light.png';
 ---
 
 <BaseLayout title="Masuk ke Orbit Site - Precision Curator Dashboard">
@@ -11,7 +26,7 @@ import { ChartBarIcon } from '@heroicons/react/24/outline';
         {/* BRAND LOGO TOP LEFT */}
         <div class="fixed top-10 left-10 hidden lg:block">
             <a href="/">
-                <img src="/logo-light.png" alt="Orbit Site" class="w-32 h-auto" />
+                <img src={logoUrl} alt={siteName} class="w-32 h-auto" />
             </a>
         </div>
 
@@ -67,7 +82,7 @@ import { ChartBarIcon } from '@heroicons/react/24/outline';
         {/* FOOTER */}
         <footer class="w-full py-12 px-8 text-center">
             <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                © 2024 Orbit Site - Precision Digital Ecosystem
+                © {new Date().getFullYear()} {siteName} - {branding?.site_tagline || 'Digital Ecosystem'}
             </p>
         </footer>
 

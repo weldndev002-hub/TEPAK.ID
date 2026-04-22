@@ -3,13 +3,33 @@ import '../styles/globals.css';
 import { ImpersonationBanner } from '../components/admin/ImpersonationBanner';
 import { AnalyticsTracker } from '../components/AnalyticsTracker';
 import { AnalyticsDebugPanel } from '../components/AnalyticsDebugPanel';
+import { createClient } from '@supabase/supabase-js';
+import { BrandingProvider } from '../hooks/useBranding';
+
+// Fetch Branding Settings
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+const { data: branding } = await supabase
+  .from('platform_configs')
+  .select('*')
+  .eq('id', 1)
+  .single();
 
 interface Props {
 	title: string;
 	description?: string;
 }
 
-const { title, description = "A modern website built with Astro, Hono, and Prisma." } = Astro.props;
+const { title, description = branding?.seo_description || branding?.site_tagline || "Platform Jualan Produk Digital Tercepat & Termudah." } = Astro.props;
+
+const siteName = branding?.site_name || 'Tepak.ID';
+const fullTitle = title === siteName ? title : `${title} | ${siteName}`;
+const faviconUrl = branding?.favicon_url || '/favicon.svg';
+
+// Check Admin Status for Global Watcher
+const isAdmin = Astro.locals.isAdmin || false;
 ---
 
 <!doctype html>
@@ -18,20 +38,69 @@ const { title, description = "A modern website built with Astro, Hono, and Prism
 		<meta charset="UTF-8" />
 		<meta name="description" content={description} />
 		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" href={faviconUrl} />
 		<meta name="generator" content={Astro.generator} />
-		<title>{title}</title>
+		<title>{fullTitle}</title>
 		
 		<!-- Google Fonts & Material Symbols -->
 		<link rel="preconnect" href="https://fonts.googleapis.com">
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 		<link href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300..800&display=swap" rel="stylesheet">
 		<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+
+		<!-- Inject Dynamic Branding Colors -->
+		<style define:vars={{ primaryBase: branding?.primary_color || '#815500' }}>
+			:root {
+				--color-primary: var(--primaryBase);
+				--color-on-primary: #ffffff;
+				--color-primary-container: color-mix(in srgb, var(--primaryBase), white 80%);
+				--color-on-primary-container: color-mix(in srgb, var(--primaryBase), black 60%);
+				--color-inverse-primary: color-mix(in srgb, var(--primaryBase), white 40%);
+				
+				/* System Background Overrides (Subtle tint to match brand) */
+				--color-background: color-mix(in srgb, var(--primaryBase), #f8f9ff 96%);
+				--color-surface-container-low: color-mix(in srgb, var(--primaryBase), #eff4ff 94%);
+			}
+		</style>
+
+		<script is:inline define:vars={{ initialBranding: branding }}>
+			window.__PLATFORM_BRANDING__ = initialBranding;
+		</script>
 	</head>
-	<body class="min-h-screen font-sans antialiased">
-		<ImpersonationBanner client:only="react" />
-		<AnalyticsDebugPanel client:only="react" />
-		<slot />
+	<body class="min-h-screen font-sans antialiased" data-is-admin={isAdmin ? "true" : "false"}>
+		<BrandingProvider initialData={branding} client:load>
+			<ImpersonationBanner client:only="react" />
+			<AnalyticsDebugPanel client:only="react" />
+			<slot />
+		</BrandingProvider>
+
+		<script>
+			// Global Maintenance Mode Watcher
+			const POLLING_INTERVAL = 10000; // Check every 10 seconds
+			
+			async function watchMaintenance() {
+				// Don't redirect if already on maintenance page or if it's an admin
+				if (window.location.pathname === '/maintenance') return;
+				if (document.body.getAttribute('data-is-admin') === 'true') return;
+
+				try {
+					const res = await fetch('/api/public/settings');
+					if (res.ok) {
+						const data = await res.json();
+						if (data && data.maintenance_mode === true) {
+							// System just went into maintenance!
+							const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+							window.location.href = `/maintenance?redirect_to=${returnUrl}`;
+						}
+					}
+				} catch (err) {
+					// Silicon failure or network issue, ignore polling errors
+				}
+			}
+
+			// Start Watching
+			setInterval(watchMaintenance, POLLING_INTERVAL);
+		</script>
 	</body>
 </html>
 

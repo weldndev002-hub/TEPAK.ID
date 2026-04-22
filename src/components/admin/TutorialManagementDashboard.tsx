@@ -171,7 +171,7 @@ export const TutorialManagementDashboard = () => {
             title: tutorial.title,
             category: tutorial.category,
             video_url: tutorial.video_url || '',
-            description: tutorial.description || '',
+            description: tutorial.content_html || tutorial.description || '',
         });
         setIsModalOpen(true);
     };
@@ -259,7 +259,7 @@ export const TutorialManagementDashboard = () => {
                         </div>
                         <div className="p-8 flex flex-col flex-grow">
                             <h3 className="text-lg font-black text-[#001b3e] mb-3 leading-tight tracking-tight line-clamp-2">{tutorial.title}</h3>
-                            <p className="text-xs text-slate-500 mb-8 line-clamp-2 font-medium leading-relaxed">{tutorial.description || "Video panduan resmi untuk membantu Anda memaksimalkan potensi Tepak.ID."}</p>
+                            <p className="text-xs text-slate-500 mb-8 line-clamp-2 font-medium leading-relaxed">{tutorial.content_html || tutorial.description || "Video panduan resmi untuk membantu Anda memaksimalkan potensi Tepak.ID."}</p>
                             
                             <div className="flex items-center justify-between mt-auto pt-6 border-t border-slate-50">
                                 <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">

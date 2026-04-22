@@ -134,13 +134,13 @@ export const ProductDetailDashboard = () => {
                                         <span className="text-[10px] text-slate-400">(0)</span>
                                     </div>
                                 </div>
-                                <h3 className="text-base font-extrabold text-[#005ab4] leading-tight mb-1">{product.title}</h3>
+                                <h3 className="text-base font-extrabold text-primary leading-tight mb-1">{product.title}</h3>
                                 <p className="text-xs text-slate-500 font-medium uppercase tracking-widest">{product.type}</p>
                             </div>
                             <div className="flex items-center justify-between pt-4 border-t border-slate-100">
                                 <div>
                                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-0.5">Harga</p>
-                                    <p className="text-xl font-black text-[#005ab4]">{formatCurrency(product.price)}</p>
+                                    <p className="text-xl font-black text-primary">{formatCurrency(product.price)}</p>
                                 </div>
                                 <a href={`/checkout?product_id=${product.id}`} target="_blank" className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-primary hover:underline">
                                     <LinkIcon className="w-3 h-3" /> Lihat Checkout
@@ -152,7 +152,7 @@ export const ProductDetailDashboard = () => {
                         <div className="lg:col-span-2 grid grid-cols-2 gap-6">
                             <Card className="p-6 border-none shadow-[0px_20px_40px_rgba(16,27,50,0.04)] flex flex-col justify-between group hover:scale-[1.02] transition-all">
                                 <div className="flex justify-between items-start mb-4">
-                                    <div className="p-3 bg-blue-50 rounded-2xl text-blue-600 group-hover:scale-110 transition-transform">
+                                    <div className="p-3 bg-primary/10 rounded-2xl text-primary group-hover:scale-110 transition-transform">
                                         <EyeIcon className="w-5 h-5" />
                                     </div>
                                     <span className="text-[10px] font-black text-slate-400 bg-slate-50 px-2 py-1 rounded-full">Total</span>
@@ -182,7 +182,7 @@ export const ProductDetailDashboard = () => {
 
                             <Card className="p-6 border-none shadow-[0px_20px_40px_rgba(16,27,50,0.04)] flex flex-col justify-between group hover:scale-[1.02] transition-all">
                                 <div className="flex justify-between items-start mb-4">
-                                    <div className="p-3 bg-[#005ab4] rounded-2xl text-white shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform">
+                                    <div className="p-3 bg-primary rounded-2xl text-white shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
                                         <CurrencyDollarIcon className="w-5 h-5" />
                                     </div>
                                     <ArrowTrendingUpIcon className="w-5 h-5 text-blue-200" />
@@ -218,8 +218,8 @@ export const ProductDetailDashboard = () => {
                         <div className="lg:col-span-2 space-y-8">
                             <Card className="p-8 border-none shadow-[0px_20px_40px_rgba(16,27,50,0.04)]">
                                 <div className="flex items-center space-x-3 mb-6">
-                                    <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-base font-extrabold tracking-tight text-[#005ab4]">Deskripsi Produk</h3>
+                                    <span className="w-1.5 h-6 bg-primary rounded-full"></span>
+                                    <h3 className="text-base font-extrabold tracking-tight text-primary">Deskripsi Produk</h3>
                                 </div>
                                 <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
                                     {product.description || 'Tidak ada deskripsi untuk produk ini.'}
@@ -230,8 +230,8 @@ export const ProductDetailDashboard = () => {
                             {product.preview_urls && product.preview_urls.length > 0 && (
                                 <Card className="p-8 border-none shadow-[0px_20px_40px_rgba(16,27,50,0.04)]">
                                     <div className="flex items-center space-x-3 mb-6">
-                                        <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                        <h3 className="text-base font-extrabold tracking-tight text-[#005ab4]">Galeri Preview</h3>
+                                        <span className="w-1.5 h-6 bg-primary rounded-full"></span>
+                                        <h3 className="text-base font-extrabold tracking-tight text-primary">Galeri Preview</h3>
                                     </div>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                                         {product.preview_urls.map((url: string, idx: number) => (
@@ -278,8 +278,8 @@ export const ProductDetailDashboard = () => {
                             {/* Metadata */}
                             <Card className="p-6 border-none shadow-[0px_20px_40px_rgba(16,27,50,0.04)]">
                                 <div className="flex items-center space-x-3 mb-6">
-                                    <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-base font-extrabold tracking-tight text-[#005ab4]">Info Produk</h3>
+                                    <span className="w-1.5 h-6 bg-primary rounded-full"></span>
+                                    <h3 className="text-base font-extrabold tracking-tight text-primary">Info Produk</h3>
                                 </div>
                                 <div className="space-y-4">
                                     {[
@@ -304,8 +304,8 @@ export const ProductDetailDashboard = () => {
                     <Card className="border-none shadow-[0px_20px_40px_rgba(16,27,50,0.04)] overflow-hidden">
                         <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
                             <div className="flex items-center space-x-3">
-                                <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                <h3 className="text-base font-extrabold tracking-tight text-[#005ab4]">Pembeli Terbaru</h3>
+                                <span className="w-1.5 h-6 bg-primary rounded-full"></span>
+                                <h3 className="text-base font-extrabold tracking-tight text-primary">Pembeli Terbaru</h3>
                             </div>
                             <a href="/orders" className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline">
                                 Lihat Semua Pesanan →
@@ -316,7 +316,7 @@ export const ProductDetailDashboard = () => {
                                 stats.recent_buyers.map((order: any) => (
                                     <div key={order.id} className="flex items-center justify-between px-8 py-5 hover:bg-slate-50/50 transition-colors">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-black">
+                                            <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-black">
                                                 {order.customers?.name?.charAt(0) || 'C'}
                                             </div>
                                             <div>
@@ -325,7 +325,7 @@ export const ProductDetailDashboard = () => {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-sm font-black text-[#005ab4]">{formatCurrency(order.amount)}</p>
+                                            <p className="text-sm font-black text-primary">{formatCurrency(order.amount)}</p>
                                             <p className="text-[10px] text-slate-400 font-medium">{new Date(order.created_at).toLocaleDateString()}</p>
                                         </div>
                                     </div>

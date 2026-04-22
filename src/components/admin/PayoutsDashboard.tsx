@@ -4,6 +4,7 @@ import Button from '../ui/Button';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '../ui/Table';
 import { Badge } from '../ui/Badge';
 import { cn } from '../../lib/utils';
+import { supabase } from '../../lib/supabase';
 import { EyeIcon, EyeSlashIcon, ExclamationTriangleIcon, CheckCircleIcon, XCircleIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 
 // Reusable Warning/Confirm Modal
@@ -117,10 +118,31 @@ export const PayoutsDashboard = () => {
     const executeUpdate = async (id: string, status: string, notes: string) => {
         setProcessing(true);
         try {
+            let proof_url = '';
+
+            // Upload proof if completing
+            if (status === 'completed' && proofFile) {
+                const fileExt = proofFile.name.split('.').pop();
+                const fileName = `${id}-${Date.now()}.${fileExt}`;
+                const filePath = `receipts/${fileName}`;
+
+                const { data, error: uploadError } = await supabase.storage
+                    .from('payout-proofs')
+                    .upload(filePath, proofFile);
+
+                if (uploadError) throw new Error(`Upload bukti gagal: ${uploadError.message}`);
+                
+                const { data: { publicUrl } } = supabase.storage
+                    .from('payout-proofs')
+                    .getPublicUrl(filePath);
+                
+                proof_url = publicUrl;
+            }
+
             const res = await fetch('/api/admin/payouts/update-status', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, status, notes })
+                body: JSON.stringify({ id, status, notes, proof_url })
             });
 
             if (!res.ok) throw new Error('Failed to update payout status');
@@ -168,8 +190,8 @@ export const PayoutsDashboard = () => {
     if (loading && payouts.length === 0) {
         return (
             <div className="w-full py-20 flex flex-col items-center justify-center gap-4">
-                <div className="w-10 h-10 border-4 border-[#005ab4] border-t-transparent rounded-full animate-spin"></div>
-                <p className="font-black text-[#005ab4] uppercase tracking-widest text-xs tracking-widest">Loading Payout Requests...</p>
+                <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                <p className="font-black text-primary uppercase tracking-widest text-xs">Loading Payout Requests...</p>
             </div>
         );
     }
@@ -193,7 +215,7 @@ export const PayoutsDashboard = () => {
             {/* Page Title & Stats Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
                 <div>
-                    <h2 className="text-4xl font-extrabold tracking-tight text-[#005ab4] mb-2">Payout Processing</h2>
+                    <h2 className="text-4xl font-extrabold tracking-tight text-primary mb-2">Payout Processing</h2>
                     <p className="text-slate-500 max-w-md">Manage creator withdrawal requests carefully and quickly to maintain ecosystem trust.</p>
                 </div>
                 <div className="flex gap-4">
@@ -203,7 +225,7 @@ export const PayoutsDashboard = () => {
                     </div>
                     <div className="bg-slate-50 px-6 py-4 rounded-xl border border-slate-100 flex flex-col justify-center">
                         <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Queue Size</p>
-                        <p className="text-2xl font-black text-[#005ab4]">{payouts.filter(p => p.status === 'pending').length} Requests</p>
+                        <p className="text-2xl font-black text-primary">{payouts.filter(p => p.status === 'pending').length} Requests</p>
                     </div>
                 </div>
             </div>
@@ -308,7 +330,7 @@ export const PayoutsDashboard = () => {
                         {/* Modal Header */}
                         <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
                             <div>
-                                <h2 className="text-2xl font-black text-[#005ab4]">Payout Request Details</h2>
+                                <h2 className="text-2xl font-black text-primary">Payout Request Details</h2>
                                 <p className="text-sm text-slate-500 font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[400px]">ID: {selectedPayout.id}</p>
                             </div>
                             <button 
@@ -335,8 +357,8 @@ export const PayoutsDashboard = () => {
                                             <span className="font-bold text-rose-500">-Rp 5.000</span>
                                         </div>
                                         <div className="pt-3 border-t border-slate-200 flex justify-between items-center">
-                                            <span className="text-xs font-black text-[#005ab4] uppercase tracking-wider">Net to Transfer</span>
-                                            <span className="text-xl font-black text-[#005ab4]">Rp {(Number(selectedPayout.amount) - 5000).toLocaleString('id-ID')}</span>
+                                            <span className="text-xs font-black text-primary uppercase tracking-wider">Net to Transfer</span>
+                                            <span className="text-xl font-black text-primary">Rp {(Number(selectedPayout.amount) - 5000).toLocaleString('id-ID')}</span>
                                         </div>
                                     </div>
                                 </div>

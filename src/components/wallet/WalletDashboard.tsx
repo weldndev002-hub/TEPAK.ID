@@ -36,8 +36,8 @@ const WalletDashboardContent = () => {
     const [showBankWarning, setShowBankWarning] = useState(false);
     const minWithdrawal = 50000;
 
-    // Fees Configuration (Matching backend)
-    const PLATFORM_FEE = 0.05; // 5%
+    // Fees Configuration - Now dynamic from DB via net_amount column
+    // const PLATFORM_FEE = 0.05; // Removed hardcoded value
 
     useEffect(() => {
         const fetchData = async () => {
@@ -155,7 +155,7 @@ const WalletDashboardContent = () => {
                         </h3>
                     </div>
                     <div className="pt-6 mt-6 border-t border-slate-50">
-                        <p className="text-[10px] text-slate-400 font-medium italic">*Sudah dipotong platform fee 5%</p>
+                        <p className="text-[10px] text-slate-400 font-medium italic">*Sudah dipotong platform fee sesuai pengaturan</p>
                     </div>
                 </Card>
 
@@ -320,7 +320,8 @@ const WalletDashboardContent = () => {
                                 </TableHeader>
                                 <TableBody>
                                     {recentOrders.map((tx: any) => {
-                                        const netAmount = (tx.status === 'success' || tx.status === 'paid') ? Math.floor(Number(tx.amount) * (1 - PLATFORM_FEE)) : 0;
+                                        const netAmount = Number(tx.net_amount || 0);
+                                        const isSettled = (tx.status === 'success' || tx.status === 'paid');
                                         return (
                                             <TableRow key={tx.id}>
                                                 <TableCell>
@@ -338,7 +339,7 @@ const WalletDashboardContent = () => {
                                                 <TableCell className="text-slate-400 text-[10px] font-medium uppercase tracking-tighter italic">
                                                     {new Date(tx.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
                                                 </TableCell>
-                                                <TableCell className={cn("text-right font-black text-sm tracking-tight", (tx.status === 'failed' || tx.status === 'cancelled') ? 'text-slate-300 line-through' : 'text-emerald-500')}>
+                                                <TableCell className={cn("text-right font-black text-sm tracking-tight", (tx.status === 'failed' || tx.status === 'cancelled') ? 'text-slate-300 line-through' : (isSettled ? 'text-emerald-500' : 'text-slate-400'))}>
                                                     {(tx.status === 'failed' || tx.status === 'cancelled') ? '- ' : '+ '}Rp {netAmount.toLocaleString('id-ID')}
                                                 </TableCell>
                                                 <TableCell className="text-center">

@@ -74,7 +74,7 @@ html, body {
 
 @layer utilities {
   .amber-gradient {
-    background: linear-gradient(135deg, #815500 0%, #f6af3b 100%);
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-container) 100%);
   }
   .glass-panel {
     background: rgba(255, 255, 255, 0.85);

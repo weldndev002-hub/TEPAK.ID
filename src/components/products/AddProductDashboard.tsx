@@ -208,7 +208,7 @@ export const AddProductDashboard = () => {
                     </a>
                     <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-0.5">Produk</p>
-                        <h2 className="text-xl font-extrabold text-[#162138] tracking-tight">Tambah Produk Baru</h2>
+                        <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Tambah Produk Baru</h2>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -217,7 +217,7 @@ export const AddProductDashboard = () => {
                     </Button>
                     <Button 
                         variant="secondary" 
-                        className="px-8 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-blue-900/30 hover:scale-105 active:scale-95 transition-all bg-[#465f89] hover:bg-[#344d77] text-white flex items-center gap-2 disabled:opacity-50"
+                        className="px-8 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/30 hover:scale-105 active:scale-95 transition-all bg-primary hover:bg-primary/90 text-white flex items-center gap-2 disabled:opacity-50"
                         onClick={handlePublish}
                         disabled={isPublishing}
                     >
@@ -238,8 +238,8 @@ export const AddProductDashboard = () => {
                             {/* Basic Info */}
                             <Card className="p-8 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
                                 <div className="flex items-center space-x-3 mb-8">
-                                    <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Informasi Produk</h3>
+                                    <span className="w-1.5 h-6 bg-primary rounded-full"></span>
+                                    <h3 className="text-lg font-extrabold tracking-tight text-primary">Informasi Produk</h3>
                                 </div>
                                 <div className="space-y-6">
                                     {errors.system && (
@@ -327,13 +327,13 @@ export const AddProductDashboard = () => {
                             {/* Digital Product File Upload */}
                             <Card className="p-8 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
                                 <div className="flex items-center space-x-3 mb-8">
-                                    <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">File Produk Digital</h3>
+                                    <span className="w-1.5 h-6 bg-primary rounded-full"></span>
+                                    <h3 className="text-lg font-extrabold tracking-tight text-primary">File Produk Digital</h3>
                                 </div>
                                 <div 
                                     className={cn(
                                         "border-2 border-dashed rounded-2xl p-12 text-center group transition-all cursor-pointer relative",
-                                        errors.file ? "border-rose-300 bg-rose-50/30" : "border-slate-200 bg-slate-50/50 hover:border-[#465f89]/60 hover:bg-blue-50/20"
+                                        errors.file ? "border-rose-300 bg-rose-50/30" : "border-slate-200 bg-slate-50/50 hover:border-primary/60 hover:bg-primary/5"
                                     )}
                                     onClick={() => document.getElementById('product-file')?.click()}
                                 >
@@ -347,7 +347,7 @@ export const AddProductDashboard = () => {
                                     <div className="w-16 h-16 bg-white border border-slate-100 rounded-2xl flex items-center justify-center mx-auto shadow-sm mb-4 group-hover:scale-110 transition-transform">
                                         <CloudArrowUpIcon className={cn("w-8 h-8", errors.file ? "text-rose-500" : "text-[#465f89]")} />
                                     </div>
-                                    <p className={cn("text-sm font-bold mb-1", errors.file ? "text-rose-600" : "text-[#005ab4]")}>
+                                    <p className={cn("text-sm font-bold mb-1", errors.file ? "text-rose-600" : "text-primary")}>
                                         {productFile ? productFile.name : "Tarik dan lepas file produk Anda di sini"}
                                     </p>
                                     <p className="text-xs text-slate-400 mb-6">{productFile ? `${(productFile.size / (1024 * 1024)).toFixed(2)} MB` : "PDF, ZIP, MP4, MP3, PNG — Maksimal 25MB"}</p>
@@ -365,8 +365,8 @@ export const AddProductDashboard = () => {
                             <Card className="p-8 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
                                 <div className="flex items-center justify-between mb-8">
                                     <div className="flex items-center space-x-3">
-                                        <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                        <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Gambar Preview</h3>
+                                        <span className="w-1.5 h-6 bg-primary rounded-full"></span>
+                                        <h3 className="text-lg font-extrabold tracking-tight text-primary">Gambar Preview</h3>
                                     </div>
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{previewImages.length} / 8 Gambar</span>
                                 </div>
@@ -386,7 +386,7 @@ export const AddProductDashboard = () => {
                                     ))}
                                     {previewImages.length < 8 && (
                                         <div 
-                                            className="aspect-video rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center gap-2 hover:border-[#465f89]/60 hover:bg-blue-50/20 transition-all cursor-pointer group"
+                                            className="aspect-video rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center gap-2 hover:border-primary/60 hover:bg-primary/5 transition-all cursor-pointer group"
                                             onClick={() => document.getElementById('gallery-files')?.click()}
                                         >
                                             <PhotoIcon className="w-6 h-6 text-slate-300 group-hover:text-[#465f89]/60 transition-colors" />
@@ -413,8 +413,8 @@ export const AddProductDashboard = () => {
                             {/* Thumbnail Section */}
                             <Card className="p-6 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
                                 <div className="flex items-center space-x-3 mb-6">
-                                    <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Thumbnail</h3>
+                                    <span className="w-1.5 h-6 bg-primary rounded-full"></span>
+                                    <h3 className="text-lg font-extrabold tracking-tight text-primary">Thumbnail</h3>
                                 </div>
                                 <div 
                                     className="aspect-square rounded-2xl overflow-hidden bg-slate-100 mb-4 flex flex-col items-center justify-center gap-3 border-2 border-dashed border-slate-200 hover:border-[#465f89]/50 hover:bg-blue-50/20 transition-all cursor-pointer group relative"
@@ -449,13 +449,13 @@ export const AddProductDashboard = () => {
                             {/* Settings */}
                             <Card className="p-6 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
                                 <div className="flex items-center space-x-3 mb-8">
-                                    <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Pengaturan</h3>
+                                    <span className="w-1.5 h-6 bg-primary rounded-full"></span>
+                                    <h3 className="text-lg font-extrabold tracking-tight text-primary">Pengaturan</h3>
                                 </div>
                                 <div className="space-y-6">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <p className="text-sm font-bold text-[#005ab4]">Terbitkan Segera</p>
+                                            <p className="text-sm font-bold text-primary">Terbitkan Segera</p>
                                             <p className="text-[10px] text-slate-500">Langsung terlihat di toko</p>
                                         </div>
                                         <Toggle checked={status} onChange={(e) => setStatus(e.target.checked)} />
@@ -488,7 +488,7 @@ export const AddProductDashboard = () => {
                             </Card>
 
                             {/* Help Card */}
-                            <div className="p-6 bg-gradient-to-br from-[#0873df] to-[#005ab4] rounded-2xl text-white overflow-hidden relative shadow-lg shadow-blue-500/20">
+                            <div className="p-6 bg-gradient-to-br from-primary/90 to-primary rounded-2xl text-white overflow-hidden relative shadow-lg shadow-primary/20">
                                 <div className="relative z-10">
                                     <h4 className="font-bold text-sm mb-2">Butuh Bantuan?</h4>
                                     <p className="text-xs text-blue-200 mb-4 leading-relaxed">

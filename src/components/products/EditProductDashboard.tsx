@@ -216,8 +216,8 @@ export const EditProductDashboard = () => {
         return (
             <div className="flex-1 flex items-center justify-center min-h-screen bg-[#F8FAFC]">
                 <div className="text-center group">
-                    <div className="w-16 h-16 border-4 border-[#005ab4] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-xs font-black text-[#005ab4] uppercase tracking-widest">Loading Data...</p>
+                    <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-xs font-black text-primary uppercase tracking-widest">Loading Data...</p>
                 </div>
             </div>
         );
@@ -247,7 +247,7 @@ export const EditProductDashboard = () => {
                 <div className="flex items-center space-x-3">
                     <Button 
                         variant="secondary" 
-                        className="px-8 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-blue-900/30 hover:scale-105 active:scale-95 transition-all bg-[#465f89] hover:bg-[#344d77] text-white"
+                        className="px-8 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/30 hover:scale-105 active:scale-95 transition-all bg-primary hover:bg-primary/90 text-white"
                         onClick={handleSave}
                         disabled={isSaving}
                     >
@@ -282,8 +282,8 @@ export const EditProductDashboard = () => {
                             {/* Informasi Produk Section */}
                             <Card className="p-8 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
                                 <div className="flex items-center space-x-3 mb-8">
-                                    <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Informasi Produk</h3>
+                                    <span className="w-1.5 h-6 bg-primary rounded-full"></span>
+                                    <h3 className="text-lg font-extrabold tracking-tight text-primary">Informasi Produk</h3>
                                 </div>
                                 
                                 <div className="space-y-6">
@@ -353,11 +353,11 @@ export const EditProductDashboard = () => {
                             {/* File Produk Digital Section */}
                             <Card className="p-8 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
                                 <div className="flex items-center space-x-3 mb-8">
-                                    <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">File Produk Digital</h3>
+                                    <span className="w-1.5 h-6 bg-primary rounded-full"></span>
+                                    <h3 className="text-lg font-extrabold tracking-tight text-primary">File Produk Digital</h3>
                                 </div>
                                 
-                                <div className="border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50 p-10 text-center group hover:border-[#465f89]/50 transition-all cursor-pointer relative">
+                                <div className="border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50 p-10 text-center group hover:border-primary/50 transition-all cursor-pointer relative">
                                     <input 
                                         type="file" 
                                         id="product-file"
@@ -371,9 +371,9 @@ export const EditProductDashboard = () => {
                                         }}
                                     />
                                     <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm mb-4 group-hover:scale-110 transition-transform">
-                                        <CloudArrowUpIcon className="w-8 h-8 text-[#465f89]" />
+                                        <CloudArrowUpIcon className="w-8 h-8 text-primary" />
                                     </div>
-                                    <p className="text-sm font-bold text-[#005ab4] mb-1">Tarik dan lepas file di sini</p>
+                                    <p className="text-sm font-bold text-primary mb-1">Tarik dan lepas file di sini</p>
                                     <p className="text-xs text-slate-500 mb-6">Maksimal ukuran file 500MB (PDF, ZIP, MP4)</p>
                                     <Button variant="outline" className="px-6 py-2 rounded-full text-xs hover:bg-slate-100 border-slate-300 pointer-events-none">Pilih File</Button>
                                 </div>
@@ -385,7 +385,7 @@ export const EditProductDashboard = () => {
                                                 <DocumentIcon className="w-5 h-5" />
                                             </div>
                                             <div className="ml-4">
-                                                <p className="text-xs font-bold text-[#005ab4] truncate max-w-[200px]">{fileName || 'Belum ada file terpilih'}</p>
+                                                <p className="text-xs font-bold text-primary truncate max-w-[200px]">{fileName || 'Belum ada file terpilih'}</p>
                                                 <p className="text-[10px] text-slate-500">Asset siap digunakan</p>
                                             </div>
                                         </div>
@@ -405,8 +405,8 @@ export const EditProductDashboard = () => {
                             <Card className="p-8 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
                                 <div className="flex items-center justify-between mb-8">
                                     <div className="flex items-center space-x-3">
-                                        <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                        <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Galeri Gambar Preview</h3>
+                                        <span className="w-1.5 h-6 bg-primary rounded-full"></span>
+                                        <h3 className="text-lg font-extrabold tracking-tight text-primary">Galeri Gambar Preview</h3>
                                     </div>
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{previewImages.length} / 8 Foto</span>
                                 </div>
@@ -428,7 +428,7 @@ export const EditProductDashboard = () => {
                                     
                                     {previewImages.length < 8 && (
                                         <div 
-                                            className="aspect-video rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center gap-2 hover:border-[#465f89]/60 hover:bg-blue-50/20 transition-all cursor-pointer group"
+                                            className="aspect-video rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center gap-2 hover:border-primary/60 hover:bg-primary/5 transition-all cursor-pointer group"
                                             onClick={() => document.getElementById('gallery-files-edit')?.click()}
                                         >
                                             <CloudArrowUpIcon className="w-6 h-6 text-slate-300 group-hover:text-[#465f89]/60 transition-colors" />
@@ -456,8 +456,8 @@ export const EditProductDashboard = () => {
                             {/* Thumbnail Produk Section */}
                             <Card className="p-6 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
                                 <div className="flex items-center space-x-3 mb-6">
-                                    <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Thumbnail</h3>
+                                    <span className="w-1.5 h-6 bg-primary rounded-full"></span>
+                                    <h3 className="text-lg font-extrabold tracking-tight text-primary">Thumbnail</h3>
                                 </div>
                                 <div 
                                     className="relative group aspect-square rounded-2xl overflow-hidden bg-slate-50 mb-4 cursor-pointer"
@@ -468,8 +468,8 @@ export const EditProductDashboard = () => {
                                         src={coverUrl || "https://images.unsplash.com/photo-1544006659-f0b21f04cb1b?w=400&h=400&fit=crop"} 
                                         alt="Thumbnail" 
                                     />
-                                    <div className="absolute inset-0 bg-[#005ab4]/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
-                                        <div className="bg-white text-[#005ab4] px-4 py-2 rounded-full text-xs font-bold flex items-center shadow-lg active:scale-95 transition-all">
+                                    <div className="absolute inset-0 bg-primary/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+                                        <div className="bg-white text-primary px-4 py-2 rounded-full text-xs font-bold flex items-center shadow-lg active:scale-95 transition-all">
                                             <PencilSquareIcon className="w-4 h-4 mr-2" />
                                             Ganti Gambar
                                         </div>
@@ -494,14 +494,14 @@ export const EditProductDashboard = () => {
                             {/* Pengaturan Section */}
                             <Card className="p-6 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
                                 <div className="flex items-center space-x-3 mb-8">
-                                    <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-lg font-extrabold tracking-tight text-[#005ab4]">Pengaturan</h3>
+                                    <span className="w-1.5 h-6 bg-primary rounded-full"></span>
+                                    <h3 className="text-lg font-extrabold tracking-tight text-primary">Pengaturan</h3>
                                 </div>
                                 <div className="space-y-6">
                                     
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <p className="text-sm font-bold text-[#005ab4]">Status Produk</p>
+                                            <p className="text-sm font-bold text-primary">Status Produk</p>
                                             <p className="text-[10px] text-slate-500">Tampilkan produk di toko</p>
                                         </div>
                                         <Toggle 
@@ -515,7 +515,7 @@ export const EditProductDashboard = () => {
                                     
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <p className="text-sm font-bold text-[#005ab4]">Visibilitas Publik</p>
+                                            <p className="text-sm font-bold text-primary">Visibilitas Publik</p>
                                             <p className="text-[10px] text-slate-500">Dapat dicari di Google</p>
                                         </div>
                                         <Toggle 
@@ -542,7 +542,7 @@ export const EditProductDashboard = () => {
                             </Card>
 
                             {/* Quick Actions */}
-                            <div className="p-6 bg-[#0873df] rounded-2xl text-white overflow-hidden relative shadow-lg shadow-blue-500/10">
+                            <div className="p-6 bg-primary rounded-2xl text-white overflow-hidden relative shadow-lg shadow-primary/10">
                                 <div className="relative z-10">
                                     <h4 className="font-bold text-sm mb-2">Butuh Bantuan?</h4>
                                     <p className="text-xs text-blue-200 mb-4 leading-relaxed">Pelajari cara mengoptimalkan penjualan produk digital Anda di Pusat Bantuan kami.</p>

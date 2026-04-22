@@ -251,7 +251,7 @@ export const CustomerDetailDashboard = () => {
                                     <>
                                         <div className="flex items-center gap-3 mb-1">
                                             <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight uppercase">{customer.name}</h3>
-                                            <span className="px-3 py-1 bg-blue-50 text-[#005ab4] text-[9px] font-black uppercase tracking-widest rounded-full border border-blue-100">
+                                            <span className="px-3 py-1 bg-primary/10 text-primary text-[9px] font-black uppercase tracking-widest rounded-full border border-primary/20">
                                                 {totalSpend > 500000 ? 'VIP Customer' : 'Customer'}
                                             </span>
                                         </div>
@@ -299,7 +299,7 @@ export const CustomerDetailDashboard = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <Card className="p-6 border-none shadow-[0px_20px_40px_rgba(16,27,50,0.04)] flex flex-col justify-between group hover:scale-[1.02] transition-all">
                             <div className="flex justify-between items-start mb-4">
-                                <div className="p-3 bg-[#005ab4] rounded-2xl text-white shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform">
+                                <div className="p-3 bg-primary rounded-2xl text-white shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
                                     <BanknotesIcon className="w-5 h-5" />
                                 </div>
                                 <ArrowTrendingUpIcon className="w-5 h-5 text-blue-200" />
@@ -342,7 +342,7 @@ export const CustomerDetailDashboard = () => {
                         <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
                             <div className="flex items-center space-x-3">
                                 <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                <h3 className="text-base font-extrabold tracking-tight text-[#005ab4]">Purchase History</h3>
+                                <h3 className="text-base font-extrabold tracking-tight text-primary">Purchase History</h3>
                             </div>
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{customer.orders?.length || 0} Orders Total</span>
                         </div>
@@ -405,7 +405,7 @@ export const CustomerDetailDashboard = () => {
                     <Card className="border-none shadow-[0px_20px_40px_rgba(16,27,50,0.04)] p-8">
                         <div className="flex items-center space-x-3 mb-6">
                             <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                            <h3 className="text-base font-extrabold tracking-tight text-[#005ab4]">Internal Notes</h3>
+                            <h3 className="text-base font-extrabold tracking-tight text-primary">Internal Notes</h3>
                         </div>
                         <div className="space-y-4">
                             <textarea 

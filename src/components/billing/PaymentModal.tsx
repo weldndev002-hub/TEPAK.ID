@@ -12,13 +12,26 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) =
     const { addTransaction, updateTransactionStatus } = useSubscription();
     const [step, setStep] = useState<'checkout' | 'processing' | 'success'>('checkout');
     const [activeTxId, setActiveTxId] = useState('');
+    const [proPrice, setProPrice] = useState<number>(99000);
+
+    React.useEffect(() => {
+        if (isOpen) {
+            fetch('/api/plans')
+                .then(res => res.json())
+                .then(data => {
+                    const pro = data.find((p: any) => p.id === 'pro');
+                    if (pro) setProPrice(Number(pro.price_monthly));
+                })
+                .catch(err => console.error('Failed to fetch pro price', err));
+        }
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
     const handlePay = () => {
         const txId = `INV-${Math.floor(Math.random() * 900000) + 100000}`;
         setActiveTxId(txId);
-        addTransaction(txId, 'PRO', '99.000', 'PENDING');
+        addTransaction(txId, 'PRO', proPrice.toLocaleString('id-ID'), 'PENDING');
         setStep('processing');
 
         // Simulate Webhook Delay
@@ -31,7 +44,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) =
     const handleCancel = () => {
         if (step === 'checkout') {
             const txId = `INV-${Math.floor(Math.random() * 900000) + 100000}`;
-            addTransaction(txId, 'PRO', '99.000', 'CANCELED');
+            addTransaction(txId, 'PRO', proPrice.toLocaleString('id-ID'), 'CANCELED');
         }
         onClose();
     };
@@ -61,7 +74,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) =
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Items Summary</p>
                                     <h3 className="text-lg font-black text-slate-900 uppercase">Orbit Site PRO (1 Month)</h3>
                                 </div>
-                                <p className="text-xl font-black text-primary">Rp 99.000</p>
+                                <p className="text-xl font-black text-primary">Rp {proPrice.toLocaleString('id-ID')}</p>
                             </div>
 
                             <div className="space-y-4">

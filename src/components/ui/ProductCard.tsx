@@ -40,7 +40,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <div className="p-10 flex flex-col flex-1">
                 <header className="mb-6">
                     <div className="flex items-center gap-2 mb-4">
-                        <span className="w-8 h-[2px] bg-primary/20"></span>
+                        <span className="w-8 h-[2px] bg-primary/40"></span>
                         <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">Premium Collection</span>
                     </div>
                     <h3 className="text-2xl font-black text-slate-900 leading-tight tracking-tight group-hover:text-primary transition-all duration-500">
@@ -54,7 +54,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
                 <div className="mt-auto pt-8 border-t border-slate-50">
                     <a href={`/checkout?product_id=${id}`} className="block w-full">
-                        <Button variant="amber" size="lg" className="w-full py-5 rounded-2xl shadow-xl shadow-amber-500/10 active:scale-[0.98] group/btn transition-all duration-500">
+                        <Button variant="primary" size="lg" className="w-full py-5 rounded-2xl shadow-xl shadow-primary/20 active:scale-[0.98] group/btn transition-all duration-500">
                             <span className="text-[10px] font-black uppercase tracking-[0.2em] ml-2">Dapatkan Sekarang</span>
                             <ShoppingCartIcon className="w-5 h-5 opacity-70 group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform duration-300" />
                         </Button>

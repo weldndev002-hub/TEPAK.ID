@@ -14,8 +14,12 @@ import {
 import { CheckCircleIcon as CheckCircleIconSolid, XCircleIcon as XCircleIconSolid } from '@heroicons/react/24/solid';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
+import { useBranding } from '../../hooks/useBranding';
 
 export const ResetPasswordForm = () => {
+    const { branding } = useBranding();
+    const siteName = branding?.site_name || 'Orbit Site';
+
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
@@ -124,7 +128,7 @@ export const ResetPasswordForm = () => {
                         <div className="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center group-hover:bg-primary transition-colors">
                             <ShieldCheckIcon className="text-slate-900 w-5 h-5 group-hover:text-white transition-colors" />
                         </div>
-                        <span className="text-[10px] font-black tracking-[0.4em] text-slate-900 uppercase">Orbit Site</span>
+                        <span className="text-[10px] font-black tracking-[0.4em] text-slate-900 uppercase">{siteName}</span>
                     </div>
                 </main>
 
@@ -148,7 +152,7 @@ export const ResetPasswordForm = () => {
 
                 {/* Brand Logo */}
                 <div className="flex justify-center mb-8 pt-6">
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">Orbit Site</h1>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">{siteName}</h1>
                 </div>
 
                 {/* Lock Illustration Icon */}

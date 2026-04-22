@@ -392,7 +392,7 @@ export const CheckoutForm: React.FC = () => {
                             </p>
                         </div>
                         <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex justify-center">
-                            <button className="px-8 py-2.5 rounded-xl font-black bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 transition-all text-[10px] uppercase tracking-widest" onClick={() => setSuccessModal(null)}>OK, Mengerti</button>
+                            <button className="px-8 py-2.5 rounded-xl font-black bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 transition-all text-[10px] uppercase tracking-widest" onClick={() => setSuccessModal(null)}>OK, Mengerti</button>
                         </div>
                     </div>
                 </div>

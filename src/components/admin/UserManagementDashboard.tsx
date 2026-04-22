@@ -129,6 +129,7 @@ export const UserManagementDashboard = () => {
 
     const executeLoginAs = (user: any) => {
         localStorage.setItem('impersonating_user', JSON.stringify({ name: user.name, id: user.id }));
+        document.cookie = `impersonate_user_id=${user.id}; path=/; max-age=3600; SameSite=Lax`;
         window.dispatchEvent(new Event('impersonation-change'));
         window.location.href = '/dashboard';
     };
@@ -248,7 +249,7 @@ export const UserManagementDashboard = () => {
                                                 className="h-10 w-10 rounded-full flex items-center justify-center bg-slate-100 font-black text-slate-400 text-xs uppercase cursor-pointer hover:bg-slate-200 transition-colors" 
                                                 onClick={() => openDetails(user)}
                                             >
-                                                {user.name.split(' ').map(n => n[0]).join('')}
+                                                {user.name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
                                             </div>
                                             <div className="cursor-pointer" onClick={() => openDetails(user)}>
                                                 <div className="font-black text-slate-900 uppercase tracking-tight text-sm hover:text-primary transition-colors">{user.name}</div>
@@ -257,7 +258,7 @@ export const UserManagementDashboard = () => {
                                         </div>
                                     </TableCell>
                                     <TableCell className="px-8 py-5">
-                                        <Badge variant={user.plan.toLowerCase() === 'pro' ? 'pro' : 'ghost'}>{user.plan}</Badge>
+                                        <Badge variant={user.plan?.toLowerCase() === 'pro' ? 'pro' : 'ghost'}>{user.plan || 'FREE'}</Badge>
                                     </TableCell>
                                     <TableCell className="px-8 py-5">
                                         <div className={cn(
@@ -281,7 +282,12 @@ export const UserManagementDashboard = () => {
                                             </Button>
                                             <Button 
                                                 variant="ghost" 
-                                                onClick={() => setBanConfirm({ open: true, userId: user.id })}
+                                                onClick={() => {
+                                                    // Get current user from some global state if possible, 
+                                                    // but for now we rely on the backend validation.
+                                                    // For a better UX, we can compare with current session user email if we had it here.
+                                                    setBanConfirm({ open: true, userId: user.id });
+                                                }}
                                                 className={cn(
                                                     "px-4 py-2 text-[10px] font-black border rounded-xl uppercase tracking-widest transition-all",
                                                     user.is_banned 
@@ -370,7 +376,7 @@ export const UserManagementDashboard = () => {
                         <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                             <div className="flex items-center gap-4">
                                 <div className="h-12 w-12 rounded-full flex items-center justify-center bg-slate-900 font-black text-white text-sm uppercase">
-                                    {selectedUser.name.split(' ').map((n: string) => n[0]).join('')}
+                                    {selectedUser.name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
                                 </div>
                                 <div>
                                     <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">{selectedUser.name}</h2>
@@ -399,7 +405,7 @@ export const UserManagementDashboard = () => {
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Active Plan</p>
                                     <div className="flex items-center gap-2">
-                                        <Badge variant={selectedUser.plan.toLowerCase() === 'pro' ? 'pro' : 'ghost'}>{selectedUser.plan}</Badge>
+                                        <Badge variant={selectedUser.plan?.toLowerCase() === 'pro' ? 'pro' : 'ghost'}>{selectedUser.plan || 'FREE'}</Badge>
                                         <span className="text-[10px] text-slate-400 font-medium tracking-tighter">EXP: {selectedUser.planExpiry}</span>
                                     </div>
                                 </div>
@@ -411,6 +417,26 @@ export const UserManagementDashboard = () => {
                                     )}>
                                         <span className={cn("w-1.5 h-1.5 rounded-full", selectedUser.is_banned ? "bg-rose-500" : "bg-emerald-500")}></span>
                                         {selectedUser.status}
+                                    </div>
+                                </div>
+
+                                {/* NEW STATS */}
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Total Pages</p>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                                            <span className="material-symbols-outlined text-sm">auto_stories</span>
+                                        </div>
+                                        <p className="text-sm font-black text-slate-900">{selectedUser.stats?.pages || 0} Pages</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Total Products</p>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center">
+                                            <span className="material-symbols-outlined text-sm">shopping_bag</span>
+                                        </div>
+                                        <p className="text-sm font-black text-slate-900">{selectedUser.stats?.products || 0} Products</p>
                                     </div>
                                 </div>
                             </div>

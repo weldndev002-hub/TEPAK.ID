@@ -134,7 +134,7 @@ export const OrderDetailDashboard = () => {
                         </div>
                         <div className="text-right">
                             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Total Jumlah</p>
-                            <p className="text-3xl font-black text-[#005ab4]">{formatCurrency(order.amount)}</p>
+                            <p className="text-3xl font-black text-primary">{formatCurrency(order.amount)}</p>
                         </div>
                     </div>
 
@@ -148,7 +148,7 @@ export const OrderDetailDashboard = () => {
                             <Card className="border-none shadow-[0px_20px_40px_rgba(16,27,50,0.04)] overflow-hidden">
                                 <div className="px-8 py-6 border-b border-slate-50 flex items-center space-x-3">
                                     <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-base font-extrabold tracking-tight text-[#005ab4]">Item Pesanan</h3>
+                                    <h3 className="text-base font-extrabold tracking-tight text-primary">Item Pesanan</h3>
                                 </div>
                                 <div className="p-6 space-y-4">
                                     {/* Product Row */}
@@ -163,7 +163,7 @@ export const OrderDetailDashboard = () => {
                                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Produk Digital • {order.products?.type || 'File'}</p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="font-black text-[#005ab4] text-base">{formatCurrency(order.amount)}</p>
+                                            <p className="font-black text-primary text-base">{formatCurrency(order.amount)}</p>
                                             <p className="text-[10px] text-slate-400 font-medium">Jml: 1</p>
                                         </div>
                                     </div>
@@ -178,7 +178,7 @@ export const OrderDetailDashboard = () => {
                                     </div>
                                     <div className="flex justify-between text-sm font-black text-slate-900 py-2 border-t border-slate-100 mt-1">
                                         <span className="uppercase tracking-tight">Total</span>
-                                        <span className="text-[#005ab4]">{formatCurrency(order.amount)}</span>
+                                        <span className="text-primary">{formatCurrency(order.amount)}</span>
                                     </div>
                                 </div>
                             </Card>
@@ -187,7 +187,7 @@ export const OrderDetailDashboard = () => {
                             <Card className="border-none shadow-[0px_20px_40px_rgba(16,27,50,0.04)] p-8">
                                 <div className="flex items-center space-x-3 mb-6">
                                     <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-base font-extrabold tracking-tight text-[#005ab4]">Informasi Pembayaran</h3>
+                                    <h3 className="text-base font-extrabold tracking-tight text-primary">Informasi Pembayaran</h3>
                                 </div>
                                 <div className="grid grid-cols-2 gap-6">
                                     {[
@@ -213,7 +213,7 @@ export const OrderDetailDashboard = () => {
                             <Card className="border-none shadow-[0px_20px_40px_rgba(16,27,50,0.04)] p-8">
                                 <div className="flex items-center space-x-3 mb-8">
                                     <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-base font-extrabold tracking-tight text-[#005ab4]">Linimasa Pesanan</h3>
+                                    <h3 className="text-base font-extrabold tracking-tight text-primary">Linimasa Pesanan</h3>
                                 </div>
                                 <div className="relative pl-6">
                                     <div className="absolute left-2 top-0 bottom-0 w-px bg-slate-100"></div>
@@ -238,7 +238,7 @@ export const OrderDetailDashboard = () => {
                             <Card className="border-none shadow-[0px_20px_40px_rgba(16,27,50,0.04)] p-6">
                                 <div className="flex items-center space-x-3 mb-6">
                                     <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-base font-extrabold tracking-tight text-[#005ab4]">Pelanggan</h3>
+                                    <h3 className="text-base font-extrabold tracking-tight text-primary">Pelanggan</h3>
                                 </div>
                                 <div className="flex items-center gap-4 mb-6">
                                     <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-lg font-black flex-shrink-0">
@@ -272,7 +272,7 @@ export const OrderDetailDashboard = () => {
                             <Card className="border-none shadow-[0px_20px_40px_rgba(16,27,50,0.04)] p-6">
                                 <div className="flex items-center space-x-3 mb-6">
                                     <span className="w-1.5 h-6 bg-[#465f89] rounded-full"></span>
-                                    <h3 className="text-base font-extrabold tracking-tight text-[#005ab4]">Info Pesanan</h3>
+                                    <h3 className="text-base font-extrabold tracking-tight text-primary">Info Pesanan</h3>
                                 </div>
                                 <div className="space-y-3">
                                     {[
