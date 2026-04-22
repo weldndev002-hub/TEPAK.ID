@@ -3107,16 +3107,21 @@ app.get('/health', async (c) => {
 });
 
 // Export handler for Astro
-export const ALL: APIRoute = (context) => {
-    // Sync environment for getEnv helper
-    if (context.locals?.runtime?.env) {
-        cfEnv = context.locals.runtime.env;
-        console.log('[API Edge] Captured Cloudflare Environment');
+export const ALL: APIRoute = async (context) => {
+    // Attempt to capture env from cloudflare:workers for getEnv
+    if (!cfEnv || Object.keys(cfEnv).length === 0) {
+        try {
+            // @ts-ignore
+            const { env } = await import('cloudflare:workers');
+            cfEnv = env;
+        } catch (e) {
+            // Fallback
+        }
     }
     
     return app.fetch(
         context.request, 
-        context.locals?.runtime?.env || {}, 
+        cfEnv || {}, 
         context
     );
 };
