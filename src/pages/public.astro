@@ -12,8 +12,7 @@ import { getServerClient } from '../lib/supabase';
 
 // 1. Detect Hostname & Identity
 const hostname = Astro.url.hostname;
-const { cookies } = Astro;
-const supabase = getServerClient(cookies, Astro.request);
+const supabase = Astro.locals.supabase;
 
 // Priority identity mapping:
 // - Custom Domain (e.g., mysite.com)
@@ -28,6 +27,10 @@ let products = [];
 let queryError = null;
 
 try {
+    if (!supabase) {
+        console.error('[Public Page Error] Supabase is null.');
+        throw new Error('Database connection not initialized');
+    }
     // A. Detect based on Custom Domain first (if it's not a tepak.id subdomain)
     const isMainDomain = hostname.includes('tepak.id') || hostname === 'localhost' || hostname === '127.0.0.1';
     

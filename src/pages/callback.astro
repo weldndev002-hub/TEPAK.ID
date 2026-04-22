@@ -35,9 +35,8 @@ if (resultCode && statusMap[resultCode]) {
   status = statusMap[resultCode].status;
   message = statusMap[resultCode].message;
 
-  if (orderId) {
     try {
-      const supabase = getServerClient(Astro.cookies, Astro.request);
+      const supabase = Astro.locals.supabase;
 
       // Update order status in database
       const { error: updateError } = await supabase

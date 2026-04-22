@@ -5,12 +5,13 @@ import {
     CheckBadgeIcon, 
     ArrowRightIcon
 } from '@heroicons/react/24/solid';
-import { getServerClient } from '../../lib/supabase';
 import { AnalyticsTracker } from '../../components/analytics/AnalyticsTracker';
 
+// 1. Detect Hostname & Identity
+const hostname = Astro.url.hostname;
+const supabase = Astro.locals.supabase;
+
 const { username } = Astro.params;
-const { cookies } = Astro;
-const supabase = getServerClient(cookies, Astro.request);
 
 let merchantData = null;
 let products = [];
@@ -18,6 +19,10 @@ let formatted_products = [];
 let blocks = [];
 
 try {
+    if (!supabase) {
+        console.error('[Public Profile Error] Supabase is null.');
+        throw new Error('Database connection not initialized');
+    }
     // 1. Fetch Profile Data (Robust Lookup: Username OR Subdomain)
     const { data: profileByUsername } = await supabase
         .from('profiles')

@@ -56,6 +56,10 @@ let merchantData = null;
 let products = [];
 
 try {
+    if (!supabase) {
+        console.error('[Routing Error] Supabase is null. Check Environment Variables in Cloudflare.');
+        throw new Error('Database connection not initialized');
+    }
     const isMainDomain = hostname.includes('tepak.id') || hostname.includes('workers.dev') || hostname === 'localhost' || hostname === '127.0.0.1';
     
     if (!isMainDomain) {
