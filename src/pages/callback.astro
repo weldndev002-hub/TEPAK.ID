@@ -35,8 +35,11 @@ if (resultCode && statusMap[resultCode]) {
   status = statusMap[resultCode].status;
   message = statusMap[resultCode].message;
 
+  if (orderId) {
     try {
       const supabase = Astro.locals.supabase;
+
+      if (!supabase) throw new Error('Supabase not initialized');
 
       // Update order status in database
       const { error: updateError } = await supabase
