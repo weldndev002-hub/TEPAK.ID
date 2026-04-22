@@ -1,19 +1,22 @@
 import { defineMiddleware } from 'astro:middleware';
 import { getServerClient } from './lib/supabase';
 
-let runtimeEnv: any = {};
-try {
-  // @ts-ignore
-  const { env } = await import('cloudflare:workers');
-  runtimeEnv = env;
-} catch (e) {
-  // Fallback to import.meta.env for local development
-  runtimeEnv = import.meta.env;
-}
-
 export const onRequest = defineMiddleware(async ({ locals, cookies, request, redirect }, next) => {
   const url = new URL(request.url);
   
+  // Capture Environment (Astro 6+ Cloudflare style)
+  let runtimeEnv: any = {};
+  try {
+    // @ts-ignore
+    const cf = await import('cloudflare:workers');
+    runtimeEnv = cf.env || {};
+  } catch (e) {
+    runtimeEnv = import.meta.env || {};
+  }
+
+  // Debug log (remove later)
+  console.log(`[Middleware] Env Check: URL=${!!runtimeEnv.PUBLIC_SUPABASE_URL}, Key=${!!runtimeEnv.PUBLIC_SUPABASE_ANON_KEY}`);
+
   // BYPASS: Jangan memblokir Webhook Duitku (harus bisa dihubungi server luar)
   if (url.pathname.includes('/api/payments/duitku/webhook')) {
     return next();
@@ -63,7 +66,7 @@ export const onRequest = defineMiddleware(async ({ locals, cookies, request, red
   
   // Master Admin Passcode Check
   const adminAccessToken = cookies.get('admin_access_token')?.value;
-  const MASTER_PASSCODE = import.meta.env.ADMIN_PASSCODE || 'admin123';
+  const MASTER_PASSCODE = runtimeEnv.ADMIN_PASSCODE || import.meta.env.ADMIN_PASSCODE || 'admin123';
   const isMasterAdmin = adminAccessToken === MASTER_PASSCODE;
 
   // Set in locals
