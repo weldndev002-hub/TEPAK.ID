@@ -15,30 +15,32 @@ import { getSupabaseAdmin } from '../../lib/supabase';
 
 // Helper to safely get environment variables
 const getEnv = (key: string) => {
-    const clean = (v: any) => {
+    const clean = (v: any, isUrl = false) => {
         if (typeof v !== 'string') return v;
-        return v.trim().replace(/^["']|["']$/g, '');
+        let cleaned = v.trim().replace(/^["']|["']$/g, '');
+        if (isUrl) cleaned = cleaned.replace(/\/+$/, '');
+        return cleaned;
     };
 
     // 1. Try passed runtime env (Cloudflare v6+)
-    if (typeof cfEnv !== 'undefined' && cfEnv && cfEnv[key]) return clean(cfEnv[key]);
+    if (typeof cfEnv !== 'undefined' && cfEnv && cfEnv[key]) return clean(cfEnv[key], key.includes('URL'));
 
     // 2. Vite / Astro Build-time (PUBLIC_ vars)
     if (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env as any)[key]) {
-        return clean((import.meta.env as any)[key]);
+        return clean((import.meta.env as any)[key], key.includes('URL'));
     }
 
     // 3. Process ENV fallback (Local Node.js)
     if (typeof process !== 'undefined' && process.env && process.env[key]) {
-        return clean(process.env[key]);
+        return clean(process.env[key], key.includes('URL'));
     }
 
     // 4. Global Fallback (Cloudflare Workers Standard)
     if (typeof globalThis !== 'undefined') {
       const val = (globalThis as any)[key];
-      if (val) return clean(val);
+      if (val) return clean(val, key.includes('URL'));
       if ((globalThis as any).env && (globalThis as any).env[key]) {
-        return clean((globalThis as any).env[key]);
+        return clean((globalThis as any).env[key], key.includes('URL'));
       }
     }
 
@@ -98,10 +100,23 @@ app.get('/debug/env', async (c) => {
 });
 
 app.get('/debug/keys', (c) => {
+    const url = getEnv('PUBLIC_SUPABASE_URL');
+    const key = getEnv('PUBLIC_SUPABASE_ANON_KEY');
+    
+    const mask = (s: any) => {
+        if (!s || typeof s !== 'string') return 'MISSING';
+        if (s.length < 10) return 'TOO_SHORT';
+        return s.substring(0, 5) + '...' + s.substring(s.length - 5);
+    };
+
     return c.json({
-        cfEnv_keys: Object.keys(cfEnv || {}),
-        hono_env_keys: Object.keys(c.env || {}),
-        msg: 'Checking available bindings'
+        url: mask(url),
+        url_full_length: url?.length || 0,
+        key: mask(key),
+        key_full_length: key?.length || 0,
+        cf_keys: Object.keys(c.env || {}),
+        global_keys: typeof globalThis !== 'undefined' ? Object.keys(globalThis).filter(k => k.includes('SUPABASE')) : [],
+        msg: 'Checking available bindings and masked values'
     });
 });
 

@@ -6,28 +6,30 @@ import { createServerClient, createBrowserClient, parseCookieHeader } from '@sup
 // Server: uses import.meta.env or resolved CF env
 const getEnv = (key: string): string | undefined => {
   // Helper to clean values (remove quotes and spaces)
-  const clean = (v: any) => {
+  const clean = (v: any, isUrl = false) => {
     if (typeof v !== 'string') return v;
-    return v.trim().replace(/^["']|["']$/g, '');
+    let cleaned = v.trim().replace(/^["']|["']$/g, '');
+    if (isUrl) cleaned = cleaned.replace(/\/+$/, '');
+    return cleaned;
   };
 
   try {
     // 1. Build-time (Vite/Astro) - Priority for Browser
-    if (key === 'PUBLIC_SUPABASE_URL') return clean(import.meta.env.PUBLIC_SUPABASE_URL);
+    if (key === 'PUBLIC_SUPABASE_URL') return clean(import.meta.env.PUBLIC_SUPABASE_URL, true);
     if (key === 'PUBLIC_SUPABASE_ANON_KEY') return clean(import.meta.env.PUBLIC_SUPABASE_ANON_KEY);
     if (key === 'SUPABASE_SERVICE_ROLE_KEY') return clean(import.meta.env.SUPABASE_SERVICE_ROLE_KEY);
     if (key === 'ADMIN_PASSCODE') return clean(import.meta.env.ADMIN_PASSCODE);
 
     // Fallback for other keys
     if (typeof import.meta !== 'undefined' && import.meta.env) {
-      return clean((import.meta.env as any)[key]);
+      return clean((import.meta.env as any)[key], key.includes('URL'));
     }
   } catch (e) {}
 
   try {
     // 2. Runtime (Node.js)
     if (typeof process !== 'undefined' && process.env) {
-      return clean(process.env[key]);
+      return clean(process.env[key], key.includes('URL'));
     }
   } catch (e) {}
 
@@ -35,10 +37,10 @@ const getEnv = (key: string): string | undefined => {
     // 3. Cloudflare Workers (Fallback/Global)
     if (typeof globalThis !== 'undefined') {
       const val = (globalThis as any)[key];
-      if (val) return clean(val);
+      if (val) return clean(val, key.includes('URL'));
       
       if ((globalThis as any).env && (globalThis as any).env[key]) {
-        return clean((globalThis as any).env[key]);
+        return clean((globalThis as any).env[key], key.includes('URL'));
       }
     }
   } catch (e) {}
