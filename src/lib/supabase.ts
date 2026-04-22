@@ -4,6 +4,7 @@ import { createServerClient, createBrowserClient, parseCookieHeader } from '@sup
 // Helper to get env vars safely
 // Browser: uses import.meta.env (Vite/Astro build-time)
 // Server: uses import.meta.env or resolved CF env
+const getEnv = (key: string): string | undefined => {
   // Helper to clean values (remove quotes and spaces)
   const clean = (v: any) => {
     if (typeof v !== 'string') return v;
