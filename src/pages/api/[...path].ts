@@ -15,25 +15,30 @@ import { getSupabaseAdmin } from '../../lib/supabase';
 
 // Helper to safely get environment variables
 const getEnv = (key: string) => {
+    const clean = (v: any) => {
+        if (typeof v !== 'string') return v;
+        return v.trim().replace(/^["']|["']$/g, '');
+    };
+
     // 1. Try passed runtime env (Cloudflare v6+)
-    if (typeof cfEnv !== 'undefined' && cfEnv && cfEnv[key]) return cfEnv[key];
+    if (typeof cfEnv !== 'undefined' && cfEnv && cfEnv[key]) return clean(cfEnv[key]);
 
     // 2. Vite / Astro Build-time (PUBLIC_ vars)
     if (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env as any)[key]) {
-        return (import.meta.env as any)[key];
+        return clean((import.meta.env as any)[key]);
     }
 
     // 3. Process ENV fallback (Local Node.js)
     if (typeof process !== 'undefined' && process.env && process.env[key]) {
-        return process.env[key];
+        return clean(process.env[key]);
     }
 
     // 4. Global Fallback (Cloudflare Workers Standard)
     if (typeof globalThis !== 'undefined') {
       const val = (globalThis as any)[key];
-      if (val) return val;
+      if (val) return clean(val);
       if ((globalThis as any).env && (globalThis as any).env[key]) {
-        return (globalThis as any).env[key];
+        return clean((globalThis as any).env[key]);
       }
     }
 
@@ -2574,11 +2579,20 @@ app.get('/admin/tutorials', async (c) => {
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+        console.error('[Admin Tutorials GET] Supabase Error:', error);
+        return c.json({ 
+            error: error.message, 
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+            note: 'Failed at query level' 
+        }, 500);
+    }
     return c.json(tutorials);
   } catch (err: any) {
-    console.error('[Admin Tutorials GET] Error:', err);
-    return c.json({ error: err.message, stack: err.stack, note: 'DEBUG MODE ACTIVE' }, 500);
+    console.error('[Admin Tutorials GET] Global Exception:', err);
+    return c.json({ error: err.message, stack: err.stack, note: 'Failed at global catch' }, 500);
   }
 });
 
