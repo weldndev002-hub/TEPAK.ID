@@ -164,7 +164,7 @@ export const ProductsDashboard = () => {
                     <Card className="p-6 flex items-start justify-between">
                         <div>
                             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Total Pelanggan</p>
-                            <h3 className="text-4xl font-extrabold text-primary leading-tight">{stat.totalCustomers}</h3>
+                            <h3 className="text-4xl font-extrabold text-primary leading-tight">{stats.totalCustomers}</h3>
                             <p className="text-xs text-slate-500 font-bold mt-2">Pembeli Unik</p>
                         </div>
                         <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600">
