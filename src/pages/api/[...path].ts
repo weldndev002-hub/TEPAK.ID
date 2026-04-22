@@ -5,6 +5,7 @@ import { z } from 'zod';
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { createServerClient, parseCookieHeader } from '@supabase/ssr';
+import { cors } from 'hono/cors';
 
 // Get environment from build-time env or process.env
 let cfEnv: any = {};
@@ -32,6 +33,16 @@ const getEnv = (key: string) => {
 
 
 const app = new Hono().basePath('/api');
+
+// Middleware to capture Cloudflare Environment directly from Hono
+app.use('*', cors());
+app.use('*', async (c, next) => {
+    // Capture environment from Hono's context (most reliable in Workers)
+    if (c.env) {
+        cfEnv = { ...cfEnv, ...c.env };
+    }
+    await next();
+});
 
 // Global Error Handler
 app.onError((err, c) => {
@@ -69,6 +80,14 @@ app.get('/debug/env', async (c) => {
         user_id: user?.id || null,
         user_email: user?.email || null,
         cookies: c.req.header('Cookie') ? 'Present' : 'Missing'
+    });
+});
+
+app.get('/debug/keys', (c) => {
+    return c.json({
+        cfEnv_keys: Object.keys(cfEnv || {}),
+        hono_env_keys: Object.keys(c.env || {}),
+        msg: 'Checking available bindings'
     });
 });
 

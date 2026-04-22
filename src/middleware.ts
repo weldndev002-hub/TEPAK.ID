@@ -9,13 +9,23 @@ export const onRequest = defineMiddleware(async ({ locals, cookies, request, red
     return next();
   }
 
-  // @ts-ignore - locals.runtime is provided by Cloudflare adapter
-  const runtimeEnv = (locals as any).runtime?.env;
-  const supabase = getServerClient(cookies, request, runtimeEnv);
+  // @ts-ignore - Support both Cloudflare Pages (locals.runtime.env) and Workers (locals.env)
+  const runtimeEnv = (locals as any).runtime?.env || (locals as any).env || globalThis;
+  
+  let supabase: any;
+  try {
+    supabase = getServerClient(cookies, request, runtimeEnv);
+  } catch (e) {
+    console.error('[Middleware] Supabase Init Failed:', e);
+    // Return early or continue with dummy if it's not a protected page
+    // But for safety, we let it throw if it's a critical error
+    supabase = null;
+  }
 
   // Set supabase and getUser in locals for use in .astro files
   locals.supabase = supabase;
   locals.getUser = async () => {
+    if (!supabase) return null;
     try {
       const { data, error } = await supabase.auth.getUser();
       if (error || !data) return null;
@@ -28,15 +38,17 @@ export const onRequest = defineMiddleware(async ({ locals, cookies, request, red
 
   // Fetch Platform Configs (Maintenance & Registration Toggles)
   let platformConfigs = { maintenance_mode: false, registration_enabled: true };
-  try {
-    const { data: configs } = await supabase
-      .from('platform_configs')
-      .select('maintenance_mode, registration_enabled')
-      .eq('id', 1)
-      .single();
-    if (configs) platformConfigs = configs;
-  } catch (e) {
-    console.error('[Middleware] Config fetch error:', e);
+  if (supabase) {
+    try {
+      const { data: configs } = await supabase
+        .from('platform_configs')
+        .select('maintenance_mode, registration_enabled')
+        .eq('id', 1)
+        .single();
+      if (configs) platformConfigs = configs;
+    } catch (e) {
+      console.error('[Middleware] Config fetch error:', e);
+    }
   }
 
   const isAuthPage = ['/login', '/signup', '/forgot-password', '/callback'].includes(url.pathname);
@@ -75,7 +87,7 @@ export const onRequest = defineMiddleware(async ({ locals, cookies, request, red
   let isBanned = false;
   let isAdmin = isMasterAdmin;
 
-  if (user) {
+  if (user && supabase) {
     const { data: profile, error: pError } = await supabase
       .from('profiles')
       .select('is_banned, role, settings:user_settings(plan_status)')
@@ -112,14 +124,16 @@ export const onRequest = defineMiddleware(async ({ locals, cookies, request, red
         if (!user) return redirect('/admin/auth');
         
         // Final role check for admin pages
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-          
-        if (profile?.role !== 'admin' && !isMasterAdmin) {
-          return redirect('/dashboard');
+        if (supabase) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', user.id)
+              .single();
+              
+            if (profile?.role !== 'admin' && !isMasterAdmin) {
+              return redirect('/dashboard');
+            }
         }
     }
 
