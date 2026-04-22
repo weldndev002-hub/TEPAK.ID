@@ -2301,6 +2301,26 @@ const checkAdmin = async (supabase: any, user: any, c?: any) => {
   }
 };
 
+// Admin Authentication Endpoint (Set admin_access_token cookie)
+app.post('/admin/auth', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { passcode } = body;
+    
+    const ADMIN_PASSCODE = getEnv('ADMIN_PASSCODE') || 'admin123';
+    
+    if (passcode === ADMIN_PASSCODE) {
+      // Set cookie for subsequent requests
+      c.header('Set-Cookie', `admin_access_token=${passcode}; Path=/; Max-Age=86400; SameSite=Lax`);
+      return c.json({ success: true, message: 'Admin authenticated' });
+    } else {
+      return c.json({ error: 'Invalid passcode' }, 401);
+    }
+  } catch (err: any) {
+    return c.json({ error: 'Authentication failed' }, 500);
+  }
+});
+
 // 1. Get All Users (Admin)
 app.get('/admin/users', async (c) => {
   const { supabase, user } = await getAuthContext(c);

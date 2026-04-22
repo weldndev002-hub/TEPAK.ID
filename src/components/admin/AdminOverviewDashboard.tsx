@@ -5,17 +5,52 @@ import Button from '../ui/Button';
 export const AdminOverviewDashboard = () => {
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [adminPassword, setAdminPassword] = useState('');
+    const [showAuthForm, setShowAuthForm] = useState(false);
+
+    const setAdminCookie = async (password: string) => {
+        try {
+            const res = await fetch('/api/admin/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ passcode: password }),
+                credentials: 'include'
+            });
+            
+            if (res.ok) {
+                setError(null);
+                setShowAuthForm(false);
+                // Retry fetching stats
+                fetchStats();
+            } else {
+                setError('Invalid admin passcode');
+            }
+        } catch (err) {
+            setError('Failed to authenticate');
+        }
+    };
 
     const fetchStats = async () => {
         setLoading(true);
+        setError(null);
         try {
-            const res = await fetch('/api/admin/overview');
-            if (res.ok) {
+            const res = await fetch('/api/admin/overview', {
+                credentials: 'include'
+            });
+            
+            if (res.status === 403) {
+                setShowAuthForm(true);
+                setError('Admin authentication required');
+            } else if (res.ok) {
                 const data = await res.json();
                 setStats(data);
+            } else {
+                setError('Failed to fetch admin data');
             }
         } catch (err) {
-            console.error('Failed to fetch admin stats:', err);
+            setError('Failed to fetch admin data');
+            console.error('Error:', err);
         } finally {
             setLoading(false);
         }
@@ -25,11 +60,43 @@ export const AdminOverviewDashboard = () => {
         fetchStats();
     }, []);
 
-    if (loading || !stats) {
+    if (loading) {
         return (
             <div className="w-full py-20 flex flex-col items-center justify-center gap-4">
                 <div className="w-12 h-12 border-4 border-[#005ab4] border-t-transparent rounded-full animate-spin"></div>
                 <p className="font-black text-[#005ab4] uppercase tracking-widest text-xs">Synchronizing platform data...</p>
+            </div>
+        );
+    }
+
+    if (showAuthForm || error) {
+        return (
+            <div className="w-full py-20 flex flex-col items-center justify-center gap-6">
+                <div className="p-8 bg-amber-50 border-2 border-amber-200 rounded-2xl max-w-sm text-center">
+                    <p className="font-black text-amber-900 uppercase tracking-widest mb-4">{error || 'Admin Authentication Required'}</p>
+                    <input 
+                        type="password" 
+                        placeholder="Enter admin passcode"
+                        value={adminPassword}
+                        onChange={(e) => setAdminPassword(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && setAdminCookie(adminPassword)}
+                        className="w-full px-4 py-2 border border-amber-300 rounded-lg mb-4 font-bold"
+                    />
+                    <Button 
+                        onClick={() => setAdminCookie(adminPassword)}
+                        className="w-full bg-amber-600 text-white font-bold py-2 rounded-lg hover:bg-amber-700"
+                    >
+                        Authenticate
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
+    if (!stats) {
+        return (
+            <div className="w-full py-20 flex flex-col items-center justify-center gap-4">
+                <p className="font-black text-slate-600 uppercase tracking-widest text-xs">No data available</p>
             </div>
         );
     }

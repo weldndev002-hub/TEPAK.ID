@@ -5,16 +5,17 @@ compatibility_date = "2025-04-22"
 compatibility_flags = ["nodejs_compat"]
 
 [env.production]
-vars = { PUBLIC_SUPABASE_URL = "https://aaqguhxonwpsnpwjjdrv.supabase.co", PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_c35EcVd0HpFsfaQZNq_uvA_mRJes_BO", PUBLIC_DUITKU_MERCHANT_CODE = "DS29376" }
+vars = { PUBLIC_SUPABASE_URL = "https://aaqguhxonwpsnpwjjdrv.supabase.co", PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_c35EcVd0HpFsfaQZNq_uvA_mRJes_BO", PUBLIC_DUITKU_MERCHANT_CODE = "DS29376", ADMIN_PASSCODE = "admin123" }
 
 [env.development]
-vars = { PUBLIC_SUPABASE_URL = "https://aaqguhxonwpsnpwjjdrv.supabase.co", PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_c35EcVd0HpFsfaQZNq_uvA_mRJes_BO", PUBLIC_DUITKU_MERCHANT_CODE = "DS29376" }
+vars = { PUBLIC_SUPABASE_URL = "https://aaqguhxonwpsnpwjjdrv.supabase.co", PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_c35EcVd0HpFsfaQZNq_uvA_mRJes_BO", PUBLIC_DUITKU_MERCHANT_CODE = "DS29376", ADMIN_PASSCODE = "admin123" }
 
 [vars]
 # Default fallback (development)
 PUBLIC_SUPABASE_URL = "https://aaqguhxonwpsnpwjjdrv.supabase.co"
 PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_c35EcVd0HpFsfaQZNq_uvA_mRJes_BO"
 PUBLIC_DUITKU_MERCHANT_CODE = "DS29376"
+ADMIN_PASSCODE = "admin123"
 
 [[kv_namespaces]]
 # binding = "MY_KV_NAMESPACE"

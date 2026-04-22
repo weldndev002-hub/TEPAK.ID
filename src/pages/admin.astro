@@ -4,6 +4,12 @@ import { Sidebar } from '../components/layout/Sidebar';
 import { Header } from '../components/layout/Header';
 import { AdminOverviewDashboard } from '../components/admin/AdminOverviewDashboard';
 import { BottomNavbar } from '../components/layout/BottomNavbar';
+
+// Require admin access
+const isAdmin = Astro.locals.isAdmin || false;
+if (!isAdmin) {
+  return Astro.redirect('/login');
+}
 ---
 
 <BaseLayout title="Admin Command Center | Orbit Site">
