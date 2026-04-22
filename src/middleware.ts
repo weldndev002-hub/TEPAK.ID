@@ -9,7 +9,9 @@ export const onRequest = defineMiddleware(async ({ locals, cookies, request, red
     return next();
   }
 
-  const supabase = getServerClient(cookies, request);
+  // @ts-ignore - locals.runtime is provided by Cloudflare adapter
+  const runtimeEnv = (locals as any).runtime?.env;
+  const supabase = getServerClient(cookies, request, runtimeEnv);
 
   // Set supabase and getUser in locals for use in .astro files
   locals.supabase = supabase;

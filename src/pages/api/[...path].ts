@@ -15,7 +15,7 @@ import { getSupabaseAdmin } from '../../lib/supabase';
 // Helper to safely get environment variables
 const getEnv = (key: string) => {
     // 1. Try passed runtime env (Cloudflare v6+)
-    if (cfEnv && cfEnv[key]) return cfEnv[key];
+    if (typeof cfEnv !== 'undefined' && cfEnv && cfEnv[key]) return cfEnv[key];
 
     // 2. Vite / Astro Build-time (PUBLIC_ vars)
     if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
@@ -29,9 +29,6 @@ const getEnv = (key: string) => {
 
     return null;
 };
-
-const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL');
-const supabaseAnonKey = getEnv('PUBLIC_SUPABASE_ANON_KEY');
 
 
 const app = new Hono().basePath('/api');
@@ -55,7 +52,7 @@ app.get('/debug/env', async (c) => {
     let fetch_error = null;
     
     try {
-        const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
+        const url = getEnv('PUBLIC_SUPABASE_URL');
         const testRes = await fetch(`${url}/auth/v1/health`, { method: 'GET', timeout: 2000 } as any);
         supabase_reachable = testRes.ok;
     } catch (e: any) {
@@ -278,8 +275,8 @@ app.delete('/settings/domain', async (c) => {
 // Helper untuk mendapatkan Supabase Client & User (Robust Cloudflare Compatibility)
 const getAuthContext = async (c: any) => {
   try {
-    const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
-    const key = getEnv('PUBLIC_SUPABASE_ANON_KEY') || supabaseAnonKey;
+    const url = getEnv('PUBLIC_SUPABASE_URL');
+    const key = getEnv('PUBLIC_SUPABASE_ANON_KEY');
     
     // Multi-source cookie detection
     let cookieHeader = c.req.header('Cookie') ?? '';
@@ -1442,6 +1439,9 @@ app.post(
         const { DuitkuService } = await import('../../lib/duitku');
         const duitkuService = new DuitkuService(merchantCode, merchantKey);
 
+        const requestOrigin = new URL(c.req.url).origin;
+        const isLocalOrTunnel = requestOrigin.includes('localhost') || requestOrigin.includes('trycloudflare.com');
+        
         const paymentResponse = await duitkuService.createPayment({
             merchantCode,
             merchantKey,
@@ -1451,8 +1451,8 @@ app.post(
             customerEmail: body.buyer_email,
             customerPhone: body.buyer_phone || '',
             customerName: body.buyer_name,
-            returnUrl: `${new URL(c.req.url).origin}/checkout/success?id=${invoiceId}&merchant=${body.merchant_id}`,
-            callbackUrl: callbackUrl || `${new URL(c.req.url).origin}/api/payments/duitku/webhook`,
+            returnUrl: `${requestOrigin}/checkout/success?id=${invoiceId}&merchant=${body.merchant_id}`,
+            callbackUrl: isLocalOrTunnel ? `${requestOrigin}/api/payments/duitku/webhook` : (callbackUrl || `${requestOrigin}/api/payments/duitku/webhook`),
             paymentMethod: body.payment_method,
         });
 
@@ -1597,6 +1597,9 @@ app.post('/subscription/upgrade', async (c) => {
       .single();
     const siteName = branding?.site_name || 'Tepak.ID';
 
+    const requestOrigin = new URL(c.req.url).origin;
+    const isLocalOrTunnel = requestOrigin.includes('localhost') || requestOrigin.includes('trycloudflare.com');
+
     const paymentResponse = await duitkuService.createPayment({
       merchantCode,
       merchantKey,
@@ -1606,8 +1609,8 @@ app.post('/subscription/upgrade', async (c) => {
       customerEmail: user.email || '',
       customerPhone: '',
       customerName: user.user_metadata?.full_name || 'Creator',
-      returnUrl: `${new URL(c.req.url).origin}/plan-info?status=pending`,
-      callbackUrl: callbackUrl || `${new URL(c.req.url).origin}/api/payments/duitku/webhook`,
+      returnUrl: `${requestOrigin}/plan-info?status=pending`,
+      callbackUrl: isLocalOrTunnel ? `${requestOrigin}/api/payments/duitku/webhook` : (callbackUrl || `${requestOrigin}/api/payments/duitku/webhook`),
       paymentMethod: selectedMethod,
     });
 
@@ -2187,8 +2190,8 @@ app.get('/analytics/dashboard', async (c) => {
 // 3. Get Public Product Detail (for Checkout)
 app.get('/public/products/:id', async (c) => {
     const id = c.req.param('id');
-    const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
-    const key = getEnv('PUBLIC_SUPABASE_ANON_KEY') || supabaseAnonKey;
+    const url = getEnv('PUBLIC_SUPABASE_URL');
+    const key = getEnv('PUBLIC_SUPABASE_ANON_KEY');
 
     if (!url || !key) {
         return c.json({ error: 'Configuration missing' }, 500);
@@ -2213,8 +2216,8 @@ app.get('/public/profiles/:id', async (c) => {
     const id = c.req.param('id');
     console.log(`[API] GET /public/profiles/${id}`);
     
-    const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
-    const key = getEnv('PUBLIC_SUPABASE_ANON_KEY') || supabaseAnonKey;
+    const url = getEnv('PUBLIC_SUPABASE_URL');
+    const key = getEnv('PUBLIC_SUPABASE_ANON_KEY');
 
     if (!url || !key) {
         return c.json({ error: 'Configuration missing' }, 500);
@@ -2411,8 +2414,8 @@ app.post('/admin/users/ban', async (c) => {
 // 2. Public Platform Settings (Branding)
 app.get('/public/settings', async (c) => {
   try {
-    const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
-    const key = getEnv('SUPABASE_SERVICE_ROLE_KEY') || getEnv('PUBLIC_SUPABASE_ANON_KEY') || supabaseAnonKey;
+    const url = getEnv('PUBLIC_SUPABASE_URL');
+    const key = getEnv('SUPABASE_SERVICE_ROLE_KEY') || getEnv('PUBLIC_SUPABASE_ANON_KEY');
     
     if (!url || !key) throw new Error('Supabase URL/Key missing');
 
@@ -2440,8 +2443,8 @@ app.get('/admin/settings', async (c) => {
   if (!isAdmin) return c.json({ error: 'Forbidden' }, 403);
 
   try {
-    const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
-    const key = getEnv('SUPABASE_SERVICE_ROLE_KEY') || getEnv('PUBLIC_SUPABASE_ANON_KEY') || supabaseAnonKey;
+    const url = getEnv('PUBLIC_SUPABASE_URL');
+    const key = getEnv('SUPABASE_SERVICE_ROLE_KEY') || getEnv('PUBLIC_SUPABASE_ANON_KEY');
     
     let targetClient = supabase;
     if (key && key.length > 20 && key.startsWith('eyJ')) {
@@ -2489,8 +2492,8 @@ app.put('/admin/settings', async (c) => {
     updateData.id = 1;
     updateData.updated_at = new Date().toISOString();
 
-    const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
-    const key = getEnv('SUPABASE_SERVICE_ROLE_KEY') || getEnv('PUBLIC_SUPABASE_ANON_KEY') || supabaseAnonKey;
+    const url = getEnv('PUBLIC_SUPABASE_URL');
+    const key = getEnv('SUPABASE_SERVICE_ROLE_KEY') || getEnv('PUBLIC_SUPABASE_ANON_KEY');
     
     let targetClient = supabase;
     if (key && key.length > 20 && key.startsWith('eyJ')) {
@@ -3085,4 +3088,16 @@ app.get('/health', async (c) => {
 });
 
 // Export handler for Astro
-export const ALL: APIRoute = ({ request }) => app.fetch(request);
+export const ALL: APIRoute = (context) => {
+    // Sync environment for getEnv helper
+    if (context.locals?.runtime?.env) {
+        cfEnv = context.locals.runtime.env;
+        console.log('[API Edge] Captured Cloudflare Environment');
+    }
+    
+    return app.fetch(
+        context.request, 
+        context.locals?.runtime?.env || {}, 
+        context
+    );
+};

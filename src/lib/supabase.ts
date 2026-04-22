@@ -27,9 +27,9 @@ const supabaseAnonKey = getEnv('PUBLIC_SUPABASE_ANON_KEY');
 export const supabase = createBrowserClient(supabaseUrl || '', supabaseAnonKey || '');
 
 // 2. Server Client untuk Middleware atau .astro files (SSR)
-export const getServerClient = (cookies: any, request: Request) => {
-  const url = getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
-  const key = getEnv('PUBLIC_SUPABASE_ANON_KEY') || supabaseAnonKey;
+export const getServerClient = (cookies: any, request: Request, runtimeEnv?: any) => {
+  const url = runtimeEnv?.PUBLIC_SUPABASE_URL || getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
+  const key = runtimeEnv?.PUBLIC_SUPABASE_ANON_KEY || getEnv('PUBLIC_SUPABASE_ANON_KEY') || supabaseAnonKey;
 
   if (!url || !key) {
     console.error('❌ Supabase Server Client: Missing URL or Key. Check ENV.');

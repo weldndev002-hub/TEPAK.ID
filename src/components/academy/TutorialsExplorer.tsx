@@ -128,6 +128,7 @@ export const TutorialsExplorer = () => {
                                 category={tutorial.category || 'General'}
                                 views={tutorial.views?.toString() || '0'}
                                 publishedAt={new Date(tutorial.created_at).toLocaleDateString()}
+                                description={tutorial.content_html}
                                 platform={tutorial.platform}
                             />
                         ))}

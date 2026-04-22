@@ -10,6 +10,7 @@ export interface TutorialCardProps {
   category: string;
   views: string;
   publishedAt: string;
+  description?: string;
   platform?: 'YouTube' | 'Vimeo' | 'Native';
   className?: string;
 }
@@ -21,6 +22,7 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({
   category,
   views,
   publishedAt,
+  description,
   platform = 'YouTube',
   className
 }) => {
@@ -70,9 +72,15 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({
           </div>
         </div>
 
-        <h3 className="text-lg md:text-xl font-black text-slate-900 leading-tight group-hover:text-primary transition-colors mb-4 uppercase tracking-tight">
+        <h3 className="text-lg md:text-xl font-black text-slate-900 leading-tight group-hover:text-primary transition-colors mb-2 uppercase tracking-tight">
           {title}
         </h3>
+
+        {description && (
+          <p className="text-slate-500 text-[11px] font-medium leading-relaxed line-clamp-2 mb-4 opacity-70">
+            {description}
+          </p>
+        )}
 
         {/* Card Footer Stats */}
         <div className="mt-auto flex items-center justify-between pt-6 border-t border-slate-50">
