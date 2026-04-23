@@ -878,9 +878,9 @@ app.post('/blocks/upload-image', async (c) => {
     const fileBuffer = new Uint8Array(arrayBuffer);
 
     const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL') || '';
-    const serviceKey  = getEnv('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const anonKey     = getEnv('PUBLIC_SUPABASE_ANON_KEY') || '';
-    const isValidKey  = (k: string) => k && k.length > 20 && (k.startsWith('eyJ') || k.startsWith('sb_'));
+    const serviceKey = getEnv('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const anonKey = getEnv('PUBLIC_SUPABASE_ANON_KEY') || '';
+    const isValidKey = (k: string) => k && k.length > 20 && (k.startsWith('eyJ') || k.startsWith('sb_'));
 
     const uploadClient = isValidKey(serviceKey)
       ? createClient(supabaseUrl, serviceKey)
@@ -1839,11 +1839,11 @@ app.post('/payments/duitku/webhook', async (c) => {
     if (merchantOrderId.startsWith('SUB--')) {
       const parts = merchantOrderId.split('--');
       const targetUserId = parts[1];
-      
+
       console.log('[Webhook DuitKu] Subscription order detected');
       console.log('[Webhook DuitKu] Target User ID:', targetUserId);
       console.log('[Webhook DuitKu] Result Code:', resultCode);
-      
+
       if (resultCode === '00' && targetUserId) {
         console.log(`[Webhook DuitKu] ✅ UPGRADING USER ${targetUserId} TO PRO...`);
 
@@ -1874,9 +1874,9 @@ app.post('/payments/duitku/webhook', async (c) => {
           auto_renewal: true,
           updated_at: new Date().toISOString()
         };
-        
+
         console.log('[Webhook DuitKu] Updating user_settings with:', updateData);
-        
+
         const { error: subError, data: subData } = await supabase
           .from('user_settings')
           .update(updateData)
@@ -1887,7 +1887,7 @@ app.post('/payments/duitku/webhook', async (c) => {
           console.error('[Webhook DuitKu] ❌ Database Update Error (Sub):', subError);
           console.error('[Webhook DuitKu] Error Code:', subError.code);
           console.error('[Webhook DuitKu] Error Message:', subError.message);
-          return c.json({ 
+          return c.json({
             error: 'Gagal update database langganan',
             code: subError.code,
             message: subError.message,
@@ -1897,9 +1897,9 @@ app.post('/payments/duitku/webhook', async (c) => {
 
         console.log(`[Webhook DuitKu] ✅ BERHASIL! User ${targetUserId} sekarang PRO.`);
         console.log('[Webhook DuitKu] Updated data:', subData);
-        
-        return c.json({ 
-          success: true, 
+
+        return c.json({
+          success: true,
           message: 'Subscription upgraded successfully',
           user_id: targetUserId,
           plan_expiry: expireIso
@@ -1907,7 +1907,7 @@ app.post('/payments/duitku/webhook', async (c) => {
       } else if (targetUserId && resultCode !== '00') {
         // Failed/Cancelled status tracking for SUB--
         console.log(`[Webhook DuitKu] ⚠️  Subscription payment not successful. Code: ${resultCode}`);
-        
+
         const statusMap: Record<string, string> = {
           '01': 'PENDING',
           '02': 'CANCELED',
@@ -1927,8 +1927,8 @@ app.post('/payments/duitku/webhook', async (c) => {
           console.error('[Webhook DuitKu] Failed to update history to', subsStatus, ':', updateError);
         }
 
-        return c.json({ 
-          success: false, 
+        return c.json({
+          success: false,
           status: subsStatus,
           message: `Payment ${subsStatus.toLowerCase()}`
         });
@@ -1967,6 +1967,65 @@ app.post('/payments/duitku/webhook', async (c) => {
     }
 
     console.log(`[Webhook DuitKu] Pesanan ${merchantOrderId} -> ${orderStatus} (Ref: ${body.reference})`);
+
+    // Trigger digital delivery for successful payments of digital products
+    if (orderStatus === 'success') {
+      try {
+        // Get order details with product and customer info
+        const { data: orderData, error: orderError } = await supabase
+          .from('orders')
+          .select(`
+            id,
+            customer_id,
+            product_id,
+            customers!inner(email),
+            products!inner(type, file_url)
+          `)
+          .eq('invoice_id', merchantOrderId)
+          .single();
+
+        if (!orderError && orderData) {
+          // Note: Supabase returns arrays for joined tables even with !inner
+          const product = Array.isArray(orderData.products) ? orderData.products[0] : orderData.products;
+          const customer = Array.isArray(orderData.customers) ? orderData.customers[0] : orderData.customers;
+          const customerEmail = customer?.email;
+          const productType = product?.type;
+          const fileUrl = product?.file_url;
+
+          // Check if product is digital and has a file URL
+          if (productType === 'digital' && fileUrl && customerEmail) {
+            console.log(`[Webhook DuitKu] Triggering digital delivery for order ${orderData.id}`);
+
+            // Import and use digital delivery service
+            const { createDigitalDelivery } = await import('../../lib/digital-delivery');
+
+            // Get request origin for email links
+            const requestOrigin = c.req.header('Origin') || c.req.header('Referer') || 'https://tepak.id';
+            const siteBaseUrl = requestOrigin.replace(/\/$/, '');
+
+            const result = await createDigitalDelivery(
+              orderData.id,
+              customerEmail,
+              fileUrl,
+              siteBaseUrl
+            );
+
+            if (result.success) {
+              console.log(`[Webhook DuitKu] Digital delivery created successfully with token: ${result.token}`);
+            } else {
+              console.error(`[Webhook DuitKu] Failed to create digital delivery: ${result.error}`);
+              // Continue anyway - don't fail the webhook
+            }
+          } else {
+            console.log(`[Webhook DuitKu] Not a digital product or missing file URL/email`);
+          }
+        }
+      } catch (deliveryError) {
+        console.error('[Webhook DuitKu] Error in digital delivery process:', deliveryError);
+        // Don't fail the webhook - just log the error
+      }
+    }
+
     return c.json({ success: true, status: orderStatus });
   } catch (error: any) {
     console.error('Kesalahan webhook DuitKu:', error);
@@ -3344,6 +3403,127 @@ app.get('/analytics/geo', async (c) => {
 });
 
 // Health check with Database Diagnostics
+// Digital Delivery Token Verification
+app.get('/digital-delivery/:token', async (c) => {
+  const token = c.req.param('token');
+  const email = c.req.query('email') || '';
+
+  if (!token) {
+    return c.json({ error: 'Token required' }, 400);
+  }
+
+  try {
+    const { verifyTokenAccess } = await import('../../lib/digital-delivery');
+    const result = await verifyTokenAccess(token, email);
+
+    if (!result.valid) {
+      if (result.error === 'EMAIL_MISMATCH') {
+        // Redirect to static error page
+        return c.redirect('/digital-delivery/error?reason=email_mismatch');
+      }
+      return c.json({ error: result.error || 'Invalid token' }, 403);
+    }
+
+    // Return the signed URL for download
+    return c.json({
+      success: true,
+      signedUrl: result.signedUrl,
+      fileUrl: result.fileUrl,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
+    });
+  } catch (error: any) {
+    console.error('Error verifying token:', error);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
+});
+
+// Static error page for digital delivery
+app.get('/digital-delivery/error', async (c) => {
+  const reason = c.req.query('reason') || 'invalid';
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="id">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Akses Ditolak - Tepak.ID</title>
+      <style>
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          margin: 0;
+        }
+        .container {
+          background: white;
+          border-radius: 16px;
+          padding: 40px;
+          max-width: 500px;
+          width: 100%;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+          text-align: center;
+        }
+        h1 {
+          color: #e53e3e;
+          margin-bottom: 20px;
+        }
+        p {
+          color: #4a5568;
+          line-height: 1.6;
+          margin-bottom: 30px;
+        }
+        .icon {
+          font-size: 64px;
+          margin-bottom: 20px;
+          color: #e53e3e;
+        }
+        .contact {
+          background: #f7fafc;
+          border-radius: 8px;
+          padding: 20px;
+          margin-top: 30px;
+        }
+        .contact h3 {
+          margin-top: 0;
+          color: #2d3748;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="icon">🔒</div>
+        <h1>Anda tidak bisa mengakses tautan</h1>
+        <p>
+          ${reason === 'email_mismatch'
+      ? 'Tautan ini hanya dapat diakses dengan email yang digunakan saat pembelian. Silakan gunakan email yang sama dengan yang tercatat di pesanan Anda.'
+      : 'Tautan ini tidak valid, telah kadaluarsa, atau telah digunakan.'}
+        </p>
+        <p>
+          Jika Anda merasa ini adalah kesalahan, silakan hubungi kreator produk untuk bantuan lebih lanjut.
+        </p>
+        
+        <div class="contact">
+          <h3>Butuh Bantuan?</h3>
+          <p>Hubungi dukungan pelanggan atau kreator produk untuk mendapatkan akses yang sesuai.</p>
+          <p><a href="mailto:support@tepak.id">support@tepak.id</a></p>
+        </div>
+        
+        <p style="margin-top: 30px; font-size: 14px; color: #718096;">
+          &copy; ${new Date().getFullYear()} Tepak.ID - Platform Digital Product
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return c.html(html);
+});
+
 app.get('/health', async (c) => {
   const { supabase } = await getAuthContext(c);
 

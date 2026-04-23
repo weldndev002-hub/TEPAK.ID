@@ -1,0 +1,171 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+const reason = Astro.url.searchParams.get("reason") || "invalid";
+
+let title = "Akses Ditolak";
+let message = "Anda tidak bisa mengakses tautan. Silahkan hubungi kreator.";
+let details = "Tautan ini tidak valid, telah kadaluarsa, atau telah digunakan.";
+
+if (reason === "email_mismatch") {
+    title = "Email Tidak Sesuai";
+    message = "Anda tidak bisa mengakses tautan. Silahkan hubungi kreator.";
+    details =
+        "Tautan ini hanya dapat diakses dengan email yang digunakan saat pembelian. Silakan gunakan email yang sama dengan yang tercatat di pesanan Anda.";
+}
+---
+
+<BaseLayout title="Akses Ditolak - Tepak.ID">
+    <div
+        class="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8"
+    >
+        <div class="max-w-md w-full space-y-8">
+            <div class="text-center">
+                <div
+                    class="mx-auto flex items-center justify-center h-24 w-24 rounded-full bg-red-100 mb-6"
+                >
+                    <svg
+                        class="h-12 w-12 text-red-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.998-.833-2.732 0L4.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                        ></path>
+                    </svg>
+                </div>
+                <h2 class="text-3xl font-extrabold text-gray-900">{title}</h2>
+                <div class="mt-4 bg-white rounded-2xl shadow-lg p-8">
+                    <p class="text-xl font-semibold text-gray-800 mb-4">
+                        {message}
+                    </p>
+                    <p class="text-gray-600 mb-8">{details}</p>
+
+                    <div class="bg-gray-50 rounded-xl p-6 mb-6">
+                        <h3 class="text-lg font-medium text-gray-900 mb-3">
+                            Langkah berikutnya:
+                        </h3>
+                        <ul class="text-gray-700 space-y-2">
+                            <li class="flex items-start">
+                                <svg
+                                    class="h-5 w-5 text-gray-400 mr-2 mt-0.5 flex-shrink-0"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                    ></path>
+                                </svg>
+                                <span
+                                    >Pastikan Anda menggunakan email yang sama
+                                    dengan saat pembelian</span
+                                >
+                            </li>
+                            <li class="flex items-start">
+                                <svg
+                                    class="h-5 w-5 text-gray-400 mr-2 mt-0.5 flex-shrink-0"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                                    ></path>
+                                </svg>
+                                <span
+                                    >Hubungi kreator produk untuk meminta tautan
+                                    baru</span
+                                >
+                            </li>
+                            <li class="flex items-start">
+                                <svg
+                                    class="h-5 w-5 text-gray-400 mr-2 mt-0.5 flex-shrink-0"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                                    ></path>
+                                </svg>
+                                <span
+                                    >Hubungi dukungan pelanggan jika masalah
+                                    berlanjut</span
+                                >
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="space-y-4">
+                        <a
+                            href="mailto:support@tepak.id"
+                            class="w-full flex justify-center items-center px-4 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        >
+                            <svg
+                                class="mr-2 h-5 w-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                ></path>
+                            </svg>
+                            Hubungi Support
+                        </a>
+
+                        <a
+                            href="/"
+                            class="w-full flex justify-center items-center px-4 py-3 border border-gray-300 text-base font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                            <svg
+                                class="mr-2 h-5 w-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                                ></path>
+                            </svg>
+                            Kembali ke Beranda
+                        </a>
+                    </div>
+
+                    <div class="mt-8 pt-6 border-t border-gray-200">
+                        <p class="text-sm text-gray-500 text-center">
+                            &copy; {new Date().getFullYear()} Tepak.ID. Semua hak
+                            dilindungi undang-undang.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</BaseLayout>
