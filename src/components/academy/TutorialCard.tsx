@@ -12,6 +12,7 @@ export interface TutorialCardProps {
   publishedAt: string;
   description?: string;
   platform?: 'YouTube' | 'Vimeo' | 'Native';
+  videoUrl?: string;
   className?: string;
 }
 
@@ -24,28 +25,38 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({
   publishedAt,
   description,
   platform = 'YouTube',
+  videoUrl,
   className
 }) => {
+  const handleClick = () => {
+    if (videoUrl) {
+      window.open(videoUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   return (
-    <div className={cn(
-      "group bg-white rounded-3xl overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 border border-slate-100 hover:border-primary/10 flex flex-col ",
-      className
-    )}>
+    <div
+      className={cn(
+        "group bg-white rounded-3xl overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 border border-slate-100 hover:border-primary/10 flex flex-col cursor-pointer",
+        className
+      )}
+      onClick={videoUrl ? handleClick : undefined}
+    >
       {/* Thumbnail Area */}
       <div className="aspect-video relative overflow-hidden bg-slate-100">
-        <img 
-          alt={title} 
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
-          src={thumbnail} 
+        <img
+          alt={title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+          src={thumbnail}
         />
-        
+
         {/* Play Overlay */}
         <div className="absolute inset-0 bg-primary/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <div className="w-16 h-16 bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center text-white scale-75 group-hover:scale-100 transition-transform duration-500">
             <PlayIconSolid className="w-10 h-10" />
           </div>
         </div>
-        
+
         {/* Duration Badge */}
         <div className="absolute bottom-4 right-4 bg-black/80 backdrop-blur-md px-2 py-1 rounded text-[10px] font-black text-white tracking-widest">
           {duration}
@@ -58,7 +69,7 @@ export const TutorialCard: React.FC<TutorialCardProps> = ({
           <span className="px-3 py-1 bg-primary/5 text-primary text-[10px] font-black uppercase tracking-widest rounded-md">
             {category}
           </span>
-          
+
           {/* Platform Icon */}
           <div className="flex items-center gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
             {platform === 'YouTube' && (

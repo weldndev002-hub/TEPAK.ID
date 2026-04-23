@@ -3,8 +3,8 @@ import { cn } from '../../lib/utils';
 import { TutorialCard, type TutorialCardProps } from './TutorialCard';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-import { 
-    MagnifyingGlassIcon, 
+import {
+    MagnifyingGlassIcon,
     VideoCameraIcon,
     ExclamationCircleIcon,
     FunnelIcon
@@ -47,13 +47,13 @@ export const TutorialsExplorer = () => {
         return tutorials.filter(t => {
             const title = t.title || '';
             const category = t.category || 'General';
-            
-            const matchesSearch = title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                                 category.toLowerCase().includes(searchTerm.toLowerCase());
-            
-            const matchesCategory = activeCategory === 'All' || 
-                                   category.toLowerCase().trim() === activeCategory.toLowerCase().trim();
-            
+
+            const matchesSearch = title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                category.toLowerCase().includes(searchTerm.toLowerCase());
+
+            const matchesCategory = activeCategory === 'All' ||
+                category.toLowerCase().trim() === activeCategory.toLowerCase().trim();
+
             return matchesSearch && matchesCategory;
         });
     }, [searchTerm, activeCategory, tutorials]);
@@ -78,13 +78,13 @@ export const TutorialsExplorer = () => {
 
     return (
         <div className="space-y-10 ">
-            
+
             {/* SEARCH & FILTERS CONTROLS */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 {/* Search Bar */}
                 <div className="w-full lg:max-w-md">
-                    <Input 
-                        placeholder="Search tutorials by title, feature, or category..." 
+                    <Input
+                        placeholder="Search tutorials by title, feature, or category..."
                         className="h-14 bg-white border-slate-100 shadow-sm rounded-2xl text-[13px] font-medium placeholder:text-slate-400 group focus-within:ring-4 focus-within:ring-primary/10 transition-all px-6"
                         iconLeft={MagnifyingGlassIcon}
                         value={searchTerm}
@@ -94,7 +94,7 @@ export const TutorialsExplorer = () => {
 
                 {/* Categories Dropdown */}
                 <div className="w-full lg:max-w-[200px]">
-                    <Select 
+                    <Select
                         value={activeCategory}
                         onChange={(e) => { setActiveCategory(e.target.value); setVisibleCount(6); }}
                         className="h-14 font-black shadow-sm"
@@ -120,8 +120,8 @@ export const TutorialsExplorer = () => {
                 <>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in duration-500">
                         {tutorialsToDisplay.map((tutorial) => (
-                            <TutorialCard 
-                                key={tutorial.id} 
+                            <TutorialCard
+                                key={tutorial.id}
                                 title={tutorial.title}
                                 thumbnail={tutorial.thumbnail_url}
                                 duration={tutorial.duration}
@@ -130,6 +130,7 @@ export const TutorialsExplorer = () => {
                                 publishedAt={new Date(tutorial.created_at).toLocaleDateString()}
                                 description={tutorial.content_html}
                                 platform={tutorial.platform}
+                                videoUrl={tutorial.video_url}
                             />
                         ))}
                     </div>
@@ -137,9 +138,9 @@ export const TutorialsExplorer = () => {
                     {/* LOAD MORE BUTTON (CONDITIONAL) */}
                     {hasMore && (
                         <div className="mt-12 flex flex-col items-center gap-6 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
-                            <Button 
+                            <Button
                                 onClick={() => setVisibleCount(prev => prev + 6)}
-                                variant="primary" 
+                                variant="primary"
                                 className="w-full sm:w-auto px-12 py-5 bg-primary rounded-2xl font-black flex items-center justify-center gap-3 hover:bg-primary/90 shadow-xl shadow-primary/20 active:scale-95 uppercase tracking-[0.2em] text-[10px]"
                             >
                                 Muat Lebih Banyak
@@ -165,8 +166,8 @@ export const TutorialsExplorer = () => {
                             Kami tidak dapat menemukan video yang sesuai dengan kata kunci ini. Coba gunakan istilah lain atau bersihkan filter.
                         </p>
                     </div>
-                    <Button 
-                        variant="primary" 
+                    <Button
+                        variant="primary"
                         onClick={() => { setSearchTerm(''); setActiveCategory('All'); setVisibleCount(6); }}
                         className="px-8 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
                     >
