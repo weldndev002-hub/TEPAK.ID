@@ -5,6 +5,12 @@ Secrets harus di-set di Cloudflare Dashboard atau via CLI.
 
 ---
 
+## ⚠️ SECURITY: Keep Your Secrets Private!
+
+**NEVER share or commit your actual API keys!** Use `.env` file locally and `.env.example` for documentation.
+
+---
+
 ## LANGKAH 1: Setup via Terminal (Recommended)
 
 ```bash
@@ -13,11 +19,11 @@ wrangler login
 
 # 2. Set SUPABASE_SERVICE_ROLE_KEY
 wrangler secret put SUPABASE_SERVICE_ROLE_KEY --env production
-# Paste value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhcWd1aHhvbndwc25wd2pqZHJ2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjA1OTIzNiwiZXhwIjoyMDkxNjM1MjM2fQ.wxk5XQG8Oq2q8v4E6DSYTVWymlmSSJQOa7p0CHNqBCs
+# Paste value from your .env file (kept private - see .env.example)
 
 # 3. Set PUBLIC_DUITKU_MERCHANT_KEY
 wrangler secret put PUBLIC_DUITKU_MERCHANT_KEY --env production
-# Paste value: 61c51a77ea664c53be0e6e02ce6ddbbe
+# Paste value from your .env file (kept private - see .env.example)
 
 # 4. Verify secrets sudah ter-set
 wrangler secret list --env production

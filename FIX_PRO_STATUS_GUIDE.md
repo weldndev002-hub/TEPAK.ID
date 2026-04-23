@@ -26,8 +26,9 @@ Pastikan file `.env` atau `.env.local` punya:
 
 ```bash
 # Duitku (Sandbox untuk testing)
-PUBLIC_DUITKU_MERCHANT_CODE=DS29376
-PUBLIC_DUITKU_MERCHANT_KEY=61c51a77ea... # Full key dari Duitku Dashboard
+# Set these in .env file (see .env.example for details)
+PUBLIC_DUITKU_MERCHANT_CODE=your_merchant_code_from_duitku_dashboard
+PUBLIC_DUITKU_MERCHANT_KEY=your_merchant_key_from_duitku_dashboard
 
 # Supabase (HARUS ADA untuk webhook!)
 PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
@@ -110,7 +111,8 @@ Pastikan file `.env` (atau `.env.local`) punya:
 
 ```bash
 PUBLIC_DUITKU_MERCHANT_CODE=DS29376      # Sandbox merchant code
-PUBLIC_DUITKU_MERCHANT_KEY=61c51a77ea... # Merchant secret key
+# Merchant secret key - keep in .env file only
+PUBLIC_DUITKU_MERCHANT_KEY=your_merchant_key_from_duitku_dashboard
 DUITKU_CALLBACK_URL=https://yourdomain.com/api/payments/duitku/webhook
 SUPABASE_SERVICE_ROLE_KEY=...           # Harus ada untuk webhook!
 ```
@@ -190,7 +192,8 @@ merchantCode + amount + orderId + merchantKey
 
 Signature untuk order SUB--f1947a0b-f2af-4f67-80b4-e7724ab4618f--4394:
 ```
-DS2937645000SUB--f1947a0b-f2af-4f67-80b4-e7724ab4618f--439461c51a77ea...
+# Example webhook signature (your actual signature will be different)
+# DS2937645000SUB--f1947a0b-f2af-4f67-80b4-e7724ab4618f--[your-merchant-key-hash]
 = f7fcadda2ea00e7e8db7ffefd27055f2
 ```
 

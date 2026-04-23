@@ -8,9 +8,9 @@ export const ProductAccessGate = () => {
     const [status, setStatus] = useState<'loading' | 'authorized' | 'unauthorized'>('loading');
     const [searchParams, setSearchParams] = useState<URLSearchParams | null>(null);
 
-    // Mock Authorized Data
-    const VALID_EMAIL = "pembeli@mail.com";
-    const VALID_TOKEN = "tepak_secure_token_123";
+    // Get credentials from environment - NEVER hardcode tokens
+    const VALID_EMAIL = import.meta.env.PUBLIC_VALID_EMAIL || "";
+    const VALID_TOKEN = import.meta.env.PUBLIC_VALID_TOKEN || "";
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);

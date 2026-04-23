@@ -12,10 +12,10 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()],
     define: {
-      // Explicitly make env vars available at build time
-      'import.meta.env.PUBLIC_SUPABASE_URL': JSON.stringify(process.env.PUBLIC_SUPABASE_URL || 'https://aaqguhxonwpsnpwjjdrv.supabase.co'),
-      'import.meta.env.PUBLIC_SUPABASE_ANON_KEY': JSON.stringify(process.env.PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_c35EcVd0HpFsfaQZNq_uvA_mRJes_BO'),
-      'import.meta.env.PUBLIC_DUITKU_MERCHANT_CODE': JSON.stringify(process.env.PUBLIC_DUITKU_MERCHANT_CODE || 'DS29376'),
+      // Make env vars available at build time (must be set in environment)
+      'import.meta.env.PUBLIC_SUPABASE_URL': JSON.stringify(process.env.PUBLIC_SUPABASE_URL || ''),
+      'import.meta.env.PUBLIC_SUPABASE_ANON_KEY': JSON.stringify(process.env.PUBLIC_SUPABASE_ANON_KEY || ''),
+      'import.meta.env.PUBLIC_DUITKU_MERCHANT_CODE': JSON.stringify(process.env.PUBLIC_DUITKU_MERCHANT_CODE || ''),
     },
     ssr: {
       noExternal: ['@heroicons/react', 'lucide-react', '@supabase/supabase-js', '@supabase/ssr']

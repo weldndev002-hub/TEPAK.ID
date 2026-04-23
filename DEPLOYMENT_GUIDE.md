@@ -1,52 +1,66 @@
 ## 🚀 DEPLOYMENT GUIDE KE CLOUDFLARE WORKERS
 
-Status: **Error "chrome-error://chromewebdata" = Environment Variables tidak lengkap**
+---
+
+## ⚠️ 🔐 SECURITY FIRST
+
+**CRITICAL:** Pastikan Anda sudah read [SECURITY_GUIDE.md](./SECURITY_GUIDE.md) dan rotate semua API keys!
+
+❌ **JANGAN** hardcode API keys di file yang di-commit ke GitHub
+✅ **GUNAKAN** environment variables & Cloudflare secrets
 
 ---
 
 ## 📋 SETUP CHECKLIST
 
-### ✅ STEP 1: Update wrangler.toml
-**Status: SUDAH DONE** ✓
+### ✅ STEP 1: Environment Variables Setup
 
-File `wrangler.toml` sudah diupdate dengan:
-- PUBLIC_SUPABASE_URL
-- PUBLIC_SUPABASE_ANON_KEY  
-- PUBLIC_DUITKU_MERCHANT_CODE
-- DUITKU_ENVIRONMENT
-- DUITKU_CALLBACK_URL
-- ADMIN_PASSCODE
+**1. Copy template:**
+```bash
+cp .env.example .env
+```
 
----
+**2. Edit `.env` dengan real values:**
+```bash
+nano .env
+```
 
-### ⚠️ STEP 2: Setup SECRETS di Cloudflare (CRITICAL!)
+**3. Verify `.gitignore` includes `.env`:**
+```bash
+cat .gitignore | grep ".env"
+# Should output: .env
+```
 
-**Ini adalah penyebab error Anda!** 
+### ✅ STEP 2: Setup Secrets di Cloudflare (CRITICAL!)
 
-Jalankan perintah ini di terminal:
+**Cloudflare Secrets** = Secret values yang tidak terlihat di `wrangler.toml`
 
 ```bash
 # Login ke Cloudflare
 wrangler login
 
-# Set Service Role Key untuk Supabase (untuk webhook)
+# Set Supabase Service Role Key (untuk database operations di Edge)
 wrangler secret put SUPABASE_SERVICE_ROLE_KEY --env production
-```
 
-Saat diminta paste value, copy dari `.env` file Anda:
-```
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhcWd1aHhvbndwc25wd2pqZHJ2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjA1OTIzNiwiZXhwIjoyMDkxNjM1MjM2fQ.wxk5XQG8Oq2q8v4E6DSYTVWymlmSSJQOa7p0CHNqBCs
-```
+# Set Resend API Key (untuk email service)
+wrangler secret put RESEND_API_KEY --env production
 
-```bash
-# Set Duitku Merchant Key untuk payment
+# Set DuitKu Merchant Key
 wrangler secret put PUBLIC_DUITKU_MERCHANT_KEY --env production
 ```
 
-Saat diminta paste value:
-```
-61c51a77ea664c53be0e6e02ce6ddbbe
-```
+**Saat diminta, paste values dari `.env` file Anda (jangan share dengan orang lain!)**
+
+### ✅ STEP 3: Setup Public Variables di Cloudflare Dashboard
+
+1. Login ke https://dash.cloudflare.com
+2. Go to Workers & Pages → Your Project → Settings → Environment Variables
+3. Tambahkan untuk Production:
+   - `PUBLIC_SUPABASE_URL` = https://your-project.supabase.co
+   - `PUBLIC_SUPABASE_ANON_KEY` = your-anon-key (safe untuk public)
+   - `PUBLIC_DUITKU_MERCHANT_CODE` = your-merchant-code
+   - `DUITKU_ENVIRONMENT` = production
+   - `DUITKU_CALLBACK_URL` = https://yourdomain.com/api/payments/duitku/webhook
 
 ---
 

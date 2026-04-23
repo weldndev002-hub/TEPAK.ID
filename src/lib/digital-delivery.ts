@@ -155,12 +155,12 @@ async function sendDigitalDeliveryEmail(
         console.log(`[Digital Delivery Email] To: ${toEmail}`);
         console.log(`[Digital Delivery Email] Token: ${token}`);
 
-        // Get Resend API key from environment or use default
-        const resendApiKey = getEnv('RESEND_API_KEY') || 're_A21Tmy6o_AGYYVFMcQHpotKmkS2Q5qmDk';
+        // Get Resend API key from environment only
+        const resendApiKey = getEnv('RESEND_API_KEY');
 
         if (!resendApiKey) {
-            console.warn('[Digital Delivery Email] RESEND_API_KEY not found, skipping email send');
-            return;
+            console.error('[Digital Delivery Email] RESEND_API_KEY is required but not set in environment');
+            throw new Error('RESEND_API_KEY is not configured');
         }
 
         // Create a user-friendly download page URL
