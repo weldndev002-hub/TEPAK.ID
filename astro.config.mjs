@@ -18,7 +18,7 @@ export default defineConfig({
       'import.meta.env.PUBLIC_DUITKU_MERCHANT_CODE': JSON.stringify(process.env.PUBLIC_DUITKU_MERCHANT_CODE || 'DS29376'),
     },
     ssr: {
-      noExternal: ['@heroicons/react', 'lucide-react', '@supabase/supabase-js', '@supabase/ssr', 'react', 'react-dom']
+      noExternal: ['@heroicons/react', 'lucide-react', '@supabase/supabase-js', '@supabase/ssr']
     },
     optimizeDeps: {
       include: ['@heroicons/react/24/outline', 'clsx', 'tailwind-merge']

@@ -24,7 +24,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ supabaseUrl, supabaseAno
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    
+
     // Error States
     const [nameError, setNameError] = useState('');
     const [emailError, setEmailError] = useState('');
@@ -33,7 +33,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ supabaseUrl, supabaseAno
 
     const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         // Reset Errors
         setNameError('');
         setEmailError('');
@@ -52,10 +52,6 @@ export const SignupForm: React.FC<SignupFormProps> = ({ supabaseUrl, supabaseAno
         if (!email.trim() || !emailRegex.test(email)) {
             setEmailError('Format email tidak valid');
             isValid = false;
-        } else if (email.trim() === 'admin@orbitsite.com') {
-            // Simulated: Email already registered
-            setEmailError('Email ini sudah terdaftar. Silakan login.');
-            isValid = false;
         }
 
         // 3. Password Length Validation
@@ -68,7 +64,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ supabaseUrl, supabaseAno
 
         // Real Supabase Sign-up Process
         setIsLoading(true);
-        
+
         try {
             const { error, data } = await supabase.auth.signUp({
                 email: email,
@@ -89,12 +85,18 @@ export const SignupForm: React.FC<SignupFormProps> = ({ supabaseUrl, supabaseAno
                     setEmailError(error.message);
                 }
             } else {
-                // Berhasil. Cek apakah butuh konfirmasi email.
-                // Jika user.identities kosong, artinya email sudah terdaftar tapi belum dikonfirmasi.
-                // Jika session null tetapi tidak ada error, biasanya butuh konfirmasi email.
-                if (data.user && data.session === null) {
+                // Store email in localStorage for verify-email page
+                if (email) {
+                    localStorage.setItem('pendingVerificationEmail', email);
+                }
+
+                // Check if email confirmation is required
+                // Supabase returns data.user.email_confirmed_at as null if not confirmed
+                if (data.user && (!data.session || !data.user.email_confirmed_at)) {
+                    // Redirect to verification page
                     window.location.href = '/verify-email';
                 } else {
+                    // Already confirmed or auto-confirmed, go to onboarding
                     window.location.href = '/onboarding';
                 }
             }
@@ -107,17 +109,17 @@ export const SignupForm: React.FC<SignupFormProps> = ({ supabaseUrl, supabaseAno
 
     return (
         <div className="w-full flex flex-col gap-10 ">
-            
+
             <form onSubmit={handleSignup} className="w-full flex flex-col gap-8">
-                
+
                 {/* Name Input */}
                 <div className="space-y-3">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1">
                         Nama Lengkap
                     </label>
-                    <Input 
+                    <Input
                         iconLeft={UserIcon}
-                        placeholder="Masukkan nama lengkap Anda" 
+                        placeholder="Masukkan nama lengkap Anda"
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
@@ -137,9 +139,9 @@ export const SignupForm: React.FC<SignupFormProps> = ({ supabaseUrl, supabaseAno
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1">
                         Alamat Email
                     </label>
-                    <Input 
+                    <Input
                         iconLeft={EnvelopeIcon}
-                        placeholder="nama@perusahaan.com" 
+                        placeholder="nama@perusahaan.com"
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -161,9 +163,9 @@ export const SignupForm: React.FC<SignupFormProps> = ({ supabaseUrl, supabaseAno
                             Kata Sandi
                         </label>
                     </div>
-                    <Input 
+                    <Input
                         iconLeft={LockClosedIcon}
-                        placeholder="Minimal 8 karakter" 
+                        placeholder="Minimal 8 karakter"
                         type={showPassword ? "text" : "password"}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -172,12 +174,12 @@ export const SignupForm: React.FC<SignupFormProps> = ({ supabaseUrl, supabaseAno
                         required
                         iconRight={
                             showPassword ? (
-                                <EyeIcon 
+                                <EyeIcon
                                     onClick={() => setShowPassword(false)}
                                     className="w-6 h-6 cursor-pointer text-primary p-0.5"
                                 />
                             ) : (
-                                <EyeSlashIcon 
+                                <EyeSlashIcon
                                     onClick={() => setShowPassword(true)}
                                     className="w-6 h-6 cursor-pointer text-slate-300 hover:text-slate-500 p-0.5"
                                 />
@@ -192,9 +194,9 @@ export const SignupForm: React.FC<SignupFormProps> = ({ supabaseUrl, supabaseAno
                 </div>
 
                 {/* Main Button */}
-                <Button 
-                    type="submit" 
-                    variant="amber" 
+                <Button
+                    type="submit"
+                    variant="amber"
                     isLoading={isLoading}
                     className="w-full h-16 mt-6 rounded-[1.5rem] shadow-2xl shadow-amber-500/20 text-[11px] font-black uppercase tracking-[0.3em] active:scale-[0.98] transition-all"
                 >
@@ -213,18 +215,18 @@ export const SignupForm: React.FC<SignupFormProps> = ({ supabaseUrl, supabaseAno
 
             {/* OAuth Buttons */}
             <div className="grid grid-cols-2 gap-6">
-                <SocialButton 
+                <SocialButton
                     supabase={supabase}
-                    provider="google" 
-                    className="h-16 rounded-2xl border-slate-100 bg-white shadow-sm hover:shadow-md transition-all active:scale-[0.98]" 
+                    provider="google"
+                    className="h-16 rounded-2xl border-slate-100 bg-white shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
                 />
-                <SocialButton 
+                <SocialButton
                     supabase={supabase}
-                    provider="apple" 
-                    className="h-16 rounded-2xl border-slate-100 bg-white shadow-sm hover:shadow-md transition-all active:scale-[0.98]" 
+                    provider="apple"
+                    className="h-16 rounded-2xl border-slate-100 bg-white shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
                 />
             </div>
-            
+
         </div>
     );
 };

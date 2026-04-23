@@ -15,36 +15,36 @@ import { getSupabaseAdmin } from '../../lib/supabase';
 
 // Helper to safely get environment variables
 const getEnv = (key: string) => {
-    const clean = (v: any, isUrl = false) => {
-        if (typeof v !== 'string') return v;
-        let cleaned = v.trim().replace(/^["']|["']$/g, '');
-        if (isUrl) cleaned = cleaned.replace(/\/+$/, '');
-        return cleaned;
-    };
+  const clean = (v: any, isUrl = false) => {
+    if (typeof v !== 'string') return v;
+    let cleaned = v.trim().replace(/^["']|["']$/g, '');
+    if (isUrl) cleaned = cleaned.replace(/\/+$/, '');
+    return cleaned;
+  };
 
-    // 1. Try passed runtime env (Cloudflare v6+)
-    if (typeof cfEnv !== 'undefined' && cfEnv && cfEnv[key]) return clean(cfEnv[key], key.includes('URL'));
+  // 1. Try passed runtime env (Cloudflare v6+)
+  if (typeof cfEnv !== 'undefined' && cfEnv && cfEnv[key]) return clean(cfEnv[key], key.includes('URL'));
 
-    // 2. Vite / Astro Build-time (PUBLIC_ vars)
-    if (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env as any)[key]) {
-        return clean((import.meta.env as any)[key], key.includes('URL'));
+  // 2. Vite / Astro Build-time (PUBLIC_ vars)
+  if (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env as any)[key]) {
+    return clean((import.meta.env as any)[key], key.includes('URL'));
+  }
+
+  // 3. Process ENV fallback (Local Node.js)
+  if (typeof process !== 'undefined' && process.env && process.env[key]) {
+    return clean(process.env[key], key.includes('URL'));
+  }
+
+  // 4. Global Fallback (Cloudflare Workers Standard)
+  if (typeof globalThis !== 'undefined') {
+    const val = (globalThis as any)[key];
+    if (val) return clean(val, key.includes('URL'));
+    if ((globalThis as any).env && (globalThis as any).env[key]) {
+      return clean((globalThis as any).env[key], key.includes('URL'));
     }
+  }
 
-    // 3. Process ENV fallback (Local Node.js)
-    if (typeof process !== 'undefined' && process.env && process.env[key]) {
-        return clean(process.env[key], key.includes('URL'));
-    }
-
-    // 4. Global Fallback (Cloudflare Workers Standard)
-    if (typeof globalThis !== 'undefined') {
-      const val = (globalThis as any)[key];
-      if (val) return clean(val, key.includes('URL'));
-      if ((globalThis as any).env && (globalThis as any).env[key]) {
-        return clean((globalThis as any).env[key], key.includes('URL'));
-      }
-    }
-
-    return null;
+  return null;
 };
 
 
@@ -53,19 +53,19 @@ const app = new Hono().basePath('/api');
 // Middleware to capture Cloudflare Environment directly from Hono
 app.use('*', cors());
 app.use('*', async (c, next) => {
-    // Capture environment from Hono's context (most reliable in Workers)
-    if (c.env) {
-        cfEnv = { ...cfEnv, ...c.env };
-    }
-    await next();
+  // Capture environment from Hono's context (most reliable in Workers)
+  if (c.env) {
+    cfEnv = { ...cfEnv, ...c.env };
+  }
+  await next();
 });
 
 // Global Error Handler
 app.onError((err, c) => {
   console.error(`[Global Error] ${c.req.method} ${c.req.url}:`, err);
-  return c.json({ 
-    error: 'Internal Server Error', 
-    message: err.message, 
+  return c.json({
+    error: 'Internal Server Error',
+    message: err.message,
     stack: err.stack,
     details: (err as any).details || (err as any).code || null,
     hint: (err as any).hint || null,
@@ -75,49 +75,49 @@ app.onError((err, c) => {
 
 // --- DEBUG ROUTES ---
 app.get('/debug/env', async (c) => {
-    let supabase_reachable = false;
-    let fetch_error = null;
-    
-    try {
-        const url = getEnv('PUBLIC_SUPABASE_URL');
-        const testRes = await fetch(`${url}/auth/v1/health`, { method: 'GET', timeout: 2000 } as any);
-        supabase_reachable = testRes.ok;
-    } catch (e: any) {
-        fetch_error = e.message;
-    }
+  let supabase_reachable = false;
+  let fetch_error = null;
 
-    const { user } = await getAuthContext(c);
-    return c.json({
-        has_url: !!getEnv('PUBLIC_SUPABASE_URL'),
-        has_anon: !!getEnv('PUBLIC_SUPABASE_ANON_KEY'),
-        has_service: !!getEnv('SUPABASE_SERVICE_ROLE_KEY'),
-        supabase_reachable,
-        fetch_error,
-        user_id: user?.id || null,
-        user_email: user?.email || null,
-        cookies: c.req.header('Cookie') ? 'Present' : 'Missing'
-    });
+  try {
+    const url = getEnv('PUBLIC_SUPABASE_URL');
+    const testRes = await fetch(`${url}/auth/v1/health`, { method: 'GET', timeout: 2000 } as any);
+    supabase_reachable = testRes.ok;
+  } catch (e: any) {
+    fetch_error = e.message;
+  }
+
+  const { user } = await getAuthContext(c);
+  return c.json({
+    has_url: !!getEnv('PUBLIC_SUPABASE_URL'),
+    has_anon: !!getEnv('PUBLIC_SUPABASE_ANON_KEY'),
+    has_service: !!getEnv('SUPABASE_SERVICE_ROLE_KEY'),
+    supabase_reachable,
+    fetch_error,
+    user_id: user?.id || null,
+    user_email: user?.email || null,
+    cookies: c.req.header('Cookie') ? 'Present' : 'Missing'
+  });
 });
 
 app.get('/debug/keys', (c) => {
-    const url = getEnv('PUBLIC_SUPABASE_URL');
-    const key = getEnv('PUBLIC_SUPABASE_ANON_KEY');
-    
-    const mask = (s: any) => {
-        if (!s || typeof s !== 'string') return 'MISSING';
-        if (s.length < 10) return 'TOO_SHORT';
-        return s.substring(0, 5) + '...' + s.substring(s.length - 5);
-    };
+  const url = getEnv('PUBLIC_SUPABASE_URL');
+  const key = getEnv('PUBLIC_SUPABASE_ANON_KEY');
 
-    return c.json({
-        url: mask(url),
-        url_full_length: url?.length || 0,
-        key: mask(key),
-        key_full_length: key?.length || 0,
-        cf_keys: Object.keys(c.env || {}),
-        global_keys: typeof globalThis !== 'undefined' ? Object.keys(globalThis).filter(k => k.includes('SUPABASE')) : [],
-        msg: 'Checking available bindings and masked values'
-    });
+  const mask = (s: any) => {
+    if (!s || typeof s !== 'string') return 'MISSING';
+    if (s.length < 10) return 'TOO_SHORT';
+    return s.substring(0, 5) + '...' + s.substring(s.length - 5);
+  };
+
+  return c.json({
+    url: mask(url),
+    url_full_length: url?.length || 0,
+    key: mask(key),
+    key_full_length: key?.length || 0,
+    cf_keys: Object.keys(c.env || {}),
+    global_keys: typeof globalThis !== 'undefined' ? Object.keys(globalThis).filter(k => k.includes('SUPABASE')) : [],
+    msg: 'Checking available bindings and masked values'
+  });
 });
 
 // --- DOMAIN SETTINGS ROUTES ---
@@ -142,14 +142,14 @@ app.get('/settings/domain', async (c) => {
 });
 
 // --- ONBOARDING ATOMIC ROUTE ---
-app.post('/onboarding/complete', zValidator('json', z.object({ 
-    domain_name: z.string().min(1),
-    full_name: z.string().optional(),
-    bio: z.string().optional(),
-    avatar_url: z.string().optional().nullable(),
-    instagram_url: z.string().optional().nullable(),
-    tiktok_url: z.string().optional().nullable(),
-    youtube_url: z.string().optional().nullable()
+app.post('/onboarding/complete', zValidator('json', z.object({
+  domain_name: z.string().min(1),
+  full_name: z.string().optional(),
+  bio: z.string().optional(),
+  avatar_url: z.string().optional().nullable(),
+  instagram_url: z.string().optional().nullable(),
+  tiktok_url: z.string().optional().nullable(),
+  youtube_url: z.string().optional().nullable()
 })), async (c) => {
   let step = 'init';
   try {
@@ -173,8 +173,8 @@ app.post('/onboarding/complete', zValidator('json', z.object({
       .maybeSingle();
 
     if (checkErr) {
-        console.error(`[Atomic Onboarding] [Step: ${step}] Error:`, checkErr);
-        throw new Error(`Gagal pengecekan domain: ${checkErr.message}`);
+      console.error(`[Atomic Onboarding] [Step: ${step}] Error:`, checkErr);
+      throw new Error(`Gagal pengecekan domain: ${checkErr.message}`);
     }
 
     if (existingDomain) {
@@ -198,8 +198,8 @@ app.post('/onboarding/complete', zValidator('json', z.object({
       }, { onConflict: 'id' });
 
     if (pErr) {
-        console.error(`[Atomic Onboarding] [Step: ${step}] Profiles Error:`, pErr);
-        throw new Error(`Profil gagal disimpan: ${pErr.message}`);
+      console.error(`[Atomic Onboarding] [Step: ${step}] Profiles Error:`, pErr);
+      throw new Error(`Profil gagal disimpan: ${pErr.message}`);
     }
 
     // 3. Perform Domain Upsert
@@ -217,18 +217,18 @@ app.post('/onboarding/complete', zValidator('json', z.object({
       .single();
 
     if (sErr) {
-        console.error(`[Atomic Onboarding] [Step: ${step}] Settings Error:`, sErr);
-        throw new Error(`Domain gagal disimpan: ${sErr.message}`);
+      console.error(`[Atomic Onboarding] [Step: ${step}] Settings Error:`, sErr);
+      throw new Error(`Domain gagal disimpan: ${sErr.message}`);
     }
 
     console.log(`[Atomic Onboarding] [Step: success] Completed for ${user.id}`);
     return c.json({ success: true, settings });
   } catch (err: any) {
     console.error(`[Atomic Onboarding] [Step: ${step}] Critical Failure:`, err);
-    return c.json({ 
-        error: err.message || 'Server error', 
-        step, 
-        stack: err.stack 
+    return c.json({
+      error: err.message || 'Server error',
+      step,
+      stack: err.stack
     }, 500);
   }
 });
@@ -240,8 +240,8 @@ app.put('/settings/domain', zValidator('json', z.object({ domain_name: z.string(
     console.log(`[Domain API] [${timestamp}] Handler invoked`);
     const { supabase, user } = await getAuthContext(c);
     if (!user) {
-        console.warn('[Domain API] Unauthorized access attempt');
-        return c.json({ error: 'Unauthorized' }, 401);
+      console.warn('[Domain API] Unauthorized access attempt');
+      return c.json({ error: 'Unauthorized' }, 401);
     }
 
     const { domain_name } = c.req.valid('json');
@@ -257,8 +257,8 @@ app.put('/settings/domain', zValidator('json', z.object({ domain_name: z.string(
       .maybeSingle();
 
     if (checkError) {
-        console.error('[Domain API] Check error:', checkError);
-        return c.json({ error: 'Database check failed: ' + checkError.message }, 500);
+      console.error('[Domain API] Check error:', checkError);
+      return c.json({ error: 'Database check failed: ' + checkError.message }, 500);
     }
 
     if (existingDomain) {
@@ -269,29 +269,29 @@ app.put('/settings/domain', zValidator('json', z.object({ domain_name: z.string(
     // 2. Perform the update directly using admin client to ensure success during onboarding
     console.log(`[Domain API] Performing upsert for user: ${user.id}`);
     const { data: upsertData, error: upsertError } = await adminSupabase
-        .from('user_settings')
-        .upsert({
-            user_id: user.id,
-            domain_name,
-            domain_verified: true,
-            updated_at: new Date().toISOString()
-        }, { onConflict: 'user_id' })
-        .select()
-        .single();
+      .from('user_settings')
+      .upsert({
+        user_id: user.id,
+        domain_name,
+        domain_verified: true,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' })
+      .select()
+      .single();
 
     if (upsertError) {
-        console.error('[Domain API] Upsert Error:', upsertError);
-        return c.json({ error: 'Gagal menyimpan domain: ' + upsertError.message, code: upsertError.code }, 500);
+      console.error('[Domain API] Upsert Error:', upsertError);
+      return c.json({ error: 'Gagal menyimpan domain: ' + upsertError.message, code: upsertError.code }, 500);
     }
-    
+
     console.log(`[Domain API] Success for user: ${user.id}`);
     return c.json(upsertData);
   } catch (err: any) {
     console.error('[Domain API Global Catch]', err);
-    return c.json({ 
-        error: 'Critical server error in domain settings', 
-        message: err.message,
-        stack: err.stack 
+    return c.json({
+      error: 'Critical server error in domain settings',
+      message: err.message,
+      stack: err.stack
     }, 500);
   }
 });
@@ -325,20 +325,20 @@ const getAuthContext = async (c: any) => {
   try {
     const url = getEnv('PUBLIC_SUPABASE_URL');
     const key = getEnv('PUBLIC_SUPABASE_ANON_KEY');
-    
+
     // Multi-source cookie detection
     let cookieHeader = c.req.header('Cookie') ?? '';
     if (!cookieHeader) {
-        // Fallback to Hono's getCookie if header is missing
-        const allCookies = getCookie(c);
-        cookieHeader = Object.entries(allCookies)
-            .map(([k, v]) => `${k}=${v}`)
-            .join('; ');
+      // Fallback to Hono's getCookie if header is missing
+      const allCookies = getCookie(c);
+      cookieHeader = Object.entries(allCookies)
+        .map(([k, v]) => `${k}=${v}`)
+        .join('; ');
     }
 
     if (!url || !key) {
-        console.error('[getAuthContext] Configuration missing! URL:', !!url, 'Key:', !!key);
-        return { supabase: null as any, user: null };
+      console.error('[getAuthContext] Configuration missing! URL:', !!url, 'Key:', !!key);
+      return { supabase: null as any, user: null };
     }
 
     const supabase = createServerClient(url, key, {
@@ -348,40 +348,40 @@ const getAuthContext = async (c: any) => {
         },
       },
     });
-    
-    try {
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (user) return { supabase, user };
-        
-        if (authError) {
-          console.warn('[getAuthContext] getUser error:', authError.message);
-        }
 
-        // Fallback: If getUser failed but we have cookies, try to extract the token manually
-        // Handle chunked cookies by looking for parts of the auth-token
-        const cookies = parseCookieHeader(cookieHeader);
-        const tokenKey = Object.keys(cookies).find(k => k.includes('auth-token'));
-        const token = tokenKey ? cookies[tokenKey] : (cookies.sb_access_token || cookies['sb-access-token']);
-        
-        if (token) {
-            console.log('[getAuthContext] Found token in cookies, attempting direct getUser(token)...');
-            const { data: { user: retryUser }, error: retryError } = await supabase.auth.getUser(token);
-            if (retryUser) return { supabase, user: retryUser };
-            
-            // SUPER FALLBACK: Try to decode JWT manually for session existence check
-            // This is "Nuclear" mode: we trust the client has a valid cookie even if Supabase API is flaky
-            try {
-                const payload = JSON.parse(atob(token.split('.')[1]));
-                if (payload && payload.sub) {
-                    console.log('[getAuthContext] Nuclear Success: Decoded user ID from JWT:', payload.sub);
-                    return { supabase, user: { id: payload.sub, email: payload.email } as any };
-                }
-            } catch (jwtErr) {
-                console.error('[getAuthContext] Nuclear Fallback failed:', jwtErr);
-            }
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (user) return { supabase, user };
+
+      if (authError) {
+        console.warn('[getAuthContext] getUser error:', authError.message);
+      }
+
+      // Fallback: If getUser failed but we have cookies, try to extract the token manually
+      // Handle chunked cookies by looking for parts of the auth-token
+      const cookies = parseCookieHeader(cookieHeader);
+      const tokenKey = Object.keys(cookies).find(k => k.includes('auth-token'));
+      const token = tokenKey ? cookies[tokenKey] : (cookies.sb_access_token || cookies['sb-access-token']);
+
+      if (token) {
+        console.log('[getAuthContext] Found token in cookies, attempting direct getUser(token)...');
+        const { data: { user: retryUser }, error: retryError } = await supabase.auth.getUser(token);
+        if (retryUser) return { supabase, user: retryUser };
+
+        // SUPER FALLBACK: Try to decode JWT manually for session existence check
+        // This is "Nuclear" mode: we trust the client has a valid cookie even if Supabase API is flaky
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          if (payload && payload.sub) {
+            console.log('[getAuthContext] Nuclear Success: Decoded user ID from JWT:', payload.sub);
+            return { supabase, user: { id: payload.sub, email: payload.email } as any };
+          }
+        } catch (jwtErr) {
+          console.error('[getAuthContext] Nuclear Fallback failed:', jwtErr);
         }
+      }
     } catch (fErr: any) {
-        console.error('[getAuthContext] Auth fetch failed (Internal Error):', fErr.message);
+      console.error('[getAuthContext] Auth fetch failed (Internal Error):', fErr.message);
     }
 
     return { supabase, user: null };
@@ -393,7 +393,7 @@ const getAuthContext = async (c: any) => {
 
 // Helper for admin client with environment-aware config
 const getAdminClient = async (env: any) => {
-    return getSupabaseAdmin(env);
+  return getSupabaseAdmin(env);
 };
 
 // Middleware untuk logs
@@ -404,37 +404,37 @@ app.use('*', async (c, next) => {
 
 // --- PUBLIC UTILITY ROUTES ---
 app.get('/public/check-domain', async (c) => {
-    const domain = c.req.query('name')?.toLowerCase();
-    if (!domain) return c.json({ available: false, error: 'Nama domain wajib diisi' }, 400);
+  const domain = c.req.query('name')?.toLowerCase();
+  if (!domain) return c.json({ available: false, error: 'Nama domain wajib diisi' }, 400);
 
-    // Regex validation
-    const domainRegex = /^[a-zA-Z0-9-]+$/;
-    if (!domainRegex.test(domain)) {
-        return c.json({ available: false, error: 'Error format' }, 400);
+  // Regex validation
+  const domainRegex = /^[a-zA-Z0-9-]+$/;
+  if (!domainRegex.test(domain)) {
+    return c.json({ available: false, error: 'Error format' }, 400);
+  }
+
+  try {
+    const adminSupabase = await getAdminClient(cfEnv);
+
+    const { data, error } = await adminSupabase
+      .from('user_settings')
+      .select('user_id')
+      .eq('domain_name', domain)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    // Reserved domains
+    const reserved = ['admin', 'tepak', 'orbit', 'studio', 'api', 'auth', 'login', 'register', 'dashboard'];
+    if (reserved.includes(domain)) {
+      return c.json({ available: false, error: 'Subdomain telah digunakan' });
     }
 
-    try {
-        const adminSupabase = await getAdminClient(cfEnv);
-        
-        const { data, error } = await adminSupabase
-            .from('user_settings')
-            .select('user_id')
-            .eq('domain_name', domain)
-            .maybeSingle();
-
-        if (error) throw error;
-        
-        // Reserved domains
-        const reserved = ['admin', 'tepak', 'orbit', 'studio', 'api', 'auth', 'login', 'register', 'dashboard'];
-        if (reserved.includes(domain)) {
-            return c.json({ available: false, error: 'Subdomain telah digunakan' });
-        }
-
-        return c.json({ available: !data });
-    } catch (err: any) {
-        console.error('[Check Domain API Error]', err);
-        return c.json({ available: false, error: err.message || 'Server Error' }, 500);
-    }
+    return c.json({ available: !data });
+  } catch (err: any) {
+    console.error('[Check Domain API Error]', err);
+    return c.json({ available: false, error: err.message || 'Server Error' }, 500);
+  }
 });
 
 // --- DEBUG / LIVENESS ---
@@ -475,8 +475,8 @@ app.get('/wallet/stats', async (c) => {
 
     // Use net_amount if available, fallback to 5% calculation for old legacy data
     const totalNet = orders?.reduce((sum, o) => {
-        const val = o.net_amount !== null ? Number(o.net_amount) : Math.floor(Number(o.amount) * 0.95);
-        return sum + val;
+      const val = o.net_amount !== null ? Number(o.net_amount) : Math.floor(Number(o.amount) * 0.95);
+      return sum + val;
     }, 0) || 0;
 
     return c.json({
@@ -515,40 +515,40 @@ app.get('/withdrawals', async (c) => {
 
 // Request new withdrawal
 app.post('/wallet/withdraw', async (c) => {
-    const { supabase, user } = await getAuthContext(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+  const { supabase, user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
-    try {
-        // --- SECURITY: Check if Payouts are globally enabled ---
-        const { data: config } = await supabase
-            .from('platform_configs')
-            .select('payouts_enabled')
-            .eq('id', 1)
-            .single();
-        
-        if (config && config.payouts_enabled === false) {
-            return c.json({ 
-                error: 'Penarikan saldo sedang ditangguhkan sementara untuk pemeliharaan sistem. Harap coba lagi nanti.' 
-            }, 403);
-        }
+  try {
+    // --- SECURITY: Check if Payouts are globally enabled ---
+    const { data: config } = await supabase
+      .from('platform_configs')
+      .select('payouts_enabled')
+      .eq('id', 1)
+      .single();
 
-        const { amount, bankAccountId } = await c.req.json();
-        if (!amount || amount <= 0) throw new Error('Invalid amount');
-        if (!bankAccountId) throw new Error('Bank account is required');
-
-        // Use RPC for atomic transaction: check balance + subtract + create record
-        const { data: withdrawalId, error } = await supabase.rpc('initiate_withdrawal', {
-            p_merchant_id: user.id,
-            p_amount: Number(amount),
-            p_bank_account_id: bankAccountId
-        });
-
-        if (error) throw error;
-        return c.json({ success: true, withdrawalId });
-    } catch (err: any) {
-        console.error('[Withdraw Request API] error:', err);
-        return c.json({ error: err.message }, 500);
+    if (config && config.payouts_enabled === false) {
+      return c.json({
+        error: 'Penarikan saldo sedang ditangguhkan sementara untuk pemeliharaan sistem. Harap coba lagi nanti.'
+      }, 403);
     }
+
+    const { amount, bankAccountId } = await c.req.json();
+    if (!amount || amount <= 0) throw new Error('Invalid amount');
+    if (!bankAccountId) throw new Error('Bank account is required');
+
+    // Use RPC for atomic transaction: check balance + subtract + create record
+    const { data: withdrawalId, error } = await supabase.rpc('initiate_withdrawal', {
+      p_merchant_id: user.id,
+      p_amount: Number(amount),
+      p_bank_account_id: bankAccountId
+    });
+
+    if (error) throw error;
+    return c.json({ success: true, withdrawalId });
+  } catch (err: any) {
+    console.error('[Withdraw Request API] error:', err);
+    return c.json({ error: err.message }, 500);
+  }
 });
 
 // Check bank account status
@@ -558,12 +558,12 @@ app.get('/bank-accounts', async (c) => {
 
   try {
     const { data, error } = await supabase
-        .from('bank_accounts')
-        .select('*')
-        .eq('merchant_id', user.id)
-        .eq('is_primary', true)
-        .single();
-    
+      .from('bank_accounts')
+      .select('*')
+      .eq('merchant_id', user.id)
+      .eq('is_primary', true)
+      .single();
+
     if (error && error.code !== 'PGRST116') throw error;
     return c.json({ exists: !!data, details: data || null });
   } catch (err: any) {
@@ -622,8 +622,8 @@ app.get('/orders/stats', async (c) => {
       successful_orders: orders?.filter(o => o.status === 'success' || o.status === 'paid').length || 0,
       pending_orders: orders?.filter(o => o.status === 'pending').length || 0,
       total_revenue: orders
-          ?.filter(o => o.status === 'success' || o.status === 'paid')
-          .reduce((sum, o) => sum + Number(o.amount), 0) || 0
+        ?.filter(o => o.status === 'success' || o.status === 'paid')
+        .reduce((sum, o) => sum + Number(o.amount), 0) || 0
     };
 
     console.log('[API] Order Stats - Success');
@@ -744,23 +744,23 @@ app.get('/profile', async (c) => {
 
     // 2. Auto-revert if expired
     if (settings?.plan_status && settings.plan_status !== 'free' && settings.plan_expiry) {
-        const expiryDate = new Date(settings.plan_expiry);
-        const now = new Date();
+      const expiryDate = new Date(settings.plan_expiry);
+      const now = new Date();
 
-        if (now > expiryDate) {
-            console.log(`[Subscription] Plan expired for user ${user.id}. Reverting to free.`);
-            const { data: updatedSettings } = await supabase
-                .from('user_settings')
-                .update({ 
-                    plan_status: 'free',
-                    auto_renewal: false 
-                })
-                .eq('user_id', user.id)
-                .select()
-                .single();
-            
-            currentSettings = updatedSettings;
-        }
+      if (now > expiryDate) {
+        console.log(`[Subscription] Plan expired for user ${user.id}. Reverting to free.`);
+        const { data: updatedSettings } = await supabase
+          .from('user_settings')
+          .update({
+            plan_status: 'free',
+            auto_renewal: false
+          })
+          .eq('user_id', user.id)
+          .select()
+          .single();
+
+        currentSettings = updatedSettings;
+      }
     }
 
     return c.json({
@@ -803,7 +803,7 @@ app.post('/profile/avatar', async (c) => {
     // Choose the best client for upload:
     let uploadClient = (isValidKey(serviceKey))
       ? createClient(supabaseUrl, serviceKey)
-      : (isValidKey(anonKey)) 
+      : (isValidKey(anonKey))
         ? createClient(supabaseUrl, anonKey)
         : (await getAuthContext(c)).supabase;
 
@@ -841,10 +841,82 @@ app.post('/profile/avatar', async (c) => {
       console.error('[Avatar Upload] DB update error:', updateError.message);
       return c.json({ error: updateError.message }, 500);
     }
-    
+
     return c.json({ success: true, url: publicUrl, avatar_url: publicUrl });
   } catch (err: any) {
     console.error('[Avatar Upload] Error:', err);
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+// UPLOAD BLOCK IMAGE - saves to Supabase Storage and returns permanent public URL
+app.post('/blocks/upload-image', async (c) => {
+  const { user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  try {
+    const formData = await c.req.formData();
+    const file = formData.get('image') as File | null;
+
+    if (!file) return c.json({ error: 'No file provided' }, 400);
+
+    // Server-side validation: type
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      return c.json({ error: 'Format tidak didukung atau file terlalu besar (Maks 2MB)' }, 422);
+    }
+
+    // Server-side validation: size (2 MB)
+    if (file.size > 2 * 1024 * 1024) {
+      return c.json({ error: 'Format tidak didukung atau file terlalu besar (Maks 2MB)' }, 422);
+    }
+
+    const BUCKET = 'block-images';
+    const fileExt = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const filePath = `${user.id}/${Date.now()}.${fileExt}`;
+    const arrayBuffer = await file.arrayBuffer();
+    const fileBuffer = new Uint8Array(arrayBuffer);
+
+    const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL') || '';
+    const serviceKey  = getEnv('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const anonKey     = getEnv('PUBLIC_SUPABASE_ANON_KEY') || '';
+    const isValidKey  = (k: string) => k && k.length > 20 && (k.startsWith('eyJ') || k.startsWith('sb_'));
+
+    const uploadClient = isValidKey(serviceKey)
+      ? createClient(supabaseUrl, serviceKey)
+      : isValidKey(anonKey)
+        ? createClient(supabaseUrl, anonKey)
+        : (await getAuthContext(c)).supabase;
+
+    // Auto-create public bucket on first use
+    if (isValidKey(serviceKey)) {
+      const { error: bErr } = await uploadClient.storage.createBucket(BUCKET, { public: true });
+      if (bErr && !bErr.message?.includes('already exists')) {
+        console.warn('[BlockImage] Bucket create warning:', bErr.message);
+      }
+    }
+
+    const { error: uploadError } = await uploadClient.storage
+      .from(BUCKET)
+      .upload(filePath, fileBuffer, { contentType: file.type, upsert: true });
+
+    if (uploadError) {
+      console.error('[BlockImage Upload] Storage error:', uploadError.message);
+      if (
+        uploadError.message?.toLowerCase().includes('row-level security') ||
+        uploadError.message?.toLowerCase().includes('rls') ||
+        uploadError.message?.toLowerCase().includes('bucket not found')
+      ) {
+        return c.json({ error: 'Storage RLS error. Tambahkan SUPABASE_SERVICE_ROLE_KEY ke .env.' }, 500);
+      }
+      throw uploadError;
+    }
+
+    const { data: { publicUrl } } = uploadClient.storage.from(BUCKET).getPublicUrl(filePath);
+    console.log(`[BlockImage Upload] URL: ${publicUrl}`);
+    return c.json({ success: true, url: publicUrl });
+  } catch (err: any) {
+    console.error('[BlockImage Upload] Error:', err);
     return c.json({ error: err.message }, 500);
   }
 });
@@ -877,7 +949,7 @@ app.post('/admin/upload-logo', async (c) => {
 
     // Auto-create bucket if not exists
     if (serviceKey && serviceKey.length > 20) {
-        await uploadClient.storage.createBucket(BUCKET, { public: true });
+      await uploadClient.storage.createBucket(BUCKET, { public: true });
     }
 
     // Upload file
@@ -888,7 +960,7 @@ app.post('/admin/upload-logo', async (c) => {
     if (uploadError) throw uploadError;
 
     const { data: { publicUrl } } = uploadClient.storage.from(BUCKET).getPublicUrl(filePath);
-    
+
     return c.json({ success: true, url: publicUrl });
   } catch (err: any) {
     console.error('[Logo Upload] Error:', err);
@@ -943,7 +1015,7 @@ app.put('/profile', async (c) => {
 // GET ALL PUBLISHED TUTORIALS
 app.get('/tutorials', async (c) => {
   const { supabase } = await getAuthContext(c);
-  
+
   try {
     const { data, error } = await supabase
       .from('tutorials')
@@ -1053,13 +1125,13 @@ app.get('/products/:id', async (c) => {
     .eq('id', id)
     .eq('merchant_id', user.id)
     .single();
-    
+
   if (error) return c.json({ error: error.message }, 404);
 
   // If the file is in our private bucket (internal path without http), generate a signed URL for the merchant to preview
   if (data.file_url && !data.file_url.startsWith('http')) {
-      const { data: signed } = await supabase.storage.from('media-produk-private').createSignedUrl(data.file_url, 60 * 60);
-      data.admin_download_url = signed?.signedUrl || data.file_url;
+    const { data: signed } = await supabase.storage.from('media-produk-private').createSignedUrl(data.file_url, 60 * 60);
+    data.admin_download_url = signed?.signedUrl || data.file_url;
   }
 
   return c.json(data);
@@ -1106,55 +1178,55 @@ app.put(
 
 // 4.1 Product Detail with Analytics (Enhanced)
 app.get('/products/:id/stats', async (c) => {
-    const { supabase, user } = await getAuthContext(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
-    const id = c.req.param('id');
+  const { supabase, user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+  const id = c.req.param('id');
 
-    // Fetch all in parallel for performance
-    const [ordersResult, analyticsResult] = await Promise.all([
-        supabase
-            .from('orders')
-            .select('*, customers (name, email)')
-            .eq('product_id', id)
-            .eq('merchant_id', user.id),
-        supabase
-            .from('analytics_events')
-            .select('event_type, created_at')
-            .eq('merchant_id', user.id)
-            .eq('product_id', id)
-            .in('event_type', ['view', 'page_view', 'click'])
-    ]);
+  // Fetch all in parallel for performance
+  const [ordersResult, analyticsResult] = await Promise.all([
+    supabase
+      .from('orders')
+      .select('*, customers (name, email)')
+      .eq('product_id', id)
+      .eq('merchant_id', user.id),
+    supabase
+      .from('analytics_events')
+      .select('event_type, created_at')
+      .eq('merchant_id', user.id)
+      .eq('product_id', id)
+      .in('event_type', ['view', 'page_view', 'click'])
+  ]);
 
-    if (ordersResult.error) return c.json({ error: ordersResult.error.message }, 500);
+  if (ordersResult.error) return c.json({ error: ordersResult.error.message }, 500);
 
-    const orders = ordersResult.data || [];
-    const events = analyticsResult.data || [];
+  const orders = ordersResult.data || [];
+  const events = analyticsResult.data || [];
 
-    const totalSold = orders.filter(o => o.status === 'success' || o.status === 'paid').length;
-    const totalRevenue = orders
-        .filter(o => o.status === 'success' || o.status === 'paid')
-        .reduce((sum, o) => sum + Number(o.amount), 0);
+  const totalSold = orders.filter(o => o.status === 'success' || o.status === 'paid').length;
+  const totalRevenue = orders
+    .filter(o => o.status === 'success' || o.status === 'paid')
+    .reduce((sum, o) => sum + Number(o.amount), 0);
 
-    // View count from analytics events
-    const totalViews = events.filter(e => e.event_type === 'view' || e.event_type === 'page_view').length;
-    const totalClicks = events.filter(e => e.event_type === 'click').length;
+  // View count from analytics events
+  const totalViews = events.filter(e => e.event_type === 'view' || e.event_type === 'page_view').length;
+  const totalClicks = events.filter(e => e.event_type === 'click').length;
 
-    // Conversion rate: sold / views * 100
-    const conversionRate = totalViews > 0
-        ? ((totalSold / totalViews) * 100).toFixed(1)
-        : '0.0';
+  // Conversion rate: sold / views * 100
+  const conversionRate = totalViews > 0
+    ? ((totalSold / totalViews) * 100).toFixed(1)
+    : '0.0';
 
-    return c.json({
-        total_sold: totalSold,
-        total_revenue: totalRevenue,
-        total_views: totalViews,
-        total_clicks: totalClicks,
-        conversion_rate: conversionRate,
-        recent_buyers: orders
-            .filter(o => o.status === 'success' || o.status === 'paid')
-            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-            .slice(0, 5)
-    });
+  return c.json({
+    total_sold: totalSold,
+    total_revenue: totalRevenue,
+    total_views: totalViews,
+    total_clicks: totalClicks,
+    conversion_rate: conversionRate,
+    recent_buyers: orders
+      .filter(o => o.status === 'success' || o.status === 'paid')
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 5)
+  });
 });
 
 // 5. Delete Product
@@ -1199,23 +1271,23 @@ app.get('/orders', async (c) => {
 
 // 1.1 Get Specific Order (Enhanced)
 app.get('/orders/:id', async (c) => {
-    const { supabase, user } = await getAuthContext(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
-    const id = c.req.param('id');
+  const { supabase, user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+  const id = c.req.param('id');
 
-    const { data, error } = await supabase
-        .from('orders')
-        .select(`
+  const { data, error } = await supabase
+    .from('orders')
+    .select(`
             *,
             customers (*),
             products (*)
         `)
-        .eq('id', id)
-        .eq('merchant_id', user.id)
-        .single();
+    .eq('id', id)
+    .eq('merchant_id', user.id)
+    .single();
 
-    if (error) return c.json({ error: error.message }, 404);
-    return c.json(data);
+  if (error) return c.json({ error: error.message }, 404);
+  return c.json(data);
 });
 
 // 2. Order Statistics
@@ -1234,14 +1306,14 @@ app.get('/orders/stats', async (c) => {
   const totalOrders = orders.length;
   const successfulOrders = orders.filter(o => o.status === 'success' || o.status === 'paid').length;
   const pendingOrders = orders.filter(o => o.status === 'pending').length;
-  
+
   // Calculate Revenue (Success only)
   // Use net_amount if available, fallback to 5% calculation for old legacy data
   const totalRevenue = orders
     .filter(o => o.status === 'success' || o.status === 'paid')
     .reduce((sum, o) => {
-        const val = o.net_amount !== null ? Number(o.net_amount) : (Number(o.amount) * 0.95);
-        return sum + val;
+      const val = o.net_amount !== null ? Number(o.net_amount) : (Number(o.amount) * 0.95);
+      return sum + val;
     }, 0);
 
   return c.json({
@@ -1258,153 +1330,153 @@ app.get('/orders/stats', async (c) => {
 
 // 1. List Customers
 app.get('/customers', async (c) => {
-    const { user } = await getAuthContext(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+  const { user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
-    const filter = c.req.query('filter') || 'all';
-    
-    console.log(`[API] Fetching customers for merchant_id: ${user.id} with filter: ${filter}`);
-    const { getSupabaseAdmin } = await import('../../lib/supabase');
-    const supabase = getSupabaseAdmin(cfEnv);
+  const filter = c.req.query('filter') || 'all';
 
-    // Fetch with orders to calculate LTV (LifeTime Value)
-    let query = supabase
-        .from('customers')
-        .select(`
+  console.log(`[API] Fetching customers for merchant_id: ${user.id} with filter: ${filter}`);
+  const { getSupabaseAdmin } = await import('../../lib/supabase');
+  const supabase = getSupabaseAdmin(cfEnv);
+
+  // Fetch with orders to calculate LTV (LifeTime Value)
+  let query = supabase
+    .from('customers')
+    .select(`
             *,
             orders (amount, status)
         `)
-        .eq('merchant_id', user.id);
+    .eq('merchant_id', user.id);
 
-    // Apply time-based filters
-    if (filter === 'this_month') {
-        const startOfMonth = new Date();
-        startOfMonth.setDate(1);
-        startOfMonth.setHours(0, 0, 0, 0);
-        query = query.gte('created_at', startOfMonth.toISOString());
-    } else if (filter === '30_days') {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        query = query.gte('created_at', thirtyDaysAgo.toISOString());
-    }
+  // Apply time-based filters
+  if (filter === 'this_month') {
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    query = query.gte('created_at', startOfMonth.toISOString());
+  } else if (filter === '30_days') {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    query = query.gte('created_at', thirtyDaysAgo.toISOString());
+  }
 
-    const { data, error } = await query.order('created_at', { ascending: false });
+  const { data, error } = await query.order('created_at', { ascending: false });
 
-    if (error) {
-        console.error('[API] Error fetching customers:', error);
-        return c.json({ error: error.message }, 500);
-    }
-    
-    // Add stats to each customer
-    let customersWithStats = (data || []).map(item => {
-        const successfulOrders = (item.orders || []).filter((o: any) => o.status === 'success' || o.status === 'paid');
-        const totalSpent = successfulOrders.reduce((sum: number, o: any) => sum + Number(o.amount), 0);
-        
-        // Remove the full orders list to keep response small
-        const { orders, ...customerData } = item;
-        return {
-            ...customerData,
-            total_spent: totalSpent,
-            order_count: successfulOrders.length
-        };
-    });
+  if (error) {
+    console.error('[API] Error fetching customers:', error);
+    return c.json({ error: error.message }, 500);
+  }
 
-    // Special sort for Biggest filter
-    if (filter === 'biggest') {
-        customersWithStats.sort((a, b) => b.total_spent - a.total_spent);
-    }
-    
-    console.log(`[API] Found ${customersWithStats.length} customers for ${user.id}`);
-    return c.json(customersWithStats);
+  // Add stats to each customer
+  let customersWithStats = (data || []).map(item => {
+    const successfulOrders = (item.orders || []).filter((o: any) => o.status === 'success' || o.status === 'paid');
+    const totalSpent = successfulOrders.reduce((sum: number, o: any) => sum + Number(o.amount), 0);
+
+    // Remove the full orders list to keep response small
+    const { orders, ...customerData } = item;
+    return {
+      ...customerData,
+      total_spent: totalSpent,
+      order_count: successfulOrders.length
+    };
+  });
+
+  // Special sort for Biggest filter
+  if (filter === 'biggest') {
+    customersWithStats.sort((a, b) => b.total_spent - a.total_spent);
+  }
+
+  console.log(`[API] Found ${customersWithStats.length} customers for ${user.id}`);
+  return c.json(customersWithStats);
 });
 
 // 2. Customer Detail (with Order History)
 app.get('/customers/:id', async (c) => {
-    const { supabase, user } = await getAuthContext(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
-    const id = c.req.param('id');
+  const { supabase, user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+  const id = c.req.param('id');
 
-    // 1. Get Profile
-    const { data: customer, error: custError } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('id', id)
-        .eq('merchant_id', user.id)
-        .single();
+  // 1. Get Profile
+  const { data: customer, error: custError } = await supabase
+    .from('customers')
+    .select('*')
+    .eq('id', id)
+    .eq('merchant_id', user.id)
+    .single();
 
-    if (custError) return c.json({ error: custError.message }, 404);
+  if (custError) return c.json({ error: custError.message }, 404);
 
-    // 2. Get Order History
-    const { data: orders, error: orderError } = await supabase
-        .from('orders')
-        .select(`
+  // 2. Get Order History
+  const { data: orders, error: orderError } = await supabase
+    .from('orders')
+    .select(`
             *,
             products (title, type, cover_url)
         `)
-        .eq('customer_id', id)
-        .order('created_at', { ascending: false });
+    .eq('customer_id', id)
+    .order('created_at', { ascending: false });
 
-    return c.json({
-        ...customer,
-        orders: orders || []
-    });
+  return c.json({
+    ...customer,
+    orders: orders || []
+  });
 });
 
 // 2.1 Update Customer
 app.put(
-    '/customers/:id',
-    zValidator(
-        'json',
-        z.object({
-            name: z.string().optional(),
-            email: z.string().email().optional(),
-            phone: z.string().optional(),
-            notes: z.string().optional(),
-            address_text: z.string().optional(),
-        })
-    ),
-    async (c) => {
-        const { supabase, user } = await getAuthContext(c);
-        if (!user) return c.json({ error: 'Unauthorized' }, 401);
-
-        const id = c.req.param('id');
-        const body = c.req.valid('json');
-
-        const { data, error } = await supabase
-            .from('customers')
-            .update({
-                name: body.name,
-                email: body.email,
-                phone: body.phone,
-                notes: body.notes,
-                address_text: body.address_text,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', id)
-            .eq('merchant_id', user.id)
-            .select()
-            .single();
-
-        if (error) return c.json({ error: error.message }, 500);
-        return c.json(data);
-    }
-);
-
-// 2.2 Delete Customer
-app.delete('/customers/:id', async (c) => {
+  '/customers/:id',
+  zValidator(
+    'json',
+    z.object({
+      name: z.string().optional(),
+      email: z.string().email().optional(),
+      phone: z.string().optional(),
+      notes: z.string().optional(),
+      address_text: z.string().optional(),
+    })
+  ),
+  async (c) => {
     const { supabase, user } = await getAuthContext(c);
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
     const id = c.req.param('id');
+    const body = c.req.valid('json');
 
-    const { error } = await supabase
-        .from('customers')
-        .delete()
-        .eq('id', id)
-        .eq('merchant_id', user.id);
+    const { data, error } = await supabase
+      .from('customers')
+      .update({
+        name: body.name,
+        email: body.email,
+        phone: body.phone,
+        notes: body.notes,
+        address_text: body.address_text,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .eq('merchant_id', user.id)
+      .select()
+      .single();
 
     if (error) return c.json({ error: error.message }, 500);
-    return c.json({ success: true });
+    return c.json(data);
+  }
+);
+
+// 2.2 Delete Customer
+app.delete('/customers/:id', async (c) => {
+  const { supabase, user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  const id = c.req.param('id');
+
+  const { error } = await supabase
+    .from('customers')
+    .delete()
+    .eq('id', id)
+    .eq('merchant_id', user.id);
+
+  if (error) return c.json({ error: error.message }, 500);
+  return c.json({ success: true });
 });
 
 // 3. Create Order (Internal/Public for Checkout)
@@ -1432,7 +1504,7 @@ app.post(
     // 1. Upsert Customer
     const { data: customer, error: custError } = await supabase
       .from('customers')
-      .upsert({ 
+      .upsert({
         merchant_id: body.merchant_id,
         email: body.buyer_email,
         name: body.buyer_name,
@@ -1445,11 +1517,11 @@ app.post(
 
     // 2. Fetch current Platform Fee from Config
     const { data: pConfig } = await supabase
-        .from('platform_configs')
-        .select('platform_fee')
-        .eq('id', 1)
-        .single();
-    
+      .from('platform_configs')
+      .select('platform_fee')
+      .eq('id', 1)
+      .single();
+
     const currentFee = pConfig?.platform_fee || 5;
     const netAmount = Math.floor(body.amount * (1 - (currentFee / 100)));
 
@@ -1475,45 +1547,45 @@ app.post(
 
     // 3. Inisialisasi Pembayaran Duitku
     try {
-        const merchantCode = getEnv('PUBLIC_DUITKU_MERCHANT_CODE') || '';
-        const merchantKey = getEnv('PUBLIC_DUITKU_MERCHANT_KEY') || '';
-        const callbackUrl = getEnv('DUITKU_CALLBACK_URL') || '';
+      const merchantCode = getEnv('PUBLIC_DUITKU_MERCHANT_CODE') || '';
+      const merchantKey = getEnv('PUBLIC_DUITKU_MERCHANT_KEY') || '';
+      const callbackUrl = getEnv('DUITKU_CALLBACK_URL') || '';
 
-        if (!merchantCode || !merchantKey) {
-            console.warn('[Orders] Duitku config missing, returning order only');
-            return c.json(order, 201);
-        }
-
-        const { DuitkuService } = await import('../../lib/duitku');
-        const duitkuService = new DuitkuService(merchantCode, merchantKey);
-
-        const requestOrigin = new URL(c.req.url).origin;
-        const isLocalOrTunnel = requestOrigin.includes('localhost') || requestOrigin.includes('trycloudflare.com');
-        
-        const paymentResponse = await duitkuService.createPayment({
-            merchantCode,
-            merchantKey,
-            paymentAmount: body.amount,
-            orderId: invoiceId,
-            productDetails: `Pesanan ${invoiceId}`,
-            customerEmail: body.buyer_email,
-            customerPhone: body.buyer_phone || '',
-            customerName: body.buyer_name,
-            returnUrl: `${requestOrigin}/checkout/success?id=${invoiceId}&merchant=${body.merchant_id}`,
-            callbackUrl: isLocalOrTunnel ? `${requestOrigin}/api/payments/duitku/webhook` : (callbackUrl || `${requestOrigin}/api/payments/duitku/webhook`),
-            paymentMethod: body.payment_method,
-        });
-
-        console.log(`[Orders] Duitku created for ${invoiceId}:`, paymentResponse.reference);
-
-        return c.json({
-            ...order,
-            payment: paymentResponse
-        }, 201);
-    } catch (duitkuErr: any) {
-        console.error('[Orders] Duitku Init Error:', duitkuErr);
-        // Tetap kembalikan order meskipun duitku gagal (fallback)
+      if (!merchantCode || !merchantKey) {
+        console.warn('[Orders] Duitku config missing, returning order only');
         return c.json(order, 201);
+      }
+
+      const { DuitkuService } = await import('../../lib/duitku');
+      const duitkuService = new DuitkuService(merchantCode, merchantKey);
+
+      const requestOrigin = new URL(c.req.url).origin;
+      const isLocalOrTunnel = requestOrigin.includes('localhost') || requestOrigin.includes('trycloudflare.com');
+
+      const paymentResponse = await duitkuService.createPayment({
+        merchantCode,
+        merchantKey,
+        paymentAmount: body.amount,
+        orderId: invoiceId,
+        productDetails: `Pesanan ${invoiceId}`,
+        customerEmail: body.buyer_email,
+        customerPhone: body.buyer_phone || '',
+        customerName: body.buyer_name,
+        returnUrl: `${requestOrigin}/checkout/success?id=${invoiceId}&merchant=${body.merchant_id}`,
+        callbackUrl: isLocalOrTunnel ? `${requestOrigin}/api/payments/duitku/webhook` : (callbackUrl || `${requestOrigin}/api/payments/duitku/webhook`),
+        paymentMethod: body.payment_method,
+      });
+
+      console.log(`[Orders] Duitku created for ${invoiceId}:`, paymentResponse.reference);
+
+      return c.json({
+        ...order,
+        payment: paymentResponse
+      }, 201);
+    } catch (duitkuErr: any) {
+      console.error('[Orders] Duitku Init Error:', duitkuErr);
+      // Tetap kembalikan order meskipun duitku gagal (fallback)
+      return c.json(order, 201);
     }
   }
 );
@@ -1576,7 +1648,7 @@ app.get('/plans', async (c) => {
 app.post('/subscription/upgrade', async (c) => {
   console.log('[Subscription Upgrade] Request received');
   const { supabase, user } = await getAuthContext(c);
-  
+
   if (!user) {
     console.warn('[Subscription Upgrade] Unauthorized access attempt');
     return c.json({ error: 'Unauthorized' }, 401);
@@ -1588,21 +1660,21 @@ app.post('/subscription/upgrade', async (c) => {
     const merchantCode = getEnv('PUBLIC_DUITKU_MERCHANT_CODE') || '';
     const merchantKey = getEnv('PUBLIC_DUITKU_MERCHANT_KEY') || '';
     const callbackUrl = getEnv('DUITKU_CALLBACK_URL') || '';
-    
+
     console.log('[Subscription Upgrade] Config check:', { merchantCode: !!merchantCode, merchantKey: !!merchantKey, callbackUrl });
 
     // Ambil pilihan metode pembayaran dari body (SP, OV, BT, dll)
     let body: any = {};
     try {
-        body = await c.req.json();
+      body = await c.req.json();
     } catch (e) {
-        // Fallback jika tidak ada body JSON
+      // Fallback jika tidak ada body JSON
     }
-    
+
     const selectedMethod = body.method || 'SP'; // Default ShopeePay untuk Sandbox jika tidak pilih
 
     if (!merchantCode || !merchantKey) {
-        throw new Error(`Konfigurasi Duitku tidak ditemukan. Code: ${!!merchantCode}, Key: ${!!merchantKey}`);
+      throw new Error(`Konfigurasi Duitku tidak ditemukan. Code: ${!!merchantCode}, Key: ${!!merchantKey}`);
     }
 
     const { DuitkuService } = await import('../../lib/duitku');
@@ -1617,24 +1689,24 @@ app.post('/subscription/upgrade', async (c) => {
 
     const amount = proPlan ? Number(proPlan.price_monthly) : 99000; // Harga Paket PRO (Dynamic with Fallback)
     const orderId = `SUB--${user.id}--${Date.now().toString().slice(-4)}`;
-    
+
     // Create initial record in history
     try {
-        await supabase
-            .from('subscription_history')
-            .insert({
-                user_id: user.id,
-                invoice_id: orderId,
-                plan_id: 'pro',
-                amount: amount,
-                status: 'PENDING',
-                payment_method: selectedMethod,
-                created_at: new Date().toISOString()
-            });
+      await supabase
+        .from('subscription_history')
+        .insert({
+          user_id: user.id,
+          invoice_id: orderId,
+          plan_id: 'pro',
+          amount: amount,
+          status: 'PENDING',
+          payment_method: selectedMethod,
+          created_at: new Date().toISOString()
+        });
     } catch (e) {
-        console.error('[Subscription Upgrade] Failed to create history record:', e);
+      console.error('[Subscription Upgrade] Failed to create history record:', e);
     }
-    
+
     console.log('[Subscription Upgrade] Creating payment for:', user.email, orderId);
 
     // Fetch Branding for Product Details
@@ -1667,10 +1739,10 @@ app.post('/subscription/upgrade', async (c) => {
     return c.json(paymentResponse);
   } catch (err: any) {
     console.error('[Subscription Upgrade] FATAL ERROR:', err);
-    return c.json({ 
-      error: 'Internal Server Error', 
-      message: err.message, 
-      stack: err.stack 
+    return c.json({
+      error: 'Internal Server Error',
+      message: err.message,
+      stack: err.stack
     }, 500);
   }
 });
@@ -1747,7 +1819,7 @@ app.post('/payments/duitku/webhook', async (c) => {
 
     // Validasi tanda tangan webhook
     const { DuitkuService } = await import('../../lib/duitku');
-    
+
     // Dapatkan kunci merchant dari pengaturan pengguna - untuk produksi, query dari database
     const merchantKey = getEnv('PUBLIC_DUITKU_MERCHANT_KEY') || '';
     const duitkuService = new DuitkuService(body.merchantCode, merchantKey);
@@ -1764,62 +1836,62 @@ app.post('/payments/duitku/webhook', async (c) => {
 
     // 1. KASUS LANGGANAN (SUB--)
     if (merchantOrderId.startsWith('SUB--')) {
-        const parts = merchantOrderId.split('--');
-        const targetUserId = parts[1];
-        if (resultCode === '00' && targetUserId) {
-            console.log(`[Webhook DuitKu] UPGRADING USER ${targetUserId} TO PRO...`);
-            
-            // 1. Get Expiry Date
-            const expiryDate = new Date();
-            expiryDate.setDate(expiryDate.getDate() + 30);
+      const parts = merchantOrderId.split('--');
+      const targetUserId = parts[1];
+      if (resultCode === '00' && targetUserId) {
+        console.log(`[Webhook DuitKu] UPGRADING USER ${targetUserId} TO PRO...`);
 
-            // 2. Update Subscription History
-            const { error: histError } = await supabase
-                .from('subscription_history')
-                .update({ 
-                    status: 'SUCCESS',
-                    updated_at: new Date().toISOString()
-                })
-                .eq('invoice_id', merchantOrderId);
-            
-            if (histError) console.error('[Webhook Duitku] Failed to update hist SUCCESS:', histError);
+        // 1. Get Expiry Date
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 30);
 
-            // 3. Update User Settings
-            const { error: subError } = await supabase
-                .from('user_settings')
-                .update({
-                    plan_status: 'pro',
-                    plan_expiry: expiryDate.toISOString(),
-                    auto_renewal: true,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('user_id', targetUserId);
-            
-            if (subError) {
-                console.error('[Webhook DuitKu] Database Update Error (Sub):', subError);
-                return c.json({ error: 'Gagal update database langganan' }, 500);
-            }
+        // 2. Update Subscription History
+        const { error: histError } = await supabase
+          .from('subscription_history')
+          .update({
+            status: 'SUCCESS',
+            updated_at: new Date().toISOString()
+          })
+          .eq('invoice_id', merchantOrderId);
 
-            console.log(`[Webhook DuitKu] BERHASIL! User ${targetUserId} sekarang PRO.`);
-            return c.json({ success: true, message: 'Subscription upgraded successfully' });
-        } else if (targetUserId) {
-            // Failed/Cancelled status tracking for SUB--
-            const statusMap: Record<string, string> = {
-                '02': 'CANCELED',
-                '03': 'EXPIRED',
-            };
-            const subsStatus = statusMap[resultCode] || 'FAILED';
+        if (histError) console.error('[Webhook Duitku] Failed to update hist SUCCESS:', histError);
 
-            await supabase
-                .from('subscription_history')
-                .update({ 
-                    status: subsStatus,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('invoice_id', merchantOrderId);
-            
-            return c.json({ success: false, status: subsStatus });
+        // 3. Update User Settings
+        const { error: subError } = await supabase
+          .from('user_settings')
+          .update({
+            plan_status: 'pro',
+            plan_expiry: expiryDate.toISOString(),
+            auto_renewal: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', targetUserId);
+
+        if (subError) {
+          console.error('[Webhook DuitKu] Database Update Error (Sub):', subError);
+          return c.json({ error: 'Gagal update database langganan' }, 500);
         }
+
+        console.log(`[Webhook DuitKu] BERHASIL! User ${targetUserId} sekarang PRO.`);
+        return c.json({ success: true, message: 'Subscription upgraded successfully' });
+      } else if (targetUserId) {
+        // Failed/Cancelled status tracking for SUB--
+        const statusMap: Record<string, string> = {
+          '02': 'CANCELED',
+          '03': 'EXPIRED',
+        };
+        const subsStatus = statusMap[resultCode] || 'FAILED';
+
+        await supabase
+          .from('subscription_history')
+          .update({
+            status: subsStatus,
+            updated_at: new Date().toISOString()
+          })
+          .eq('invoice_id', merchantOrderId);
+
+        return c.json({ success: false, status: subsStatus });
+      }
     }
 
     // 2. KASUS PESURAN PRODUK (Invoice Biasa)
@@ -1844,8 +1916,8 @@ app.post('/payments/duitku/webhook', async (c) => {
       .eq('invoice_id', merchantOrderId);
 
     if (updateError) {
-        console.error('[Webhook DuitKu] Database Update Error (Order):', updateError);
-        return c.json({ error: 'Gagal update database pesanan' }, 500);
+      console.error('[Webhook DuitKu] Database Update Error (Order):', updateError);
+      return c.json({ error: 'Gagal update database pesanan' }, 500);
     }
 
     console.log(`[Webhook DuitKu] Pesanan ${merchantOrderId} -> ${orderStatus} (Ref: ${body.reference})`);
@@ -1891,95 +1963,174 @@ app.post(
 
 // 1. Get My Profile (with Settings)
 app.get('/profile/me', async (c) => {
-    const { supabase, user } = await getAuthContext(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+  const { supabase, user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
-    const { data: profile, error } = await supabase
-        .from('profiles')
-        .select(`
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select(`
             *,
             user_settings (*)
         `)
-        .eq('id', user.id)
-        .single();
+    .eq('id', user.id)
+    .single();
 
-    if (error) return c.json({ error: error.message }, 500);
-    return c.json(profile);
+  if (error) return c.json({ error: error.message }, 500);
+  return c.json(profile);
 });
+
+// Helper function to sanitize text block content (backend side)
+const sanitizeTextBlockContent = (content: any): any => {
+  if (!content) return content;
+
+  // Deep copy to avoid mutating original
+  const sanitized = JSON.parse(JSON.stringify(content));
+
+  // If it's a text block, sanitize title and content
+  if (sanitized.type === 'text' && sanitized.data) {
+    const sanitizeString = (str: string): string => {
+      if (!str || typeof str !== 'string') return str || '';
+
+      let sanitizedStr = str;
+
+      // 1. Remove all script tags and their content
+      sanitizedStr = sanitizedStr.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '');
+
+      // 2. Remove HTML comments and CDATA sections
+      sanitizedStr = sanitizedStr.replace(/<!--[\s\S]*?-->/g, '');
+      sanitizedStr = sanitizedStr.replace(/<!\[CDATA\[[\s\S]*?\]\]>/g, '');
+
+      // 3. Remove dangerous tags
+      sanitizedStr = sanitizedStr.replace(/<\/?(iframe|embed|object|svg|style|link|meta|base)[^>]*>/gim, '');
+
+      // 4. Remove event handlers
+      sanitizedStr = sanitizedStr.replace(/on\w+\s*=\s*["'][^"']*["']/gim, '');
+      sanitizedStr = sanitizedStr.replace(/on\w+\s*=\s*[^\s>]+/gim, '');
+
+      // 5. Remove javascript: and data: URLs
+      sanitizedStr = sanitizedStr.replace(/\s+(href|src|background|style)\s*=\s*["'](javascript:|data:)[^"']*["']/gim, '');
+      sanitizedStr = sanitizedStr.replace(/javascript\s*:/gim, '');
+
+      // 6. Remove CSS expressions
+      sanitizedStr = sanitizedStr.replace(/expression\s*\([^)]*\)/gim, '');
+
+      // 7. Escape HTML entities
+      const escapeHtml = (text: string) => {
+        const htmlEntities: Record<string, string> = {
+          '&': '&',
+          '<': '<',
+          '>': '>',
+          '"': '"',
+          "'": "&#x27;",
+          '/': '&#x2F;'
+        };
+        return text.replace(/[&<>"'/]/g, char => htmlEntities[char]);
+      };
+
+      sanitizedStr = escapeHtml(sanitizedStr);
+
+      // 8. Clean up whitespace
+      sanitizedStr = sanitizedStr.replace(/\s+/g, ' ').trim();
+
+      return sanitizedStr;
+    };
+
+    // Sanitize title and content
+    sanitized.data.title = sanitizeString(sanitized.data.title);
+    sanitized.data.content = sanitizeString(sanitized.data.content);
+  }
+
+  return sanitized;
+};
 
 // 2. Update My Profile & Settings
 app.put(
-    '/profile/me',
-    zValidator(
-        'json',
+  '/profile/me',
+  zValidator(
+    'json',
+    z.object({
+      full_name: z.string().optional(),
+      username: z.string().optional(),
+      bio: z.string().optional(),
+      avatar_url: z.string().optional(),
+      domain_name: z.string().optional(),
+      seo_title: z.string().optional(),
+      seo_description: z.string().optional(),
+      instagram_url: z.string().optional(),
+      tiktok_url: z.string().optional(),
+      twitter_url: z.string().optional(),
+      youtube_url: z.string().optional(),
+      phone: z.string().optional(),
+      address_text: z.string().optional(),
+      city: z.string().optional(),
+      postcode: z.string().optional(),
+      blocks: z.array(
         z.object({
-            full_name: z.string().optional(),
-            username: z.string().optional(),
-            bio: z.string().optional(),
-            avatar_url: z.string().optional(),
-            domain_name: z.string().optional(),
-            seo_title: z.string().optional(),
-            seo_description: z.string().optional(),
-            instagram_url: z.string().optional(),
-            tiktok_url: z.string().optional(),
-            twitter_url: z.string().optional(),
-            youtube_url: z.string().optional(),
-            phone: z.string().optional(),
-            address_text: z.string().optional(),
-            city: z.string().optional(),
-            postcode: z.string().optional(),
-            blocks: z.array(z.any()).optional(),
+          id: z.string(),
+          type: z.string(),
+          icon: z.string().optional(),
+          title: z.string().optional(),
+          subtitle: z.string().optional(),
+          data: z.any().optional()
         })
-    ),
-    async (c) => {
-        const { supabase, user } = await getAuthContext(c);
-        if (!user) return c.json({ error: 'Unauthorized' }, 401);
+      ).optional(),
+    })
+  ),
+  async (c) => {
+    const { supabase, user } = await getAuthContext(c);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
-        const body = c.req.valid('json');
+    const body = c.req.valid('json');
 
-        // Split body into profile and settings fields
-        const profileFields = {
-            full_name: body.full_name,
-            username: body.username,
-            bio: body.bio,
-            avatar_url: body.avatar_url,
-            instagram_url: body.instagram_url,
-            tiktok_url: body.tiktok_url,
-            twitter_url: body.twitter_url,
-            youtube_url: body.youtube_url,
-            phone: body.phone,
-            address_text: body.address_text,
-            city: body.city,
-            postcode: body.postcode,
-            blocks: body.blocks,
-            updated_at: new Date().toISOString()
-        };
-        
-        const settingsFields = {
-            domain_name: body.domain_name,
-            seo_title: body.seo_title,
-            seo_description: body.seo_description,
-            updated_at: new Date().toISOString()
-        };
-
-        // 1. Update Profile
-        const { error: profileError } = await supabase
-            .from('profiles')
-            .update(Object.fromEntries(Object.entries(profileFields).filter(([_, v]) => v !== undefined)))
-            .eq('id', user.id);
-
-        if (profileError) return c.json({ error: profileError.message }, 500);
-
-        // 2. Update Settings
-        const { error: settingsError } = await supabase
-            .from('user_settings')
-            .update(Object.fromEntries(Object.entries(settingsFields).filter(([_, v]) => v !== undefined)))
-            .eq('user_id', user.id);
-
-        if (settingsError) return c.json({ error: settingsError.message }, 500);
-
-        return c.json({ success: true });
+    // Sanitize blocks if present
+    let sanitizedBlocks = body.blocks;
+    if (sanitizedBlocks && Array.isArray(sanitizedBlocks)) {
+      sanitizedBlocks = sanitizedBlocks.map(sanitizeTextBlockContent);
     }
+
+    // Split body into profile and settings fields
+    const profileFields = {
+      full_name: body.full_name,
+      username: body.username,
+      bio: body.bio,
+      avatar_url: body.avatar_url,
+      instagram_url: body.instagram_url,
+      tiktok_url: body.tiktok_url,
+      twitter_url: body.twitter_url,
+      youtube_url: body.youtube_url,
+      phone: body.phone,
+      address_text: body.address_text,
+      city: body.city,
+      postcode: body.postcode,
+      blocks: sanitizedBlocks,
+      updated_at: new Date().toISOString()
+    };
+
+    const settingsFields = {
+      domain_name: body.domain_name,
+      seo_title: body.seo_title,
+      seo_description: body.seo_description,
+      updated_at: new Date().toISOString()
+    };
+
+    // 1. Update Profile
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update(Object.fromEntries(Object.entries(profileFields).filter(([_, v]) => v !== undefined)))
+      .eq('id', user.id);
+
+    if (profileError) return c.json({ error: profileError.message }, 500);
+
+    // 2. Update Settings
+    const { error: settingsError } = await supabase
+      .from('user_settings')
+      .update(Object.fromEntries(Object.entries(settingsFields).filter(([_, v]) => v !== undefined)))
+      .eq('user_id', user.id);
+
+    if (settingsError) return c.json({ error: settingsError.message }, 500);
+
+    return c.json({ success: true });
+  }
 );
 
 // (Orders & Analytics moved to top)
@@ -2009,13 +2160,13 @@ app.post(
 
       // Daftar halaman internal yang TIDAK boleh dilacak views-nya (Backend Safety)
       const excludedPaths = [
-        '/dashboard', '/admin', '/settings', '/orders', '/products', 
-        '/wallet', '/withdraw', '/bank-info', '/add-product', '/edit-product', 
-        '/login', '/signup', '/forgot-password', '/reset-password', '/reset-sent', 
+        '/dashboard', '/admin', '/settings', '/orders', '/products',
+        '/wallet', '/withdraw', '/bank-info', '/add-product', '/edit-product',
+        '/login', '/signup', '/forgot-password', '/reset-password', '/reset-sent',
         '/onboarding', '/verify-email', '/uikit', '/demo', '/api'
       ];
 
-      const isExcluded = excludedPaths.some(p => 
+      const isExcluded = excludedPaths.some(p =>
         path === p || path.startsWith(p + '/')
       );
 
@@ -2026,23 +2177,23 @@ app.post(
 
       const mid = String(body.merchant_id || '');
       if (!mid || mid === 'undefined' || mid === 'null' || mid.length < 10) {
-          console.log('[analytics/track] Skipping: Invalid merchant_id:', mid);
-          return c.json({ success: true, message: 'Skipped: Invalid merchant_id' }, 200);
+        console.log('[analytics/track] Skipping: Invalid merchant_id:', mid);
+        return c.json({ success: true, message: 'Skipped: Invalid merchant_id' }, 200);
       }
 
       // Filter and map to actual DB columns (Lowercased to avoid check constraint violations)
       const insertData = {
-          merchant_id: body.merchant_id,
-          product_id: body.product_id || null,
-          event_type: String(body.event_type || 'page_view').toLowerCase() === 'view' ? 'page_view' : String(body.event_type || 'page_view').toLowerCase(),
-          traffic_source: String(body.traffic_source || 'direct').toLowerCase(),
-          device_type: String(body.device_type || 'desktop').toLowerCase(),
-          browser: String(body.browser || 'unknown').toLowerCase(),
-          country: String(body.country || 'id').toLowerCase(),
-          city: String(body.city || 'unknown').toLowerCase(),
-          session_id: body.session_id || `sess_${Date.now()}`,
-          path: body.path || '',
-          referrer: body.referrer || ''
+        merchant_id: body.merchant_id,
+        product_id: body.product_id || null,
+        event_type: String(body.event_type || 'page_view').toLowerCase() === 'view' ? 'page_view' : String(body.event_type || 'page_view').toLowerCase(),
+        traffic_source: String(body.traffic_source || 'direct').toLowerCase(),
+        device_type: String(body.device_type || 'desktop').toLowerCase(),
+        browser: String(body.browser || 'unknown').toLowerCase(),
+        country: String(body.country || 'id').toLowerCase(),
+        city: String(body.city || 'unknown').toLowerCase(),
+        session_id: body.session_id || `sess_${Date.now()}`,
+        path: body.path || '',
+        referrer: body.referrer || ''
       };
 
       const { error } = await supabase
@@ -2050,8 +2201,8 @@ app.post(
         .insert(insertData);
 
       if (error) {
-          console.error('[analytics/track] Supabase Error:', error);
-          return c.json({ error: error.message, details: error }, 500);
+        console.error('[analytics/track] Supabase Error:', error);
+        return c.json({ error: error.message, details: error }, 500);
       }
       return c.json({ success: true }, 201);
     } catch (err: any) {
@@ -2086,8 +2237,8 @@ app.get('/analytics/dashboard', async (c) => {
 
     if (eventError) {
       console.error('[Analytics API] Event fetch error:', eventError);
-      return c.json({ 
-        error: 'Event Fetch Failed', 
+      return c.json({
+        error: 'Event Fetch Failed',
         details: eventError,
         hint: 'Check if analytics_events table exists and RLS is correct.'
       }, 500);
@@ -2101,11 +2252,11 @@ app.get('/analytics/dashboard', async (c) => {
       .gte('created_at', startDateStr);
 
     if (orderError) {
-        console.error('[Analytics API] Order fetch error:', orderError);
-        return c.json({ 
-          error: 'Order Fetch Failed', 
-          details: orderError 
-        }, 500);
+      console.error('[Analytics API] Order fetch error:', orderError);
+      return c.json({
+        error: 'Order Fetch Failed',
+        details: orderError
+      }, 500);
     }
 
     const rawEventList = events || [];
@@ -2113,9 +2264,9 @@ app.get('/analytics/dashboard', async (c) => {
 
     // STRICT AUDIT: Filter out any internal paths from the counts
     const excludedPaths = [
-      '/dashboard', '/admin', '/settings', '/orders', '/products', 
-      '/wallet', '/withdraw', '/bank-info', '/add-product', '/edit-product', 
-      '/login', '/signup', '/forgot-password', '/reset-password', '/reset-sent', 
+      '/dashboard', '/admin', '/settings', '/orders', '/products',
+      '/wallet', '/withdraw', '/bank-info', '/add-product', '/edit-product',
+      '/login', '/signup', '/forgot-password', '/reset-password', '/reset-sent',
       '/onboarding', '/verify-email', '/uikit', '/demo', '/api'
     ];
 
@@ -2154,81 +2305,81 @@ app.get('/analytics/dashboard', async (c) => {
 
     // 3. Time Series aggregation
     const timeSeries: Record<string, { views: number, clicks: number, sales: number }> = {};
-    
+
     // Initialize the last X days with 0s to avoid gaps in chart
     for (let i = 0; i < days; i++) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split('T')[0];
-        timeSeries[dateStr] = { views: 0, clicks: 0, sales: 0 };
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      timeSeries[dateStr] = { views: 0, clicks: 0, sales: 0 };
     }
 
     // Helper to check for successful order status
     const isSuccessOrder = (status: string) => {
-        const s = (status || '').toLowerCase();
-        return s === 'success' || s === 'paid' || s === 'settled' || s === 'completed';
+      const s = (status || '').toLowerCase();
+      return s === 'success' || s === 'paid' || s === 'settled' || s === 'completed';
     };
 
     eventList.forEach(e => {
-        const dateStr = new Date(e.created_at).toISOString().split('T')[0];
-        if (timeSeries[dateStr]) {
-            if (e.event_type === 'view' || e.event_type === 'page_view') timeSeries[dateStr].views++;
-            if (e.event_type === 'click') timeSeries[dateStr].clicks++;
-        }
+      const dateStr = new Date(e.created_at).toISOString().split('T')[0];
+      if (timeSeries[dateStr]) {
+        if (e.event_type === 'view' || e.event_type === 'page_view') timeSeries[dateStr].views++;
+        if (e.event_type === 'click') timeSeries[dateStr].clicks++;
+      }
     });
 
     orderList.forEach(o => {
-        const dateStr = new Date(o.created_at).toISOString().split('T')[0];
-        if (timeSeries[dateStr] && isSuccessOrder(o.status)) {
-            timeSeries[dateStr].sales += Number(o.amount);
-        }
+      const dateStr = new Date(o.created_at).toISOString().split('T')[0];
+      if (timeSeries[dateStr] && isSuccessOrder(o.status)) {
+        timeSeries[dateStr].sales += Number(o.amount);
+      }
     });
 
     const sortedDates = Object.keys(timeSeries).sort();
     const time_series = {
-        labels: sortedDates.map(d => {
-            const date = new Date(d);
-            return date.toLocaleDateString('id-ID', { month: 'short', day: '2-digit' }).toUpperCase();
-        }),
-        views: sortedDates.map(d => timeSeries[d].views),
-        clicks: sortedDates.map(d => timeSeries[d].clicks),
-        sales: sortedDates.map(d => timeSeries[d].sales)
+      labels: sortedDates.map(d => {
+        const date = new Date(d);
+        return date.toLocaleDateString('id-ID', { month: 'short', day: '2-digit' }).toUpperCase();
+      }),
+      views: sortedDates.map(d => timeSeries[d].views),
+      clicks: sortedDates.map(d => timeSeries[d].clicks),
+      sales: sortedDates.map(d => timeSeries[d].sales)
     };
 
     // 4. Top Links aggregation
     const linkCounts: Record<string, { views: number, clicks: number, path: string }> = {};
     eventList.forEach(e => {
-        const path = e.path || '/';
-        if (!linkCounts[path]) linkCounts[path] = { views: 0, clicks: 0, path };
-        if (e.event_type === 'view' || e.event_type === 'page_view') linkCounts[path].views++;
-        if (e.event_type === 'click') linkCounts[path].clicks++;
+      const path = e.path || '/';
+      if (!linkCounts[path]) linkCounts[path] = { views: 0, clicks: 0, path };
+      if (e.event_type === 'view' || e.event_type === 'page_view') linkCounts[path].views++;
+      if (e.event_type === 'click') linkCounts[path].clicks++;
     });
     const top_links = Object.values(linkCounts)
-        .sort((a, b) => b.views - a.views)
-        .slice(0, 5);
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 5);
 
     return c.json({
       totalViews,
       totalClicks,
       avgCTR: avgCtr,
       devices: devices.length > 0 ? devices : [
-          { type: 'Mobile', percentage: 0 },
-          { type: 'Desktop', percentage: 0 }
+        { type: 'Mobile', percentage: 0 },
+        { type: 'Desktop', percentage: 0 }
       ],
       browsers: browsers.length > 0 ? browsers : [
-          { name: 'N/A', percentage: 0, icon: '❓' }
+        { name: 'N/A', percentage: 0, icon: '❓' }
       ],
       sales: {
-          total_revenue: orderList.filter(o => isSuccessOrder(o.status)).reduce((sum, o) => sum + Number(o.amount), 0),
-          order_count: orderList.filter(o => isSuccessOrder(o.status)).length
+        total_revenue: orderList.filter(o => isSuccessOrder(o.status)).reduce((sum, o) => sum + Number(o.amount), 0),
+        order_count: orderList.filter(o => isSuccessOrder(o.status)).length
       },
       time_series,
       top_links
     });
   } catch (err: any) {
     console.error('[Analytics API] Global catch:', err);
-    return c.json({ 
-      error: 'Global Exception', 
+    return c.json({
+      error: 'Global Exception',
       message: err.message,
       stack: err.stack
     }, 500);
@@ -2237,56 +2388,56 @@ app.get('/analytics/dashboard', async (c) => {
 
 // 3. Get Public Product Detail (for Checkout)
 app.get('/public/products/:id', async (c) => {
-    const id = c.req.param('id');
-    const url = getEnv('PUBLIC_SUPABASE_URL');
-    const key = getEnv('PUBLIC_SUPABASE_ANON_KEY');
+  const id = c.req.param('id');
+  const url = getEnv('PUBLIC_SUPABASE_URL');
+  const key = getEnv('PUBLIC_SUPABASE_ANON_KEY');
 
-    if (!url || !key) {
-        return c.json({ error: 'Configuration missing' }, 500);
-    }
+  if (!url || !key) {
+    return c.json({ error: 'Configuration missing' }, 500);
+  }
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(url, key);
+  const { createClient } = await import('@supabase/supabase-js');
+  const supabase = createClient(url, key);
 
-    const { data, error } = await supabase
-        .from('products')
-        .select('id, title, price, description, cover_url, merchant_id, status')
-        .eq('id', id)
-        .eq('status', 'published')
-        .single();
+  const { data, error } = await supabase
+    .from('products')
+    .select('id, title, price, description, cover_url, merchant_id, status')
+    .eq('id', id)
+    .eq('status', 'published')
+    .single();
 
-    if (error) return c.json({ error: 'Produk tidak ditemukan atau tidak tersedia' }, 404);
-    return c.json(data);
+  if (error) return c.json({ error: 'Produk tidak ditemukan atau tidak tersedia' }, 404);
+  return c.json(data);
 });
 
 // 4. Get Public Profile Detail (for Creator Landing Page Link)
 app.get('/public/profiles/:id', async (c) => {
-    const id = c.req.param('id');
-    console.log(`[API] GET /public/profiles/${id}`);
-    
-    const url = getEnv('PUBLIC_SUPABASE_URL');
-    const key = getEnv('PUBLIC_SUPABASE_ANON_KEY');
+  const id = c.req.param('id');
+  console.log(`[API] GET /public/profiles/${id}`);
 
-    if (!url || !key) {
-        return c.json({ error: 'Configuration missing' }, 500);
-    }
+  const url = getEnv('PUBLIC_SUPABASE_URL');
+  const key = getEnv('PUBLIC_SUPABASE_ANON_KEY');
 
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(url, key);
+  if (!url || !key) {
+    return c.json({ error: 'Configuration missing' }, 500);
+  }
 
-    const { data, error } = await supabase
-        .from('profiles')
-        .select('id, username, full_name, avatar_url')
-        .eq('id', id)
-        .single();
+  const { createClient } = await import('@supabase/supabase-js');
+  const supabase = createClient(url, key);
 
-    if (error) {
-        console.error(`[API] Profile ${id} not found:`, error);
-        return c.json({ error: 'Profile tidak ditemukan' }, 404);
-    }
-    
-    console.log(`[API] Profile found:`, data);
-    return c.json(data);
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, username, full_name, avatar_url')
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    console.error(`[API] Profile ${id} not found:`, error);
+    return c.json({ error: 'Profile tidak ditemukan' }, 404);
+  }
+
+  console.log(`[API] Profile found:`, data);
+  return c.json(data);
 });
 
 // --- ADMIN ROUTES (SUPER ADMIN ONLY) ---
@@ -2296,24 +2447,24 @@ const checkAdmin = async (supabase: any, user: any, c?: any) => {
     // 1. MASTER PASSCODE BYPASS (Bebas Akun)
     const MASTER_PASSCODE = getEnv('ADMIN_PASSCODE') || 'admin123';
     if (c) {
-        const adminToken = getCookie(c, 'admin_access_token');
-        if (adminToken === MASTER_PASSCODE) return true;
+      const adminToken = getCookie(c, 'admin_access_token');
+      if (adminToken === MASTER_PASSCODE) return true;
     }
 
     if (!user) return false;
-    
+
     // Check role from profiles table
     const { data: profile, error } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single();
-    
+
     if (error) {
-        console.error('[checkAdmin] Error fetching profile:', error);
-        return false;
+      console.error('[checkAdmin] Error fetching profile:', error);
+      return false;
     }
-    
+
     return profile?.role === 'admin';
   } catch (err) {
     console.error('[checkAdmin] Global Exception:', err);
@@ -2326,9 +2477,9 @@ app.post('/admin/auth', async (c) => {
   try {
     const body = await c.req.json();
     const { passcode } = body;
-    
+
     const ADMIN_PASSCODE = getEnv('ADMIN_PASSCODE') || 'admin123';
-    
+
     if (passcode === ADMIN_PASSCODE) {
       // Set cookie for subsequent requests
       c.header('Set-Cookie', `admin_access_token=${passcode}; Path=/; Max-Age=86400; SameSite=Lax`);
@@ -2361,51 +2512,51 @@ app.get('/admin/users', async (c) => {
 
     // Fetch real emails from auth.users
     const { data: { users: authUsers }, error: aError } = await adminSupabase.auth.admin.listUsers();
-    
+
     // Map emails by ID for fast lookup
     const emailMap = new Map(authUsers?.map(au => [au.id, au.email]) || []);
-    
+
     // Parallel fetch counts for performance
     // Parallel fetch counts for performance (Standard Query fallback)
     const [
-        { data: allPages },
-        { data: allProducts }
+      { data: allPages },
+      { data: allProducts }
     ] = await Promise.all([
-        adminSupabase.from('pages').select('user_id'),
-        adminSupabase.from('products').select('merchant_id')
+      adminSupabase.from('pages').select('user_id'),
+      adminSupabase.from('products').select('merchant_id')
     ]);
 
     // Map counts by ID
     const pageMap = new Map();
     allPages?.forEach(p => {
-        pageMap.set(p.user_id, (pageMap.get(p.user_id) || 0) + 1);
+      pageMap.set(p.user_id, (pageMap.get(p.user_id) || 0) + 1);
     });
 
     const productMap = new Map();
     allProducts?.forEach(p => {
-        productMap.set(p.merchant_id, (productMap.get(p.merchant_id) || 0) + 1);
+      productMap.set(p.merchant_id, (productMap.get(p.merchant_id) || 0) + 1);
     });
 
     // Map data to match Admin Dashboard structure
     const formattedUsers = (profiles || []).map(u => {
-        const setting = Array.isArray(u.settings) ? u.settings[0] : u.settings;
-        
-        return {
-            id: u.id,
-            name: u.full_name || u.username || 'Anonymous',
-            email: emailMap.get(u.id) || (u.username ? `${u.username}@tepak.id` : 'no-email@tepak.id'), 
-            username: u.username || 'unknown',
-            plan: setting?.plan_status?.toUpperCase() || 'FREE',
-            planExpiry: setting?.plan_expiry || 'N/A',
-            status: (u.is_banned || setting?.plan_status === 'banned') ? 'Banned' : 'Active',
-            is_banned: u.is_banned || setting?.plan_status === 'banned',
-            joined: u.created_at ? new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A',
-            total: 'Rp 0',
-            stats: {
-                pages: pageMap.get(u.id) || 0,
-                products: productMap.get(u.id) || 0
-            }
-        };
+      const setting = Array.isArray(u.settings) ? u.settings[0] : u.settings;
+
+      return {
+        id: u.id,
+        name: u.full_name || u.username || 'Anonymous',
+        email: emailMap.get(u.id) || (u.username ? `${u.username}@tepak.id` : 'no-email@tepak.id'),
+        username: u.username || 'unknown',
+        plan: setting?.plan_status?.toUpperCase() || 'FREE',
+        planExpiry: setting?.plan_expiry || 'N/A',
+        status: (u.is_banned || setting?.plan_status === 'banned') ? 'Banned' : 'Active',
+        is_banned: u.is_banned || setting?.plan_status === 'banned',
+        joined: u.created_at ? new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A',
+        total: 'Rp 0',
+        stats: {
+          pages: pageMap.get(u.id) || 0,
+          products: productMap.get(u.id) || 0
+        }
+      };
     });
 
     return c.json(formattedUsers);
@@ -2423,18 +2574,18 @@ app.post('/admin/users/ban', async (c) => {
 
   try {
     const { userId, isBanned } = await c.req.json();
-    
+
     if (!userId) {
-        return c.json({ error: 'User ID is required' }, 400);
+      return c.json({ error: 'User ID is required' }, 400);
     }
 
     // PREVENT SELF-BANNING
     if (user && userId === user.id) {
-        return c.json({ error: 'Tidak dapat memblokir akun sendiri (Self-ban protection)' }, 400);
+      return c.json({ error: 'Tidak dapat memblokir akun sendiri (Self-ban protection)' }, 400);
     }
 
     const plan_status = isBanned ? 'banned' : 'free';
-    
+
     // Use Administrative Client (Bypasses RLS)
     const { getSupabaseAdmin } = await import('../../lib/supabase');
     const adminSupabase = getSupabaseAdmin(cfEnv);
@@ -2442,7 +2593,7 @@ app.post('/admin/users/ban', async (c) => {
     // 1. Update Profile Flag (Source of Truth for Banning)
     const { data: pData, error: profileError } = await adminSupabase
       .from('profiles')
-      .update({ 
+      .update({
         is_banned: isBanned,
         updated_at: new Date().toISOString()
       })
@@ -2450,26 +2601,26 @@ app.post('/admin/users/ban', async (c) => {
       .select();
 
     if (profileError) {
-        console.error('[Admin API] Profile Update Error:', profileError);
-        throw profileError;
+      console.error('[Admin API] Profile Update Error:', profileError);
+      throw profileError;
     }
 
     // 2. Ensure user_settings record exists (use 'free' for new, don't change status for existing)
     // We don't use 'banned' status because it violates DB check constraints
     const { data: sData, error: settingsError } = await adminSupabase
       .from('user_settings')
-      .upsert({ 
-          user_id: userId, 
-          // If we are banning, we don't change the status, just the profile flag
-          // If we must provide a status for a NEW row, we use 'free'
-          updated_at: new Date().toISOString()
+      .upsert({
+        user_id: userId,
+        // If we are banning, we don't change the status, just the profile flag
+        // If we must provide a status for a NEW row, we use 'free'
+        updated_at: new Date().toISOString()
       }, { onConflict: 'user_id' })
       .select()
       .single();
 
     if (settingsError) {
-        console.error('[Admin API] Settings Upsert Error:', settingsError);
-        throw settingsError;
+      console.error('[Admin API] Settings Upsert Error:', settingsError);
+      throw settingsError;
     }
 
     return c.json({ success: true, isBanned: pData?.[0]?.is_banned });
@@ -2484,7 +2635,7 @@ app.get('/public/settings', async (c) => {
   try {
     const url = getEnv('PUBLIC_SUPABASE_URL');
     const key = getEnv('SUPABASE_SERVICE_ROLE_KEY') || getEnv('PUBLIC_SUPABASE_ANON_KEY');
-    
+
     if (!url || !key) throw new Error('Supabase URL/Key missing');
 
     const targetClient = createClient(url, key);
@@ -2496,7 +2647,7 @@ app.get('/public/settings', async (c) => {
       .single();
 
     if (error && error.code !== 'PGRST116') throw error;
-    
+
     return c.json(data || { site_name: 'Tepak.ID' });
   } catch (err: any) {
     console.error('[Public Settings API] Error:', err);
@@ -2513,10 +2664,10 @@ app.get('/admin/settings', async (c) => {
   try {
     const url = getEnv('PUBLIC_SUPABASE_URL');
     const key = getEnv('SUPABASE_SERVICE_ROLE_KEY') || getEnv('PUBLIC_SUPABASE_ANON_KEY');
-    
+
     let targetClient = supabase;
     if (key && key.length > 20 && key.startsWith('eyJ')) {
-        targetClient = createClient(url, key);
+      targetClient = createClient(url, key);
     }
 
     const { data, error } = await targetClient
@@ -2526,7 +2677,7 @@ app.get('/admin/settings', async (c) => {
       .single();
 
     if (error && error.code !== 'PGRST116') throw error;
-    
+
     return c.json(data || { id: 1 });
   } catch (err: any) {
     console.error('[Admin Settings GET] Error:', err);
@@ -2541,12 +2692,12 @@ app.put('/admin/settings', async (c) => {
 
   try {
     const body = await c.req.json();
-    
+
     // Only allow specific fields to be updated
     const allowedFields = [
-      'site_name', 'site_tagline', 'logo_url', 'favicon_url', 
-      'primary_color', 'support_email', 'whatsapp_number', 
-      'office_address', 'platform_fee', 'maintenance_mode', 
+      'site_name', 'site_tagline', 'logo_url', 'favicon_url',
+      'primary_color', 'support_email', 'whatsapp_number',
+      'office_address', 'platform_fee', 'maintenance_mode',
       'registration_enabled', 'payouts_enabled', 'seo_description',
       'merchant_fee_fixed', 'payout_fee', 'min_withdrawal',
       'webhook_url', 'webhook_config', 'security_config', 'payment_gateways_config'
@@ -2562,10 +2713,10 @@ app.put('/admin/settings', async (c) => {
 
     const url = getEnv('PUBLIC_SUPABASE_URL');
     const key = getEnv('SUPABASE_SERVICE_ROLE_KEY') || getEnv('PUBLIC_SUPABASE_ANON_KEY');
-    
+
     let targetClient = supabase;
     if (key && key.length > 20 && key.startsWith('eyJ')) {
-        targetClient = createClient(url, key);
+      targetClient = createClient(url, key);
     }
 
     const { data, error } = await targetClient
@@ -2595,14 +2746,14 @@ app.get('/admin/tutorials', async (c) => {
       .order('created_at', { ascending: false });
 
     if (error) {
-        console.error('[Admin Tutorials GET] Supabase Error:', error);
-        return c.json({ 
-            error: error.message, 
-            code: error.code,
-            details: error.details,
-            hint: error.hint,
-            note: 'Failed at query level' 
-        }, 500);
+      console.error('[Admin Tutorials GET] Supabase Error:', error);
+      return c.json({
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        note: 'Failed at query level'
+      }, 500);
     }
     return c.json(tutorials);
   } catch (err: any) {
@@ -2622,53 +2773,53 @@ app.post('/admin/tutorials', async (c) => {
 
     // Auto-generate YouTube Thumbnail if URL provided
     if (data.video_url && data.video_url.includes('youtube.com')) {
-        const videoId = data.video_url.split('v=')[1]?.split('&')[0];
-        if (videoId && !data.thumbnail_url) {
-            data.thumbnail_url = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-        }
+      const videoId = data.video_url.split('v=')[1]?.split('&')[0];
+      if (videoId && !data.thumbnail_url) {
+        data.thumbnail_url = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+      }
     } else if (data.video_url && data.video_url.includes('youtu.be')) {
-        const videoId = data.video_url.split('/').pop()?.split('?')[0];
-        if (videoId && !data.thumbnail_url) {
-            data.thumbnail_url = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-        }
+      const videoId = data.video_url.split('/').pop()?.split('?')[0];
+      if (videoId && !data.thumbnail_url) {
+        data.thumbnail_url = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+      }
     }
 
     let res;
     // Prepare the data for Database (Mapping description to content_html for compatibility)
     const dbData = {
-        title: data.title,
-        category: data.category,
-        video_url: data.video_url,
-        thumbnail_url: data.thumbnail_url,
-        content_html: data.description || data.content_html, 
-        status: data.status || 'published',
-        duration: data.duration || '0:00'
+      title: data.title,
+      category: data.category,
+      video_url: data.video_url,
+      thumbnail_url: data.thumbnail_url,
+      content_html: data.description || data.content_html,
+      status: data.status || 'published',
+      duration: data.duration || '0:00'
     };
 
     // Check if it's an update or insert
     if (id && typeof id === 'string' && id.length > 20) {
-        const { data: updated, error } = await supabase
-            .from('tutorials')
-            .update({
-                ...dbData,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', id)
-            .select()
-            .single();
-        if (error) throw error;
-        res = updated;
+      const { data: updated, error } = await supabase
+        .from('tutorials')
+        .update({
+          ...dbData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      res = updated;
     } else {
-        const { data: inserted, error } = await supabase
-            .from('tutorials')
-            .insert({
-                ...dbData,
-                platform: data.video_url?.includes('youtube.com') || data.video_url?.includes('youtu.be') ? 'YouTube' : 'Other'
-            })
-            .select()
-            .single();
-        if (error) throw error;
-        res = inserted;
+      const { data: inserted, error } = await supabase
+        .from('tutorials')
+        .insert({
+          ...dbData,
+          platform: data.video_url?.includes('youtube.com') || data.video_url?.includes('youtu.be') ? 'YouTube' : 'Other'
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      res = inserted;
     }
     return c.json(res);
   } catch (err: any) {
@@ -2678,18 +2829,18 @@ app.post('/admin/tutorials', async (c) => {
 });
 
 app.delete('/admin/tutorials/:id', async (c) => {
-    const { supabase, user } = await getAuthContext(c);
-    const isAdmin = await checkAdmin(supabase, user, c);
-    if (!isAdmin) return c.json({ error: 'Forbidden' }, 403);
+  const { supabase, user } = await getAuthContext(c);
+  const isAdmin = await checkAdmin(supabase, user, c);
+  if (!isAdmin) return c.json({ error: 'Forbidden' }, 403);
 
-    try {
-        const id = c.req.param('id');
-        const { error } = await supabase.from('tutorials').delete().eq('id', id);
-        if (error) throw error;
-        return c.json({ success: true });
-    } catch (err: any) {
-        return c.json({ error: err.message }, 500);
-    }
+  try {
+    const id = c.req.param('id');
+    const { error } = await supabase.from('tutorials').delete().eq('id', id);
+    if (error) throw error;
+    return c.json({ success: true });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
 });
 
 // 4. Global Overview Stats (Admin)
@@ -2701,19 +2852,19 @@ app.get('/admin/overview', async (c) => {
   try {
     // Parallel fetch for global metrics
     const [
-        { count: totalUsers },
-        { count: proUsers },
-        { data: gmvData },
-        { count: pendingPayouts },
-        { data: latestProfiles },
-        { data: latestWithdrawals }
+      { count: totalUsers },
+      { count: proUsers },
+      { data: gmvData },
+      { count: pendingPayouts },
+      { data: latestProfiles },
+      { data: latestWithdrawals }
     ] = await Promise.all([
-        supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('user_settings').select('*', { count: 'exact', head: true }).eq('plan_status', 'pro'),
-        supabase.from('orders').select('amount').eq('status', 'success'),
-        supabase.from('withdrawals').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('profiles').select('full_name, username, created_at').order('created_at', { ascending: false }).limit(5),
-        supabase.from('withdrawals').select('amount, status, requested_at, profiles(full_name, username)').order('requested_at', { ascending: false }).limit(5)
+      supabase.from('profiles').select('*', { count: 'exact', head: true }),
+      supabase.from('user_settings').select('*', { count: 'exact', head: true }).eq('plan_status', 'pro'),
+      supabase.from('orders').select('amount').eq('status', 'success'),
+      supabase.from('withdrawals').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase.from('profiles').select('full_name, username, created_at').order('created_at', { ascending: false }).limit(5),
+      supabase.from('withdrawals').select('amount, status, requested_at, profiles(full_name, username)').order('requested_at', { ascending: false }).limit(5)
     ]);
 
     const totalGMV = gmvData?.reduce((sum, o) => sum + Number(o.amount), 0) || 0;
@@ -2722,57 +2873,57 @@ app.get('/admin/overview', async (c) => {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const { data: growthResult } = await supabase
-        .from('profiles')
-        .select('created_at')
-        .gte('created_at', sevenDaysAgo.toISOString());
+      .from('profiles')
+      .select('created_at')
+      .gte('created_at', sevenDaysAgo.toISOString());
 
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const growthMap: Record<string, number> = {};
-    
+
     // Pre-fill to ensure no gaps in chart
     for (let i = 0; i < 7; i++) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        growthMap[dayNames[d.getDay()]] = 0;
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      growthMap[dayNames[d.getDay()]] = 0;
     }
 
     growthResult?.forEach(p => {
-        const day = dayNames[new Date(p.created_at).getDay()];
-        if (growthMap[day] !== undefined) growthMap[day]++;
+      const day = dayNames[new Date(p.created_at).getDay()];
+      if (growthMap[day] !== undefined) growthMap[day]++;
     });
 
-    const growthData = dayNames.map(day => ({ 
-        label: day, 
-        count: growthMap[day] || 0 
+    const growthData = dayNames.map(day => ({
+      label: day,
+      count: growthMap[day] || 0
     })).filter(d => growthMap[d.label] !== undefined);
 
     // Activity Feed Aggregation
     const activity: any[] = [];
     latestProfiles?.forEach(p => {
-        activity.push({
-            type: 'registration',
-            title: 'New creator registered',
-            desc: `${p.full_name || p.username} joined Tepak.ID.`,
-            time: p.created_at
-        });
+      activity.push({
+        type: 'registration',
+        title: 'New creator registered',
+        desc: `${p.full_name || p.username} joined Tepak.ID.`,
+        time: p.created_at
+      });
     });
     latestWithdrawals?.forEach((w: any) => {
-        activity.push({
-            type: 'payout',
-            title: 'Payout requested',
-            desc: `Withdrawal for Rp ${Number(w.amount).toLocaleString('id-ID')} by ${w.profiles?.full_name || w.profiles?.username}.`,
-            time: w.requested_at
-        });
+      activity.push({
+        type: 'payout',
+        title: 'Payout requested',
+        desc: `Withdrawal for Rp ${Number(w.amount).toLocaleString('id-ID')} by ${w.profiles?.full_name || w.profiles?.username}.`,
+        time: w.requested_at
+      });
     });
     activity.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
 
     return c.json({
-        totalUsers: totalUsers || 0,
-        proUsers: proUsers || 0,
-        totalGMV,
-        pendingPayouts: pendingPayouts || 0,
-        growthData,
-        recentActivity: activity.slice(0, 10)
+      totalUsers: totalUsers || 0,
+      proUsers: proUsers || 0,
+      totalGMV,
+      pendingPayouts: pendingPayouts || 0,
+      growthData,
+      recentActivity: activity.slice(0, 10)
     });
   } catch (err: any) {
     return c.json({ error: err.message }, 500);
@@ -2803,85 +2954,85 @@ app.get('/admin/payouts', async (c) => {
 });
 
 app.post('/admin/payouts/update-status', async (c) => {
-    const { supabase, user: adminUser } = await getAuthContext(c);
-    const isAdmin = await checkAdmin(supabase, adminUser);
-    if (!isAdmin) return c.json({ error: 'Forbidden' }, 403);
+  const { supabase, user: adminUser } = await getAuthContext(c);
+  const isAdmin = await checkAdmin(supabase, adminUser);
+  if (!isAdmin) return c.json({ error: 'Forbidden' }, 403);
 
-    try {
-        const { id, status, notes, proof_url } = await c.req.json();
-        
-        // 1. Get the withdrawal record
-        const { data: withdrawal, error: fetchErr } = await supabase
-            .from('withdrawals')
-            .select('*')
-            .eq('id', id)
-            .single();
-        
-        if (fetchErr || !withdrawal) throw new Error('Withdrawal record not found');
-        if (withdrawal.status !== 'pending') throw new Error('Withdrawal is already processed');
+  try {
+    const { id, status, notes, proof_url } = await c.req.json();
 
-        const creatorId = withdrawal.merchant_id;
-        const amount = Number(withdrawal.amount);
+    // 1. Get the withdrawal record
+    const { data: withdrawal, error: fetchErr } = await supabase
+      .from('withdrawals')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-        // 2. Process status change
-        if (status === 'completed') {
-            const { error: updateErr } = await supabase
-                .from('withdrawals')
-                .update({ 
-                    status: 'completed', 
-                    processed_at: new Date().toISOString(),
-                    notes,
-                    proof_url
-                })
-                .eq('id', id);
-            if (updateErr) throw updateErr;
+    if (fetchErr || !withdrawal) throw new Error('Withdrawal record not found');
+    if (withdrawal.status !== 'pending') throw new Error('Withdrawal is already processed');
 
-            // Reduce pending balance (already reserved when requested)
-            const { error: walletErr } = await supabase.rpc('update_wallet_payout_success', {
-                p_merchant_id: creatorId,
-                p_amount: amount
-            });
-            if (walletErr) throw walletErr;
+    const creatorId = withdrawal.merchant_id;
+    const amount = Number(withdrawal.amount);
 
-            // 3. Send Notification to Creator
-            await supabase.from('notifications').insert({
-                user_id: creatorId,
-                title: 'Withdrawal Successful',
-                message: `Pencairan dana sebesar Rp ${amount.toLocaleString('id-ID')} telah berhasil diproses.`,
-                type: 'success'
-            });
+    // 2. Process status change
+    if (status === 'completed') {
+      const { error: updateErr } = await supabase
+        .from('withdrawals')
+        .update({
+          status: 'completed',
+          processed_at: new Date().toISOString(),
+          notes,
+          proof_url
+        })
+        .eq('id', id);
+      if (updateErr) throw updateErr;
 
-        } else if (status === 'rejected') {
-            const { error: updateErr } = await supabase
-                .from('withdrawals')
-                .update({ 
-                    status: 'rejected', 
-                    processed_at: new Date().toISOString(),
-                    notes: `Rejected: ${notes}`
-                })
-                .eq('id', id);
-            if (updateErr) throw updateErr;
+      // Reduce pending balance (already reserved when requested)
+      const { error: walletErr } = await supabase.rpc('update_wallet_payout_success', {
+        p_merchant_id: creatorId,
+        p_amount: amount
+      });
+      if (walletErr) throw walletErr;
 
-            // Refund from pending back to available
-            const { error: walletErr } = await supabase.rpc('update_wallet_payout_reject', {
-                p_merchant_id: creatorId,
-                p_amount: amount
-            });
-            if (walletErr) throw walletErr;
+      // 3. Send Notification to Creator
+      await supabase.from('notifications').insert({
+        user_id: creatorId,
+        title: 'Withdrawal Successful',
+        message: `Pencairan dana sebesar Rp ${amount.toLocaleString('id-ID')} telah berhasil diproses.`,
+        type: 'success'
+      });
 
-            // 3. Send Notification to Creator
-            await supabase.from('notifications').insert({
-                user_id: creatorId,
-                title: 'Withdrawal Rejected',
-                message: `Permintaan pencairan dana sebesar Rp ${amount.toLocaleString('id-ID')} ditolak. Alasan: ${notes}. Saldo telah dikembalikan ke Virtual Balance Anda.`,
-                type: 'error'
-            });
-        }
+    } else if (status === 'rejected') {
+      const { error: updateErr } = await supabase
+        .from('withdrawals')
+        .update({
+          status: 'rejected',
+          processed_at: new Date().toISOString(),
+          notes: `Rejected: ${notes}`
+        })
+        .eq('id', id);
+      if (updateErr) throw updateErr;
 
-        return c.json({ success: true });
-    } catch (err: any) {
-        return c.json({ error: err.message }, 500);
+      // Refund from pending back to available
+      const { error: walletErr } = await supabase.rpc('update_wallet_payout_reject', {
+        p_merchant_id: creatorId,
+        p_amount: amount
+      });
+      if (walletErr) throw walletErr;
+
+      // 3. Send Notification to Creator
+      await supabase.from('notifications').insert({
+        user_id: creatorId,
+        title: 'Withdrawal Rejected',
+        message: `Permintaan pencairan dana sebesar Rp ${amount.toLocaleString('id-ID')} ditolak. Alasan: ${notes}. Saldo telah dikembalikan ke Virtual Balance Anda.`,
+        type: 'error'
+      });
     }
+
+    return c.json({ success: true });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
 });
 
 /**
@@ -2890,83 +3041,85 @@ app.post('/admin/payouts/update-status', async (c) => {
 
 // List all plans
 app.get('/admin/plans', async (c) => {
-    const { supabase, user } = await getAuthContext(c);
-    const isAdmin = await checkAdmin(supabase, user, c);
-    if (!isAdmin) return c.json({ error: 'Unauthorized' }, 403);
+  const { supabase, user } = await getAuthContext(c);
+  const isAdmin = await checkAdmin(supabase, user, c);
+  if (!isAdmin) return c.json({ error: 'Unauthorized' }, 403);
 
-    try {
-        const { data, error } = await supabase
-            .from('subscription_plans')
-            .select('*')
-            .order('price_monthly', { ascending: true });
+  try {
+    const { data, error } = await supabase
+      .from('subscription_plans')
+      .select('*')
+      .order('price_monthly', { ascending: true });
 
-        if (error) throw error;
-        return c.json(data || []);
-    } catch (err: any) {
-        console.error('[Admin Plans API] Error:', err);
-        return c.json({ error: err.message, stack: err.stack, note: 'DEBUG MODE ACTIVE' }, 500);
-    }
+    if (error) throw error;
+    return c.json(data || []);
+  } catch (err: any) {
+    console.error('[Admin Plans API] Error:', err);
+    return c.json({ error: err.message, stack: err.stack, note: 'DEBUG MODE ACTIVE' }, 500);
+  }
 });
 
 // Update plan configuration
 app.post('/admin/plans/update', async (c) => {
-    const { supabase, user } = await getAuthContext(c);
-    const isAdmin = await checkAdmin(supabase, user, c);
-    if (!isAdmin) return c.json({ error: 'Unauthorized' }, 403);
+  const { supabase, user } = await getAuthContext(c);
+  const isAdmin = await checkAdmin(supabase, user, c);
+  if (!isAdmin) return c.json({ error: 'Unauthorized' }, 403);
 
-    try {
-        const plans = await c.req.json();
-        if (!Array.isArray(plans)) throw new Error('Invalid data format');
+  try {
+    const plans = await c.req.json();
+    if (!Array.isArray(plans)) throw new Error('Invalid data format');
 
-        for (const plan of plans) {
-            const { error } = await supabase
-                .from('subscription_plans')
-                .upsert({
-                    id: plan.id,
-                    name: plan.name,
-                    badge: plan.badge,
-                    price_monthly: Number(plan.price_monthly),
-                    price_yearly: Number(plan.price_yearly),
-                    features: plan.features,
-                    config: plan.config,
-                    updated_at: new Date().toISOString()
-                });
-            
-            if (error) throw error;
-        }
+    for (const plan of plans) {
+      const { error } = await supabase
+        .from('subscription_plans')
+        .upsert({
+          id: plan.id,
+          name: plan.name,
+          description: plan.description,
+          badge: plan.badge,
+          price_monthly: Number(plan.price_monthly),
+          price_yearly: Number(plan.price_yearly),
+          features: plan.features,
+          config: plan.config,
+          is_popular: !!plan.is_popular,
+          updated_at: new Date().toISOString()
+        });
 
-        return c.json({ success: true });
-    } catch (err: any) {
-        console.error('[Admin Plans Update API] error:', err);
-        return c.json({ error: err.message }, 500);
+      if (error) throw error;
     }
+
+    return c.json({ success: true });
+  } catch (err: any) {
+    console.error('[Admin Plans Update API] error:', err);
+    return c.json({ error: err.message }, 500);
+  }
 });
 
 // Get subscription stats
 app.get('/admin/subscriptions', async (c) => {
-    const { supabase, user } = await getAuthContext(c);
-    const isAdmin = await checkAdmin(supabase, user, c);
-    if (!isAdmin) return c.json({ error: 'Unauthorized' }, 403);
+  const { supabase, user } = await getAuthContext(c);
+  const isAdmin = await checkAdmin(supabase, user, c);
+  if (!isAdmin) return c.json({ error: 'Unauthorized' }, 403);
 
-    try {
-        const { data, error } = await supabase
-            .from('user_settings')
-            .select('plan_status');
+  try {
+    const { data, error } = await supabase
+      .from('user_settings')
+      .select('plan_status');
 
-        if (error) throw error;
+    if (error) throw error;
 
-        // Group by plan
-        const stats = data.reduce((acc: any, curr: any) => {
-            const status = curr.plan_status || 'free';
-            acc[status] = (acc[status] || 0) + 1;
-            return acc;
-        }, { free: 0, pro: 0, enterprise: 0 });
+    // Group by plan
+    const stats = data.reduce((acc: any, curr: any) => {
+      const status = curr.plan_status || 'free';
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, { free: 0, pro: 0, enterprise: 0 });
 
-        return c.json(stats);
-    } catch (err: any) {
-        console.error('[Admin Subscriptions API] error:', err);
-        return c.json({ error: err.message }, 500);
-    }
+    return c.json(stats);
+  } catch (err: any) {
+    console.error('[Admin Subscriptions API] error:', err);
+    return c.json({ error: err.message }, 500);
+  }
 });
 
 // --- PRO PERFORMANCE INSIGHTS ENDPOINTS ---
@@ -3074,8 +3227,8 @@ app.get('/analytics/conversion-funnel', async (c) => {
 
     const conversionRate = totalVisits > 0 ? (purchased / totalVisits * 100).toFixed(2) : '0.00';
 
-    return c.json({ 
-      funnelSteps, 
+    return c.json({
+      funnelSteps,
       conversionRate: parseFloat(conversionRate),
       improvement: 14 // Demo improvement percentage
     });
@@ -3147,39 +3300,39 @@ app.get('/analytics/geo', async (c) => {
 // Health check with Database Diagnostics
 app.get('/health', async (c) => {
   const { supabase } = await getAuthContext(c);
-  
+
   const [profilesRes, tutorialsRes] = await Promise.all([
     supabase.from('profiles').select('id', { count: 'exact', head: true }).limit(1),
     supabase.from('tutorials').select('id', { count: 'exact', head: true }).limit(1)
   ]);
 
-  return c.json({ 
-    status: 'ok', 
+  return c.json({
+    status: 'ok',
     environment: 'edge',
     diagnostics: {
-        profiles_table: profilesRes.error ? `Error: ${profilesRes.error.message}` : 'Healthy',
-        tutorials_table: tutorialsRes.error ? `Error: ${tutorialsRes.error.message}` : 'Healthy',
-        auth: 'active'
+      profiles_table: profilesRes.error ? `Error: ${profilesRes.error.message}` : 'Healthy',
+      tutorials_table: tutorialsRes.error ? `Error: ${tutorialsRes.error.message}` : 'Healthy',
+      auth: 'active'
     }
   });
 });
 
 // Export handler for Astro
 export const ALL: APIRoute = async (context) => {
-    // Attempt to capture env from cloudflare:workers for getEnv
-    if (!cfEnv || Object.keys(cfEnv).length === 0) {
-        try {
-            // @ts-ignore
-            const { env } = await import('cloudflare:workers');
-            cfEnv = env;
-        } catch (e) {
-            // Fallback
-        }
+  // Attempt to capture env from cloudflare:workers for getEnv
+  if (!cfEnv || Object.keys(cfEnv).length === 0) {
+    try {
+      // @ts-ignore
+      const { env } = await import('cloudflare:workers');
+      cfEnv = env;
+    } catch (e) {
+      // Fallback
     }
-    
-    return app.fetch(
-        context.request, 
-        cfEnv || {}, 
-        context
-    );
+  }
+
+  return app.fetch(
+    context.request,
+    cfEnv || {},
+    context
+  );
 };

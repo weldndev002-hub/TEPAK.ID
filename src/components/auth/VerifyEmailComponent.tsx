@@ -29,26 +29,52 @@ export const VerifyEmailComponent: React.FC<VerifyEmailProps> = ({ supabaseUrl, 
     const [error, setError] = useState('');
     const [email, setEmail] = useState('');
 
-    // Get email from URL params or localStorage
+    // Get email from URL params, localStorage, or user session
     React.useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const errorParam = params.get('error');
-        
+
         if (errorParam === 'link_expired') {
             setError('Link verifikasi Anda sudah kadaluarsa. Silakan minta pengiriman ulang.');
         }
 
-        // Try to get email from user session
+        // Try to get email from multiple sources
         const getEmail = async () => {
-            try {
-                const { data } = await supabase.auth.getSession();
-                if (data.session?.user?.email) {
-                    setEmail(data.session.user.email);
+            let foundEmail = '';
+
+            // 1. Check localStorage (set by SignupForm)
+            const pendingEmail = localStorage.getItem('pendingVerificationEmail');
+            if (pendingEmail) {
+                foundEmail = pendingEmail;
+                // Clean up localStorage after reading
+                localStorage.removeItem('pendingVerificationEmail');
+            }
+
+            // 2. Try to get email from user session
+            if (!foundEmail) {
+                try {
+                    const { data } = await supabase.auth.getSession();
+                    if (data.session?.user?.email) {
+                        foundEmail = data.session.user.email;
+                    }
+                } catch (err) {
+                    console.error('Error getting email from session:', err);
                 }
-            } catch (err) {
-                console.error('Error getting email:', err);
+            }
+
+            // 3. Check URL params for email
+            if (!foundEmail) {
+                const emailParam = params.get('email');
+                if (emailParam) {
+                    foundEmail = emailParam;
+                }
+            }
+
+            if (foundEmail) {
+                setEmail(foundEmail);
             }
         };
+
         getEmail();
     }, []);
 
@@ -85,7 +111,7 @@ export const VerifyEmailComponent: React.FC<VerifyEmailProps> = ({ supabaseUrl, 
 
     return (
         <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-slate-50/50 font-['Plus_Jakarta_Sans',sans-serif]">
-            
+
             {/* LOGO AREA */}
             <div className="mb-10">
                 <a href="/">
@@ -95,9 +121,9 @@ export const VerifyEmailComponent: React.FC<VerifyEmailProps> = ({ supabaseUrl, 
 
             {/* VERIFICATION CARD */}
             <div className="w-full max-w-[480px] bg-white p-10 md:p-14 rounded-[2.5rem] shadow-[0px_32px_64px_-12px_rgba(0,0,0,0.06)] border border-slate-50 relative overflow-hidden">
-                
+
                 <div className="flex flex-col items-center text-center">
-                    
+
                     {isSent ? (
                         <>
                             {/* SUCCESS ICON */}
@@ -154,8 +180,8 @@ export const VerifyEmailComponent: React.FC<VerifyEmailProps> = ({ supabaseUrl, 
 
                                 <div className="flex flex-col items-center gap-4">
                                     <p className="text-sm font-medium text-slate-400">
-                                        Tidak menerima email? 
-                                        <button 
+                                        Tidak menerima email?
+                                        <button
                                             onClick={handleResendEmail}
                                             disabled={isLoading}
                                             className="text-primary font-black hover:underline underline-offset-4 decoration-2 ml-1 transition-all disabled:opacity-50"
@@ -166,7 +192,7 @@ export const VerifyEmailComponent: React.FC<VerifyEmailProps> = ({ supabaseUrl, 
                                 </div>
                             </>
                         ) : (
-                            <button 
+                            <button
                                 onClick={() => setIsSent(false)}
                                 className="w-full px-6 py-4 bg-slate-100 hover:bg-slate-200 text-slate-900 font-black uppercase rounded-2xl text-sm transition-all"
                             >

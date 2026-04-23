@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { z } from 'zod';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import { EnvelopeIcon, ArrowRightIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
@@ -24,22 +25,61 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ supabase
     const [isSent, setIsSent] = useState(false);
     const [error, setError] = useState('');
 
+    // Zod validation schema for email
+    const emailSchema = z.string().email({ message: 'Format email tidak valid.' });
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setError('');
 
-        try {
-            const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${window.location.origin}/reset-password`,
-            });
+        // Validate email format with Zod
+        const validationResult = emailSchema.safeParse(email);
+        if (!validationResult.success) {
+            setError(validationResult.error.issues[0].message);
+            setIsLoading(false);
+            return;
+        }
 
-            if (resetError) {
-                setError(resetError.message);
-            } else {
-                setIsSent(true);
+        try {
+            // Check if user exists before sending reset email
+            const { data: userData, error: userError } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('email', email)
+                .maybeSingle();
+
+            if (userError) {
+                console.error('Error checking user existence:', userError);
+                // Continue anyway to prevent email enumeration
             }
+
+            // Only send reset email if user exists
+            if (userData) {
+                const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: `${window.location.origin}/reset-password`,
+                });
+
+                if (resetError) {
+                    // Only show error for rate limits, other errors are hidden
+                    if (resetError.message.includes('rate limit')) {
+                        setError('Terlalu banyak permintaan. Silakan coba lagi nanti.');
+                        setIsLoading(false);
+                        return;
+                    }
+                    // Other errors are ignored to prevent email enumeration
+                    console.error('Reset password error:', resetError);
+                }
+            } else {
+                // User doesn't exist - log but don't show error to user
+                console.log('Email not found in database:', email);
+            }
+
+            // Always show success message to prevent email enumeration
+            setIsSent(true);
         } catch (err: any) {
+            console.error('Unexpected error:', err);
+            // Don't show specific error to user to prevent information leakage
             setError('Terjadi kesalahan sistem. Silakan coba lagi.');
         } finally {
             setIsLoading(false);
@@ -55,14 +95,17 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ supabase
                     </div>
                 </div>
                 <div className="text-center space-y-4">
-                    <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Email Terkirim!</h2>
+                    <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Permintaan Diterima</h2>
                     <p className="text-slate-500 font-medium leading-relaxed">
-                        Kami telah mengirimkan instruksi pemulihan ke <span className="text-slate-900 font-bold">{email}</span>. 
-                        Silakan periksa kotak masuk atau folder spam Anda.
+                        Jika email <span className="text-slate-900 font-bold">{email}</span> terdaftar di sistem kami,
+                        tautan reset password telah dikirim. Silakan periksa kotak masuk atau folder spam Anda.
+                    </p>
+                    <p className="text-slate-400 text-sm font-medium mt-4">
+                        (Pesan ini selalu ditampilkan untuk mencegah enumerasi email)
                     </p>
                 </div>
-                <Button 
-                    variant="ghost" 
+                <Button
+                    variant="ghost"
                     className="w-full h-14 rounded-2xl border-slate-100 font-black text-[11px] uppercase tracking-widest"
                     onClick={() => setIsSent(false)}
                 >
@@ -78,10 +121,10 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ supabase
                 <label className="block text-[10px] font-black text-primary tracking-[0.2em] uppercase ml-1">
                     Alamat Email Anda
                 </label>
-                <Input 
+                <Input
                     iconLeft={EnvelopeIcon}
-                    type="email" 
-                    placeholder="nama@perusahaan.com" 
+                    type="email"
+                    placeholder="nama@perusahaan.com"
                     className="h-16 text-base rounded-2xl border-slate-100 bg-slate-50/50 shadow-inner"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -94,10 +137,10 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ supabase
                 )}
             </div>
 
-            <Button 
+            <Button
                 type="submit"
-                variant="amber" 
-                size="lg" 
+                variant="amber"
+                size="lg"
                 isLoading={isLoading}
                 className="w-full h-16 rounded-[1.5rem] shadow-xl shadow-amber-500/20 group text-[11px] font-black uppercase tracking-[0.3em]"
             >

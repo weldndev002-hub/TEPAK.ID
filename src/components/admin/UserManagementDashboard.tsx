@@ -4,10 +4,10 @@ import { cn } from '../../lib/utils';
 import Button from '../ui/Button';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '../ui/Table';
 import { Badge } from '../ui/Badge';
-import { 
-    UsersIcon, 
-    UserPlusIcon, 
-    ShieldCheckIcon, 
+import {
+    UsersIcon,
+    UserPlusIcon,
+    ShieldCheckIcon,
     NoSymbolIcon,
     MagnifyingGlassIcon,
     ChevronLeftIcon,
@@ -18,24 +18,26 @@ import {
     ArrowDownTrayIcon,
     ArrowTrendingUpIcon,
     ExclamationTriangleIcon,
-    ArrowRightEndOnRectangleIcon
+    ArrowRightEndOnRectangleIcon,
+    CheckCircleIcon,
+    ExclamationCircleIcon
 } from '@heroicons/react/24/outline';
 
 // Reusable Warning/Confirm Modal
-const ConfirmModal = ({ 
-    isOpen, 
-    onClose, 
-    onConfirm, 
-    title, 
-    message, 
-    confirmLabel = 'Confirm', 
+const ConfirmModal = ({
+    isOpen,
+    onClose,
+    onConfirm,
+    title,
+    message,
+    confirmLabel = 'Confirm',
     confirmStyle = 'danger',
     icon,
-}: { 
-    isOpen: boolean; 
-    onClose: () => void; 
-    onConfirm: () => void; 
-    title: string; 
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    title: string;
     message: React.ReactNode;
     confirmLabel?: string;
     confirmStyle?: 'danger' | 'warning' | 'primary';
@@ -57,13 +59,13 @@ const ConfirmModal = ({
                     <div className="text-sm text-slate-500 font-medium leading-relaxed">{message}</div>
                 </div>
                 <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
-                    <button 
+                    <button
                         className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest"
                         onClick={onClose}
                     >
                         Cancel
                     </button>
-                    <button 
+                    <button
                         className={cn("px-6 py-2.5 rounded-xl font-black shadow-lg transition-all text-[10px] uppercase tracking-widest", confirmClass)}
                         onClick={onConfirm}
                     >
@@ -84,6 +86,14 @@ export const UserManagementDashboard = () => {
     // Confirm modals state
     const [banConfirm, setBanConfirm] = React.useState<{ open: boolean; userId: string | null }>({ open: false, userId: null });
     const [loginAsConfirm, setLoginAsConfirm] = React.useState<{ open: boolean; user: any | null }>({ open: false, user: null });
+
+    // Toast notification state
+    const [toast, setToast] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+    const showToast = (type: 'success' | 'error', message: string) => {
+        setToast({ type, message });
+        setTimeout(() => setToast(null), 4000);
+    };
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -106,7 +116,7 @@ export const UserManagementDashboard = () => {
 
     const confirmBan = async () => {
         if (!banConfirm.userId) return;
-        
+
         const target = users.find(u => u.id === banConfirm.userId);
         const isBanningNow = target ? !target.is_banned : false;
 
@@ -119,9 +129,14 @@ export const UserManagementDashboard = () => {
 
             if (res.ok) {
                 await fetchUsers(); // Refresh the list
+                showToast('success', isBanningNow ? 'Akun berhasil di-suspend' : 'Akses akun berhasil dipulihkan');
+            } else {
+                const errorData = await res.json();
+                showToast('error', errorData.error || 'Gagal memperbarui status ban');
             }
         } catch (err) {
             console.error('Ban error:', err);
+            showToast('error', 'Kesalahan jaringan. Silakan coba lagi.');
         } finally {
             setBanConfirm({ open: false, userId: null });
         }
@@ -178,6 +193,20 @@ export const UserManagementDashboard = () => {
 
     return (
         <div className="w-full ">
+            {/* Toast Notification */}
+            {toast && (
+                <div className={cn(
+                    "fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl text-sm font-bold transition-all",
+                    toast.type === 'success' ? "bg-emerald-500 text-white" : "bg-rose-500 text-white"
+                )}>
+                    {toast.type === 'success'
+                        ? <CheckCircleIcon className="w-5 h-5 shrink-0" />
+                        : <ExclamationCircleIcon className="w-5 h-5 shrink-0" />
+                    }
+                    {toast.message}
+                </div>
+            )}
+
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
                 <div>
@@ -185,8 +214,8 @@ export const UserManagementDashboard = () => {
                     <h2 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Manage Users</h2>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button 
-                        variant="ghost" 
+                    <Button
+                        variant="ghost"
                         onClick={handleExportCSV}
                         className="flex items-center gap-2 border-slate-100 bg-white font-black text-[11px] uppercase tracking-wider"
                     >
@@ -245,8 +274,8 @@ export const UserManagementDashboard = () => {
                                 <TableRow key={user.id} className="hover:bg-slate-50/50 transition-colors">
                                     <TableCell className="px-8 py-5">
                                         <div className="flex items-center gap-3">
-                                            <div 
-                                                className="h-10 w-10 rounded-full flex items-center justify-center bg-slate-100 font-black text-slate-400 text-xs uppercase cursor-pointer hover:bg-slate-200 transition-colors" 
+                                            <div
+                                                className="h-10 w-10 rounded-full flex items-center justify-center bg-slate-100 font-black text-slate-400 text-xs uppercase cursor-pointer hover:bg-slate-200 transition-colors"
                                                 onClick={() => openDetails(user)}
                                             >
                                                 {user.name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
@@ -273,15 +302,21 @@ export const UserManagementDashboard = () => {
                                     <TableCell className="px-8 py-5 text-sm font-black text-slate-900 text-right">{user.total}</TableCell>
                                     <TableCell className="px-8 py-5 text-right">
                                         <div className="flex items-center justify-end gap-2">
-                                            <Button 
-                                                variant="ghost" 
-                                                onClick={() => handleLoginAsClick(user)}
-                                                className="px-4 py-2 text-[10px] font-black text-slate-900 border border-slate-100 rounded-xl hover:bg-slate-50 uppercase tracking-widest"
-                                            >
-                                                Login As
-                                            </Button>
-                                            <Button 
-                                                variant="ghost" 
+                                            {user.role !== 'admin' ? (
+                                                <Button
+                                                    variant="ghost"
+                                                    onClick={() => handleLoginAsClick(user)}
+                                                    className="px-4 py-2 text-[10px] font-black text-slate-900 border border-slate-100 rounded-xl hover:bg-slate-50 uppercase tracking-widest"
+                                                >
+                                                    Login As
+                                                </Button>
+                                            ) : (
+                                                <Badge variant="ghost" className="px-3 py-1.5 text-[9px] font-black uppercase bg-blue-50 text-blue-600 border-blue-100">
+                                                    Admin
+                                                </Badge>
+                                            )}
+                                            <Button
+                                                variant="ghost"
                                                 onClick={() => {
                                                     // Get current user from some global state if possible, 
                                                     // but for now we rely on the backend validation.
@@ -290,8 +325,8 @@ export const UserManagementDashboard = () => {
                                                 }}
                                                 className={cn(
                                                     "px-4 py-2 text-[10px] font-black border rounded-xl uppercase tracking-widest transition-all",
-                                                    user.is_banned 
-                                                        ? "text-emerald-500 border-emerald-100 hover:bg-emerald-50" 
+                                                    user.is_banned
+                                                        ? "text-emerald-500 border-emerald-100 hover:bg-emerald-50"
                                                         : "text-rose-500 border-rose-100 hover:bg-rose-50"
                                                 )}
                                             >
@@ -342,30 +377,30 @@ export const UserManagementDashboard = () => {
                     </div>
                 </div>
                 <div className="lg:col-span-4 bg-white p-10 rounded-3xl flex flex-col justify-center border border-slate-100 shadow-sm">
-                            <div className="flex items-center justify-between mb-8">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Plans Split</span>
-                                <ChartPieIcon className="w-5 h-5 text-primary" />
+                    <div className="flex items-center justify-between mb-8">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Plans Split</span>
+                        <ChartPieIcon className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="space-y-6">
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-black text-slate-900 uppercase tracking-tight">PRO Account</span>
+                                <span className="text-[11px] font-black text-primary uppercase">{proPercentage}%</span>
                             </div>
-                            <div className="space-y-6">
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[11px] font-black text-slate-900 uppercase tracking-tight">PRO Account</span>
-                                        <span className="text-[11px] font-black text-primary uppercase">{proPercentage}%</span>
-                                    </div>
-                                    <div className="w-full bg-slate-50 h-1.5 rounded-full overflow-hidden">
-                                        <div className="bg-primary h-full rounded-full transition-all duration-1000" style={{ width: `${proPercentage}%` }}></div>
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[11px] font-black text-slate-900 uppercase tracking-tight">Standard Plan</span>
-                                        <span className="text-[11px] font-black text-slate-300 uppercase">{freePercentage}%</span>
-                                    </div>
-                                    <div className="w-full bg-slate-50 h-1.5 rounded-full overflow-hidden">
-                                        <div className="bg-slate-200 h-full rounded-full transition-all duration-1000" style={{ width: `${freePercentage}%` }}></div>
-                                    </div>
-                                </div>
+                            <div className="w-full bg-slate-50 h-1.5 rounded-full overflow-hidden">
+                                <div className="bg-primary h-full rounded-full transition-all duration-1000" style={{ width: `${proPercentage}%` }}></div>
                             </div>
+                        </div>
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-black text-slate-900 uppercase tracking-tight">Standard Plan</span>
+                                <span className="text-[11px] font-black text-slate-300 uppercase">{freePercentage}%</span>
+                            </div>
+                            <div className="w-full bg-slate-50 h-1.5 rounded-full overflow-hidden">
+                                <div className="bg-slate-200 h-full rounded-full transition-all duration-1000" style={{ width: `${freePercentage}%` }}></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -383,7 +418,7 @@ export const UserManagementDashboard = () => {
                                     <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">{selectedUser.email}</p>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 className="p-2 hover:bg-slate-100 rounded-full transition-colors"
                                 onClick={() => setIsModalOpen(false)}
                             >
@@ -443,8 +478,8 @@ export const UserManagementDashboard = () => {
                         </div>
 
                         <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                            <Button 
-                                variant="ghost" 
+                            <Button
+                                variant="ghost"
                                 onClick={() => setBanConfirm({ open: true, userId: selectedUser.id })}
                                 className={cn(
                                     "font-black text-[10px] uppercase tracking-widest px-6",
@@ -455,13 +490,20 @@ export const UserManagementDashboard = () => {
                             </Button>
                             <div className="flex gap-3">
                                 <Button variant="ghost" className="font-black text-[10px] uppercase tracking-widest px-6" onClick={() => setIsModalOpen(false)}>Close</Button>
-                                <Button 
-                                    variant="primary" 
-                                    onClick={() => handleLoginAsClick(selectedUser)}
-                                    className="bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest px-8 shadow-xl shadow-slate-900/20"
-                                >
-                                    Login As User
-                                </Button>
+                                {selectedUser.role !== 'admin' ? (
+                                    <Button
+                                        variant="primary"
+                                        onClick={() => handleLoginAsClick(selectedUser)}
+                                        className="bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest px-8 shadow-xl shadow-slate-900/20"
+                                    >
+                                        Login As User
+                                    </Button>
+                                ) : (
+                                    <div className="px-4 py-2 bg-blue-50 text-blue-600 border border-blue-100 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                                        <ShieldCheckIcon className="w-3 h-3" />
+                                        Admin Account
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

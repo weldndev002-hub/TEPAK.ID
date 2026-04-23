@@ -5,15 +5,15 @@ import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { FilterTabs } from '../ui/FilterTabs';
 import { Pagination } from '../ui/Pagination';
-import { 
-    PlusIcon, 
-    ArrowTrendingUpIcon, 
-    ArchiveBoxIcon, 
-    BanknotesIcon, 
-    UsersIcon, 
-    EyeIcon, 
-    ShoppingBagIcon, 
-    PencilSquareIcon, 
+import {
+    PlusIcon,
+    ArrowTrendingUpIcon,
+    ArchiveBoxIcon,
+    BanknotesIcon,
+    UsersIcon,
+    EyeIcon,
+    ShoppingBagIcon,
+    PencilSquareIcon,
     TrashIcon,
     CheckCircleIcon,
     ExclamationTriangleIcon,
@@ -55,7 +55,7 @@ export const ProductsDashboard = () => {
                 fetch('/api/orders/stats'),
                 fetch('/api/customers')
             ]);
-            
+
             let totalSold = 0;
             let totalCust = 0;
 
@@ -89,12 +89,12 @@ export const ProductsDashboard = () => {
 
     const executeDelete = async () => {
         if (!selectedProduct) return;
-        
+
         try {
             const res = await fetch(`/api/products/${selectedProduct.id}`, {
                 method: 'DELETE'
             });
-            
+
             if (res.ok) {
                 showToast(`Produk "${selectedProduct.title}" berhasil dihapus.`);
                 fetchProducts();
@@ -125,7 +125,7 @@ export const ProductsDashboard = () => {
             )}
 
             {/* Main Content */}
-            <div className="px-8 mt-8 pb-12 overflow-y-auto">
+            <div className="px-8 mt-24 pb-12 overflow-y-auto">
                 <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <h2 className="text-3xl font-extrabold text-primary tracking-tight">Produk Digital</h2>
@@ -205,9 +205,9 @@ export const ProductsDashboard = () => {
                                         <TableCell>
                                             <div className="flex items-center gap-4">
                                                 <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0">
-                                                    <img 
-                                                        alt={product.title} 
-                                                        className="w-full h-full object-cover" 
+                                                    <img
+                                                        alt={product.title}
+                                                        className="w-full h-full object-cover"
                                                         src={product.cover_url || "https://images.unsplash.com/photo-1544006659-f0b21f04cb1b?w=400&h=400&fit=crop"}
                                                     />
                                                 </div>
@@ -242,7 +242,7 @@ export const ProductsDashboard = () => {
                                                 <a href={`/edit-product?id=${product.id}`} className="p-2 inline-block text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
                                                     <PencilSquareIcon className="w-5 h-5" />
                                                 </a>
-                                                <button 
+                                                <button
                                                     className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                                                     onClick={() => handleDeleteClick(product)}
                                                 >
@@ -255,18 +255,18 @@ export const ProductsDashboard = () => {
                             )}
                         </TableBody>
                     </Table>
-                    
+
                     {/* Pagination */}
-                    <Pagination 
-                        currentPage={1} 
-                        totalPages={1} 
-                        totalItems={products.length} 
+                    <Pagination
+                        currentPage={1}
+                        totalPages={1}
+                        totalItems={products.length}
                         itemsPerPage={10}
-                        className="rounded-b-none border-t border-slate-100" 
+                        className="rounded-b-none border-t border-slate-100"
                     />
                 </Card>
             </div>
-            
+
             {/* BottomNavBar Spacer for Mobile */}
             <div className="md:hidden h-16 w-full shrink-0"></div>
 
@@ -280,19 +280,19 @@ export const ProductsDashboard = () => {
                             </div>
                             <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Hapus Produk?</h3>
                             <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                                Apakah Anda yakin ingin menghapus produk <strong className="text-slate-900">"{selectedProduct?.title}"</strong>? 
+                                Apakah Anda yakin ingin menghapus produk <strong className="text-slate-900">"{selectedProduct?.title}"</strong>?
                                 Member yang sudah membeli produk ini masih akan dapat mengaksesnya, namun produk ini tidak akan tersedia lagi di toko Anda.
                             </p>
                         </div>
                         <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
-                            <button 
-                                className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" 
+                            <button
+                                className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest"
                                 onClick={() => setDeleteModal(false)}
                             >
                                 Batal
                             </button>
-                            <button 
-                                className="px-6 py-2.5 rounded-xl font-black bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/20 transition-all text-[10px] uppercase tracking-widest" 
+                            <button
+                                className="px-6 py-2.5 rounded-xl font-black bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/20 transition-all text-[10px] uppercase tracking-widest"
                                 onClick={executeDelete}
                             >
                                 Ya, Hapus Produk

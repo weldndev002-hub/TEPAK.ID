@@ -31,24 +31,18 @@ export const CreatorAtelierEditor: React.FC<CreatorAtelierEditorProps> = ({ init
     const [isAddBlockOpen, setIsAddBlockOpen] = useState(false);
     const [selectedTheme, setSelectedTheme] = useState(initialTheme);
     const [subdomain, setSubdomain] = useState(initialSubdomain);
-    const [bio, setBio] = useState('Visual Architect & Content Strategist based in Jakarta.');
+    const [bio, setBio] = useState('');
     const [fullName, setFullName] = useState('');
     const [avatarUrl, setAvatarUrl] = useState('');
-    const [instagramUrl, setInstagramUrl] = useState('');
-    const [tiktokUrl, setTiktokUrl] = useState('');
-    const [twitterUrl, setTwitterUrl] = useState('');
-    const [youtubeUrl, setYoutubeUrl] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isLoadingProfile, setIsLoadingProfile] = useState(true);
     const [activeBlockType, setActiveBlockType] = useState<string | null>(null);
-    const [blocks, setBlocks] = useState([
-        { id: '1', type: 'link', icon: 'LinkIcon', title: 'Main Portfolio', subtitle: 'https://behance.net/andipratama' },
-        { id: '2', type: 'social', icon: 'ShareIcon', title: 'Social Icons', subtitle: 'Instagram, Twitter, LinkedIn' },
-        { id: '3', type: 'video', icon: 'PlayCircleIcon', title: 'Latest Showreel', subtitle: 'YouTube Embed • 03:45' },
-    ]);
+    const [blocks, setBlocks] = useState<any[]>([]);
 
     // Fetch Profile Data
     React.useEffect(() => {
         const fetchProfile = async () => {
+            setIsLoadingProfile(true);
             try {
                 const res = await fetch(`/api/profile/me?t=${Date.now()}`);
                 if (res.ok) {
@@ -61,10 +55,6 @@ export const CreatorAtelierEditor: React.FC<CreatorAtelierEditorProps> = ({ init
                     if (data.bio) setBio(data.bio);
                     if (data.full_name) setFullName(data.full_name);
                     if (data.avatar_url) setAvatarUrl(data.avatar_url);
-                    if (data.instagram_url) setInstagramUrl(data.instagram_url);
-                    if (data.tiktok_url) setTiktokUrl(data.tiktok_url);
-                    if (data.twitter_url) setTwitterUrl(data.twitter_url);
-                    if (data.youtube_url) setYoutubeUrl(data.youtube_url);
                     if (data.blocks && Array.isArray(data.blocks) && data.blocks.length > 0) setBlocks(data.blocks);
                 } else if (initialBranding) {
                     // Fallback to initial branding if API fails
@@ -74,6 +64,8 @@ export const CreatorAtelierEditor: React.FC<CreatorAtelierEditorProps> = ({ init
                 }
             } catch (err) {
                 console.error('Failed to fetch profile:', err);
+            } finally {
+                setIsLoadingProfile(false);
             }
         };
         fetchProfile();
@@ -91,10 +83,6 @@ export const CreatorAtelierEditor: React.FC<CreatorAtelierEditorProps> = ({ init
                     domain_name: subdomain,
                     full_name: fullName,
                     avatar_url: avatarUrl,
-                    instagram_url: instagramUrl,
-                    tiktok_url: tiktokUrl,
-                    twitter_url: twitterUrl,
-                    youtube_url: youtubeUrl,
                     blocks: blocks
                 })
             });
@@ -118,6 +106,21 @@ export const CreatorAtelierEditor: React.FC<CreatorAtelierEditorProps> = ({ init
     const handleSelectBlock = (type: string) => {
         setActiveBlockType(type);
         setIsAddBlockOpen(false);
+    };
+
+    const handleMoveBlock = (index: number, direction: 'up' | 'down') => {
+        const newBlocks = [...blocks];
+        if (direction === 'up' && index > 0) {
+            const temp = newBlocks[index];
+            newBlocks[index] = newBlocks[index - 1];
+            newBlocks[index - 1] = temp;
+            setBlocks(newBlocks);
+        } else if (direction === 'down' && index < newBlocks.length - 1) {
+            const temp = newBlocks[index];
+            newBlocks[index] = newBlocks[index + 1];
+            newBlocks[index + 1] = temp;
+            setBlocks(newBlocks);
+        }
     };
 
     // After saving a block: add it to list and go back to the block drawer
@@ -235,52 +238,6 @@ export const CreatorAtelierEditor: React.FC<CreatorAtelierEditorProps> = ({ init
                                                     />
                                                 </div>
 
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    <div>
-                                                        <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] md:tracking-[0.3em] block mb-2 md:mb-3 flex items-center gap-2">
-                                                            <span className="material-symbols-outlined text-sm">brand_awareness</span> Instagram
-                                                        </label>
-                                                        <Input 
-                                                            placeholder="@username" 
-                                                            value={instagramUrl}
-                                                            onChange={(e) => setInstagramUrl(e.target.value)}
-                                                            className="rounded-lg md:rounded-xl text-[9px] md:text-xs h-8 md:h-auto"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] md:tracking-[0.3em] block mb-2 md:mb-3 flex items-center gap-2">
-                                                            <span className="material-symbols-outlined text-sm">video_library</span> TikTok
-                                                        </label>
-                                                        <Input 
-                                                            placeholder="@username" 
-                                                            value={tiktokUrl}
-                                                            onChange={(e) => setTiktokUrl(e.target.value)}
-                                                            className="rounded-lg md:rounded-xl text-[9px] md:text-xs h-8 md:h-auto"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] md:tracking-[0.3em] block mb-2 md:mb-3 flex items-center gap-2">
-                                                            <span className="material-symbols-outlined text-sm">alternate_email</span> Twitter/X
-                                                        </label>
-                                                        <Input 
-                                                            placeholder="@username" 
-                                                            value={twitterUrl}
-                                                            onChange={(e) => setTwitterUrl(e.target.value)}
-                                                            className="rounded-lg md:rounded-xl text-[9px] md:text-xs h-8 md:h-auto"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] md:tracking-[0.3em] block mb-2 md:mb-3 flex items-center gap-2">
-                                                            <span className="material-symbols-outlined text-sm">play_circle</span> YouTube
-                                                        </label>
-                                                        <Input 
-                                                            placeholder="channel/name" 
-                                                            value={youtubeUrl}
-                                                            onChange={(e) => setYoutubeUrl(e.target.value)}
-                                                            className="rounded-lg md:rounded-xl text-[9px] md:text-xs h-8 md:h-auto"
-                                                        />
-                                                    </div>
-                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -299,17 +256,46 @@ export const CreatorAtelierEditor: React.FC<CreatorAtelierEditorProps> = ({ init
                                         </button>
                                     </div>
                                     
-                                    <div className="space-y-2 md:space-y-8">
-                                        {blocks.map(block => (
-                                            <DraggableBlock 
-                                                key={block.id}
-                                                icon={block.icon} 
-                                                title={block.title} 
-                                                subtitle={block.subtitle} 
-                                                onEdit={() => setActiveBlockType(block.type)} 
-                                                onDelete={() => setDeleteTarget(block.id)}
-                                            />
-                                        ))}
+                                    <div className="space-y-2 md:space-y-4">
+                                        {isLoadingProfile ? (
+                                            // Skeleton loading
+                                            <div className="space-y-3">
+                                                {[1,2].map(i => (
+                                                    <div key={i} className="h-16 md:h-20 bg-slate-100 rounded-2xl animate-pulse" />
+                                                ))}
+                                            </div>
+                                        ) : blocks.length === 0 ? (
+                                            // Empty state
+                                            <div className="flex flex-col items-center justify-center py-10 md:py-14 px-6 bg-slate-50 border-2 border-dashed border-slate-200 rounded-[1.5rem] md:rounded-[2rem] text-center gap-4">
+                                                <div className="w-14 h-14 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center text-slate-300">
+                                                    <PlusCircleIcon className="w-7 h-7" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[11px] md:text-xs font-black text-slate-900 uppercase tracking-widest">Belum Ada Blok</p>
+                                                    <p className="text-[10px] text-slate-400 font-medium mt-1 leading-relaxed">Klik <span className="font-black text-primary">+ Tambah Blok</span> untuk mulai membangun halaman Anda</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => setIsAddBlockOpen(true)}
+                                                    className="mt-1 bg-primary text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 active:scale-95 transition-all"
+                                                >
+                                                    + Tambah Blok Pertama
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            // Daftar blok
+                                            blocks.map((block, index) => (
+                                                <DraggableBlock 
+                                                    key={block.id}
+                                                    icon={block.icon} 
+                                                    title={block.title} 
+                                                    subtitle={block.subtitle} 
+                                                    onEdit={() => setActiveBlockType(block.type)} 
+                                                    onDelete={() => setDeleteTarget(block.id)}
+                                                    onMoveUp={index > 0 ? () => handleMoveBlock(index, 'up') : undefined}
+                                                    onMoveDown={index < blocks.length - 1 ? () => handleMoveBlock(index, 'down') : undefined}
+                                                />
+                                            ))
+                                        )}
                                     </div>
                                 </div>
 
@@ -358,77 +344,88 @@ export const CreatorAtelierEditor: React.FC<CreatorAtelierEditorProps> = ({ init
                                     profileImage={avatarUrl}
                                 >
                                     <div className="space-y-4">
-                                        {blocks.map((block: any) => (
-                                            <div key={block.id}>
-                                                {block.type === 'social' ? (
-                                                    <div className="flex justify-center gap-4 py-4">
-                                                        {block.data?.instagram && (
-                                                            <div className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center bg-white shadow-sm hover:scale-110 transition-transform">
-                                                                <span className="text-[10px] font-black uppercase text-slate-800">IG</span>
-                                                            </div>
-                                                        )}
-                                                        {block.data?.tiktok && (
-                                                            <div className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center bg-white shadow-sm hover:scale-110 transition-transform">
-                                                                <span className="text-[10px] font-black uppercase text-slate-800">TT</span>
-                                                            </div>
-                                                        )}
-                                                        {block.data?.twitter && (
-                                                            <div className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center bg-white shadow-sm hover:scale-110 transition-transform">
-                                                                <span className="text-[10px] font-black uppercase text-slate-800">TW</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ) : block.type === 'text' ? (
-                                                    <div className="py-6 px-2 text-center space-y-3">
-                                                        {block.data?.title && (
-                                                            <h4 className="text-lg font-black text-slate-900 tracking-tighter uppercase leading-tight">{block.data.title}</h4>
-                                                        )}
-                                                        {block.data?.content && (
-                                                            <p className="text-[10px] text-slate-500 font-medium leading-relaxed italic opacity-80">{block.data.content}</p>
-                                                        )}
-                                                    </div>
-                                                ) : block.type === 'image' ? (
-                                                    <div className="w-full space-y-4 py-4 animate-in fade-in zoom-in-95 duration-500">
-                                                        <div className="w-full aspect-video rounded-3xl overflow-hidden border border-slate-100 shadow-sm bg-slate-50">
-                                                            {block.data?.imageUrl && (
-                                                                <img src={block.data.imageUrl} className="w-full h-full object-cover" alt={block.title} />
+                                        {blocks.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center py-10 gap-3 text-center opacity-60">
+                                                <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-300">
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                                    </svg>
+                                                </div>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tambah blok<br/>untuk mulai</p>
+                                            </div>
+                                        ) : (
+                                            blocks.map((block: any) => (
+                                                <div key={block.id}>
+                                                    {block.type === 'social' ? (
+                                                        <div className="flex justify-center gap-4 py-4">
+                                                            {block.data?.instagram && (
+                                                                <div className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center bg-white shadow-sm hover:scale-110 transition-transform">
+                                                                    <span className="text-[10px] font-black uppercase text-slate-800">IG</span>
+                                                                </div>
                                                             )}
-                                                        </div>
-                                                        {block.data?.title && (
-                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center italic">{block.data.title}</p>
-                                                        )}
-                                                    </div>
-                                                ) : block.type === 'video' ? (
-                                                    <div className="w-full space-y-4 py-4 animate-in fade-in zoom-in-95 duration-500">
-                                                        <div className="w-full aspect-video rounded-3xl overflow-hidden shadow-2xl bg-black border border-slate-900">
-                                                            {block.data?.isYouTube && block.data?.videoId && (
-                                                                <iframe 
-                                                                    width="100%" 
-                                                                    height="100%" 
-                                                                    src={`https://www.youtube.com/embed/${block.data.videoId}`}
-                                                                    title="YouTube video player" 
-                                                                    frameBorder="0" 
-                                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                                                                    allowFullScreen
-                                                                />
+                                                            {block.data?.tiktok && (
+                                                                <div className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center bg-white shadow-sm hover:scale-110 transition-transform">
+                                                                    <span className="text-[10px] font-black uppercase text-slate-800">TT</span>
+                                                                </div>
                                                             )}
-                                                            {block.data?.isVimeo && (
-                                                                <div className="w-full h-full flex items-center justify-center text-white text-[10px] font-black uppercase tracking-widest">
-                                                                     Vimeo Player Ready
+                                                            {block.data?.twitter && (
+                                                                <div className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center bg-white shadow-sm hover:scale-110 transition-transform">
+                                                                    <span className="text-[10px] font-black uppercase text-slate-800">TW</span>
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        {block.title && (
-                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center italic">{block.title}</p>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <div className="w-full py-4 px-6 border border-slate-100 bg-white rounded-2xl shadow-sm text-[10px] font-black uppercase tracking-widest flex items-center justify-between transition-all hover:scale-[1.02]">
-                                                        <span className="text-slate-700">{block.title}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
+                                                    ) : block.type === 'text' ? (
+                                                        <div className="py-6 px-2 text-center space-y-3">
+                                                            {block.data?.title && (
+                                                                <h4 className="text-lg font-black text-slate-900 tracking-tighter uppercase leading-tight">{block.data.title}</h4>
+                                                            )}
+                                                            {block.data?.content && (
+                                                                <p className="text-[10px] text-slate-500 font-medium leading-relaxed italic opacity-80">{block.data.content}</p>
+                                                            )}
+                                                        </div>
+                                                    ) : block.type === 'image' ? (
+                                                        <div className="w-full space-y-4 py-4 animate-in fade-in zoom-in-95 duration-500">
+                                                            <div className="w-full aspect-video rounded-3xl overflow-hidden border border-slate-100 shadow-sm bg-slate-50">
+                                                                {block.data?.imageUrl && (
+                                                                    <img src={block.data.imageUrl} className="w-full h-full object-cover" alt={block.title} />
+                                                                )}
+                                                            </div>
+                                                            {block.data?.title && (
+                                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center italic">{block.data.title}</p>
+                                                            )}
+                                                        </div>
+                                                    ) : block.type === 'video' ? (
+                                                        <div className="w-full space-y-4 py-4 animate-in fade-in zoom-in-95 duration-500">
+                                                            <div className="w-full aspect-video rounded-3xl overflow-hidden shadow-2xl bg-black border border-slate-900">
+                                                                {block.data?.isYouTube && block.data?.videoId && (
+                                                                    <iframe 
+                                                                        width="100%" 
+                                                                        height="100%" 
+                                                                        src={`https://www.youtube.com/embed/${block.data.videoId}`}
+                                                                        title="YouTube video player" 
+                                                                        frameBorder="0" 
+                                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                                                                        allowFullScreen
+                                                                    />
+                                                                )}
+                                                                {block.data?.isVimeo && (
+                                                                    <div className="w-full h-full flex items-center justify-center text-white text-[10px] font-black uppercase tracking-widest">
+                                                                         Vimeo Player Ready
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            {block.title && (
+                                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center italic">{block.title}</p>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="w-full py-4 px-6 border border-slate-100 bg-white rounded-2xl shadow-sm text-[10px] font-black uppercase tracking-widest flex items-center justify-between transition-all hover:scale-[1.02]">
+                                                            <span className="text-slate-700">{block.title}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))
+                                        )}
                                     </div>
                                 </PhoneFrame>
                             </div>

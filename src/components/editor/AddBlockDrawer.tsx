@@ -30,12 +30,8 @@ export const AddBlockDrawer: React.FC<AddBlockDrawerProps> = ({
   const defaultBlocks: BlockType[] = [
     { id: 'link', label: 'Link', icon: LinkIcon },
     { id: 'video', label: 'Video', icon: VideoCameraIcon },
-    { id: 'product', label: 'Produk', icon: ShoppingBagIcon },
-    { id: 'event', label: 'Event', icon: CalendarIcon },
-    { id: 'social', label: 'Sosmed', icon: MegaphoneIcon },
-    { id: 'text', label: 'Blok Teks', icon: DocumentTextIcon },
     { id: 'image', label: 'Gambar', icon: PhotoIcon },
-    { id: 'article', label: 'Tulisan', icon: DocumentTextIcon },
+    { id: 'social', label: 'Ikon Sosmed', icon: MegaphoneIcon },
   ];
 
   return (

@@ -15,16 +15,36 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({ image, onUpload, cla
         if (image) setPreview(image);
     }, [image]);
 
+    const [error, setError] = useState<string>('');
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setPreview(reader.result as string);
-                if (onUpload) onUpload(file);
-            };
-            reader.readAsDataURL(file);
+        if (!file) return;
+
+        // Validate file size (max 2MB)
+        const maxSize = 2 * 1024 * 1024; // 2MB in bytes
+        if (file.size > maxSize) {
+            setError('File terlalu besar atau format tidak didukung');
+            e.target.value = ''; // Clear the input
+            return;
         }
+
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            setError('File terlalu besar atau format tidak didukung');
+            e.target.value = '';
+            return;
+        }
+
+        setError(''); // Clear any previous error
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setPreview(reader.result as string);
+            if (onUpload) onUpload(file);
+        };
+        reader.readAsDataURL(file);
     };
 
     return (
@@ -48,9 +68,16 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({ image, onUpload, cla
                     <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
                 </label>
             </div>
-            
+
+            {/* ERROR MESSAGE */}
+            {error && (
+                <p className="mt-2 text-xs font-medium text-red-500 text-center max-w-xs">
+                    {error}
+                </p>
+            )}
+
             <p className="mt-4 md:mt-6 text-[8px] md:text-[9px] font-black text-slate-300 uppercase tracking-widest leading-loose text-center">
-                JPG, PNG or WebP.<br/>Maximum 2MB.
+                JPG, PNG or WebP.<br />Maximum 2MB.
             </p>
         </div>
     );

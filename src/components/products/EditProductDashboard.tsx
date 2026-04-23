@@ -6,15 +6,16 @@ import { Textarea } from '../ui/Textarea';
 import { Select } from '../ui/Select';
 import { Toggle } from '../ui/Toggle';
 import { Button } from '../ui/Button';
-import { 
-    ArrowLeftIcon, 
-    CloudArrowUpIcon, 
-    DocumentIcon, 
-    TrashIcon, 
-    PencilSquareIcon, 
-    ArrowUpRightIcon, 
+import {
+    ArrowLeftIcon,
+    CloudArrowUpIcon,
+    DocumentIcon,
+    TrashIcon,
+    PencilSquareIcon,
+    ArrowUpRightIcon,
     QuestionMarkCircleIcon,
     ExclamationTriangleIcon,
+    ExclamationCircleIcon,
     CheckCircleIcon,
     XMarkIcon
 } from '@heroicons/react/24/outline';
@@ -32,7 +33,7 @@ export const EditProductDashboard = () => {
     const [fileUrl, setFileUrl] = useState('');
     const [fileName, setFileName] = useState('');
     const [previewImages, setPreviewImages] = useState<{ id: string; file?: File; url: string }[]>([]);
-    
+
     // UI States
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -41,7 +42,7 @@ export const EditProductDashboard = () => {
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [showDiscardModal, setShowDiscardModal] = useState(false);
     const [showFileDeleteModal, setShowFileDeleteModal] = useState(false);
-    const [errors, setErrors] = useState<{ system?: string }>({});
+    const [errors, setErrors] = useState<{ system?: string; price?: string }>({});
 
     const showToast = (msg: string) => {
         setToast(msg);
@@ -64,7 +65,7 @@ export const EditProductDashboard = () => {
             const res = await fetch(`/api/products/${productId}`);
             if (!res.ok) throw new Error('Gagal mengambil data produk');
             const data = await res.json();
-            
+
             setTitle(data.title || '');
             setDescription(data.description || '');
             setPrice(data.price?.toString() || '');
@@ -72,7 +73,7 @@ export const EditProductDashboard = () => {
             setStatus(data.status === 'published');
             setCoverUrl(data.cover_url || '');
             setFileUrl(data.file_url || '');
-            
+
             // Populate preview images
             if (data.preview_urls && Array.isArray(data.preview_urls)) {
                 setPreviewImages(data.preview_urls.map((url: string) => ({
@@ -80,7 +81,7 @@ export const EditProductDashboard = () => {
                     url
                 })));
             }
-            
+
             // Extract filename from URL (if it's a Supabase URL)
             if (data.file_url) {
                 const parts = data.file_url.split('/');
@@ -97,24 +98,37 @@ export const EditProductDashboard = () => {
         const { data, error } = await supabase.storage
             .from(bucket)
             .upload(path, file, { upsert: true });
-        
+
         if (error) throw error;
 
         if (bucket === 'media-produk-private') {
             return data.path;
         }
-        
+
         const { data: { publicUrl } } = supabase.storage
             .from(bucket)
             .getPublicUrl(data.path);
-            
+
         return publicUrl;
     };
 
     const handleSave = async () => {
+        // Validation before saving
+        const newErrors: { price?: string } = {};
+
+        if (Number(price) < 10000) {
+            newErrors.price = "Harga minimal adalah Rp 10.000";
+        }
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return;
+        }
+
         setShowSaveModal(false);
         setIsSaving(true);
-        
+        setErrors({});
+
         try {
             const timestamp = Date.now();
             let final_cover_url = coverUrl;
@@ -235,8 +249,8 @@ export const EditProductDashboard = () => {
             {/* TopNavBar Replacement Local Context */}
             <header className="sticky top-0 z-40 bg-white/70 backdrop-blur-md flex justify-between items-center w-full px-8 py-4 shadow-[0px_20px_40px_rgba(16,27,50,0.06)] border-b border-slate-200">
                 <div className="flex items-center gap-4">
-                    <a 
-                        href="/products" 
+                    <a
+                        href="/products"
                         className="text-slate-500 hover:text-slate-800 transition-colors p-2 rounded-lg hover:bg-slate-100"
                         onClick={handleBackClick}
                     >
@@ -245,15 +259,15 @@ export const EditProductDashboard = () => {
                     <h2 className="text-xl font-extrabold text-[#162138] tracking-tight">Edit Produk Digital</h2>
                 </div>
                 <div className="flex items-center space-x-3">
-                    <Button 
-                        variant="secondary" 
+                    <Button
+                        variant="secondary"
                         className="px-8 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/30 hover:scale-105 active:scale-95 transition-all bg-primary hover:bg-primary/90 text-white"
                         onClick={handleSave}
                         disabled={isSaving}
                     >
                         {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
                     </Button>
-                    <button 
+                    <button
                         onClick={async () => {
                             if (window.confirm('Hapus produk ini secara permanen?')) {
                                 try {
@@ -275,17 +289,17 @@ export const EditProductDashboard = () => {
             <main className="flex-1 p-8">
                 <div className="max-w-6xl mx-auto">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        
+
                         {/* Left Column (Main Form) */}
                         <div className="lg:col-span-2 space-y-8">
-                            
+
                             {/* Informasi Produk Section */}
                             <Card className="p-8 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
                                 <div className="flex items-center space-x-3 mb-8">
                                     <span className="w-1.5 h-6 bg-primary rounded-full"></span>
                                     <h3 className="text-lg font-extrabold tracking-tight text-primary">Informasi Produk</h3>
                                 </div>
-                                
+
                                 <div className="space-y-6">
                                     {errors.system && (
                                         <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-[10px] font-black uppercase tracking-widest animate-in fade-in slide-in-from-top-2">
@@ -295,9 +309,9 @@ export const EditProductDashboard = () => {
                                     )}
                                     <div>
                                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nama Produk</label>
-                                        <Input 
-                                            type="text" 
-                                            value={title} 
+                                        <Input
+                                            type="text"
+                                            value={title}
                                             onChange={(e) => {
                                                 setTitle(e.target.value);
                                                 handleInputChange();
@@ -306,9 +320,9 @@ export const EditProductDashboard = () => {
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Deskripsi</label>
-                                        <Textarea 
-                                            rows={5} 
-                                            value={description} 
+                                        <Textarea
+                                            rows={5}
+                                            value={description}
                                             onChange={(e) => {
                                                 setDescription(e.target.value);
                                                 handleInputChange();
@@ -322,28 +336,41 @@ export const EditProductDashboard = () => {
                                                 setCategory(e.target.value);
                                                 handleInputChange();
                                             }}>
-                                               <option value="">— Pilih Kategori —</option>
-                                               <option value="ebook">E-Book</option>
-                                               <option value="course">Kursus Online</option>
-                                               <option value="assets">Asset Desain</option>
-                                               <option value="software">Software / Plugin</option>
-                                               <option value="video">Bundle Video</option>
-                                               <option value="templates">Template</option>
+                                                <option value="">— Pilih Kategori —</option>
+                                                <option value="ebook">E-Book</option>
+                                                <option value="course">Kursus Online</option>
+                                                <option value="assets">Asset Desain</option>
+                                                <option value="software">Software / Plugin</option>
+                                                <option value="video">Bundle Video</option>
+                                                <option value="templates">Template</option>
                                             </Select>
                                         </div>
                                         <div>
                                             <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Harga (IDR)</label>
                                             <div className="relative">
                                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">Rp</span>
-                                                <Input 
-                                                    type="number" 
-                                                    value={price} 
+                                                <Input
+                                                    type="number"
+                                                    value={price}
                                                     onChange={(e) => {
                                                         setPrice(e.target.value);
                                                         handleInputChange();
+                                                        // Clear error when user types
+                                                        if (errors.price) {
+                                                            setErrors({ ...errors, price: undefined });
+                                                        }
                                                     }}
-                                                    className="pl-10" 
+                                                    className={`pl-10 ${errors.price ? 'border-red-300 focus:ring-red-200' : ''}`}
                                                 />
+                                                {errors.price && (
+                                                    <p className="mt-1.5 text-xs font-medium text-red-500 flex items-center gap-1">
+                                                        <ExclamationCircleIcon className="w-3.5 h-3.5" />
+                                                        {errors.price}
+                                                    </p>
+                                                )}
+                                                <div className="mt-2 text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-200">
+                                                    <span className="font-medium">Catatan:</span> Fitur harga diskon sedang dalam pengembangan dan akan tersedia dalam update berikutnya.
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -356,12 +383,12 @@ export const EditProductDashboard = () => {
                                     <span className="w-1.5 h-6 bg-primary rounded-full"></span>
                                     <h3 className="text-lg font-extrabold tracking-tight text-primary">File Produk Digital</h3>
                                 </div>
-                                
+
                                 <div className="border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50 p-10 text-center group hover:border-primary/50 transition-all cursor-pointer relative">
-                                    <input 
-                                        type="file" 
+                                    <input
+                                        type="file"
                                         id="product-file"
-                                        className="absolute inset-0 opacity-0 cursor-pointer" 
+                                        className="absolute inset-0 opacity-0 cursor-pointer"
                                         onChange={(e) => {
                                             const file = e.target.files?.[0];
                                             if (file) {
@@ -377,7 +404,7 @@ export const EditProductDashboard = () => {
                                     <p className="text-xs text-slate-500 mb-6">Maksimal ukuran file 500MB (PDF, ZIP, MP4)</p>
                                     <Button variant="outline" className="px-6 py-2 rounded-full text-xs hover:bg-slate-100 border-slate-300 pointer-events-none">Pilih File</Button>
                                 </div>
-                                
+
                                 <div className="mt-6 space-y-3">
                                     <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-blue-900/10">
                                         <div className="flex items-center">
@@ -390,7 +417,7 @@ export const EditProductDashboard = () => {
                                             </div>
                                         </div>
                                         {fileName && (
-                                            <button 
+                                            <button
                                                 className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"
                                                 onClick={() => setShowFileDeleteModal(true)}
                                             >
@@ -410,13 +437,13 @@ export const EditProductDashboard = () => {
                                     </div>
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{previewImages.length} / 8 Foto</span>
                                 </div>
-                                
+
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     {previewImages.map((img) => (
                                         <div key={img.id} className="relative aspect-video rounded-xl overflow-hidden group/item shadow-sm border border-slate-100">
                                             <img src={img.url} className="w-full h-full object-cover transition-transform group-hover/item:scale-110" alt="Preview" />
                                             <div className="absolute inset-0 bg-rose-500/80 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center justify-center">
-                                                <button 
+                                                <button
                                                     onClick={() => removePreviewImage(img.id)}
                                                     className="p-2 bg-white rounded-lg text-rose-500 shadow-xl active:scale-90 transition-transform"
                                                 >
@@ -425,9 +452,9 @@ export const EditProductDashboard = () => {
                                             </div>
                                         </div>
                                     ))}
-                                    
+
                                     {previewImages.length < 8 && (
-                                        <div 
+                                        <div
                                             className="aspect-video rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center gap-2 hover:border-primary/60 hover:bg-primary/5 transition-all cursor-pointer group"
                                             onClick={() => document.getElementById('gallery-files-edit')?.click()}
                                         >
@@ -435,12 +462,12 @@ export const EditProductDashboard = () => {
                                             <p className="text-[10px] font-bold text-slate-300 uppercase tracking-wider group-hover:text-[#465f89]/60">Tambah Foto</p>
                                         </div>
                                     )}
-                                    
-                                    <input 
-                                        type="file" 
-                                        id="gallery-files-edit" 
-                                        className="hidden" 
-                                        multiple 
+
+                                    <input
+                                        type="file"
+                                        id="gallery-files-edit"
+                                        className="hidden"
+                                        multiple
                                         onChange={handlePreviewImagesChange}
                                         accept="image/*"
                                     />
@@ -452,21 +479,21 @@ export const EditProductDashboard = () => {
 
                         {/* Right Column (Media & Settings) */}
                         <div className="space-y-8">
-                            
+
                             {/* Thumbnail Produk Section */}
                             <Card className="p-6 shadow-[0px_20px_40px_rgba(16,27,50,0.04)] border-none">
                                 <div className="flex items-center space-x-3 mb-6">
                                     <span className="w-1.5 h-6 bg-primary rounded-full"></span>
                                     <h3 className="text-lg font-extrabold tracking-tight text-primary">Thumbnail</h3>
                                 </div>
-                                <div 
+                                <div
                                     className="relative group aspect-square rounded-2xl overflow-hidden bg-slate-50 mb-4 cursor-pointer"
                                     onClick={() => document.getElementById('thumbnail-file')?.click()}
                                 >
-                                    <img 
-                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
-                                        src={coverUrl || "https://images.unsplash.com/photo-1544006659-f0b21f04cb1b?w=400&h=400&fit=crop"} 
-                                        alt="Thumbnail" 
+                                    <img
+                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                        src={coverUrl || "https://images.unsplash.com/photo-1544006659-f0b21f04cb1b?w=400&h=400&fit=crop"}
+                                        alt="Thumbnail"
                                     />
                                     <div className="absolute inset-0 bg-primary/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
                                         <div className="bg-white text-primary px-4 py-2 rounded-full text-xs font-bold flex items-center shadow-lg active:scale-95 transition-all">
@@ -474,10 +501,10 @@ export const EditProductDashboard = () => {
                                             Ganti Gambar
                                         </div>
                                     </div>
-                                    <input 
-                                        type="file" 
+                                    <input
+                                        type="file"
                                         id="thumbnail-file"
-                                        className="hidden" 
+                                        className="hidden"
                                         onChange={(e) => {
                                             const file = e.target.files?.[0];
                                             if (file) {
@@ -498,37 +525,37 @@ export const EditProductDashboard = () => {
                                     <h3 className="text-lg font-extrabold tracking-tight text-primary">Pengaturan</h3>
                                 </div>
                                 <div className="space-y-6">
-                                    
+
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <p className="text-sm font-bold text-primary">Status Produk</p>
                                             <p className="text-[10px] text-slate-500">Tampilkan produk di toko</p>
                                         </div>
-                                        <Toggle 
-                                            checked={status} 
+                                        <Toggle
+                                            checked={status}
                                             onChange={(e) => {
                                                 setStatus(e.target.checked);
                                                 handleInputChange();
-                                            }} 
+                                            }}
                                         />
                                     </div>
-                                    
+
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <p className="text-sm font-bold text-primary">Visibilitas Publik</p>
                                             <p className="text-[10px] text-slate-500">Dapat dicari di Google</p>
                                         </div>
-                                        <Toggle 
-                                            checked={visibility} 
+                                        <Toggle
+                                            checked={visibility}
                                             onChange={(e) => {
                                                 setVisibility(e.target.checked);
                                                 handleInputChange();
-                                            }} 
+                                            }}
                                         />
                                     </div>
-                                    
-                                    <hr className="border-slate-100"/>
-                                    
+
+                                    <hr className="border-slate-100" />
+
                                     <div>
                                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Kedaluwarsa Link Download</label>
                                         <Select className="font-bold">
@@ -547,7 +574,7 @@ export const EditProductDashboard = () => {
                                     <h4 className="font-bold text-sm mb-2">Butuh Bantuan?</h4>
                                     <p className="text-xs text-blue-200 mb-4 leading-relaxed">Pelajari cara mengoptimalkan penjualan produk digital Anda di Pusat Bantuan kami.</p>
                                     <a className="inline-flex items-center text-white text-xs font-bold hover:underline" href="#">
-                                        Baca Panduan 
+                                        Baca Panduan
                                         <ArrowUpRightIcon className="w-4 h-4 ml-1" />
                                     </a>
                                 </div>
@@ -574,15 +601,15 @@ export const EditProductDashboard = () => {
                             </p>
                         </div>
                         <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
-                            <button 
-                                className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" 
+                            <button
+                                className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest"
                                 onClick={() => setShowDiscardModal(false)}
                             >
                                 Lanjut Edit
                             </button>
-                            <a 
+                            <a
                                 href="/products"
-                                className="px-6 py-2.5 rounded-xl font-black bg-slate-900 text-white shadow-lg transition-all text-[10px] uppercase tracking-widest text-center" 
+                                className="px-6 py-2.5 rounded-xl font-black bg-slate-900 text-white shadow-lg transition-all text-[10px] uppercase tracking-widest text-center"
                             >
                                 Ya, Buang & Keluar
                             </a>
@@ -605,14 +632,14 @@ export const EditProductDashboard = () => {
                             </p>
                         </div>
                         <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
-                            <button 
-                                className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" 
+                            <button
+                                className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest"
                                 onClick={() => setShowFileDeleteModal(false)}
                             >
                                 Batal
                             </button>
-                            <button 
-                                className="px-6 py-2.5 rounded-xl font-black bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/20 transition-all text-[10px] uppercase tracking-widest" 
+                            <button
+                                className="px-6 py-2.5 rounded-xl font-black bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/20 transition-all text-[10px] uppercase tracking-widest"
                                 onClick={() => {
                                     setFileUrl('');
                                     setFileName('');

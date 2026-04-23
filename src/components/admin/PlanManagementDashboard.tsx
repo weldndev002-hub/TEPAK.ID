@@ -119,9 +119,7 @@ export const PlanManagementDashboard = () => {
             ]);
             if (plansRes.ok) {
                 const data = await plansRes.json();
-                // ONLY ALLOW PRO TIER AS REQUESTED
-                const proOnly = data.filter((p: any) => p.id === 'pro');
-                setPlans(proOnly);
+                setPlans(data);
             }
             if (statsRes.ok) {
                 const stats = await statsRes.json();

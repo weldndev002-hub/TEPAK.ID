@@ -9,11 +9,13 @@ export interface DraggableBlockProps {
   subtitle?: string;
   onEdit?: () => void;
   onDelete?: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
   className?: string;
 }
 
 export const DraggableBlock: React.FC<DraggableBlockProps> = ({ 
-  icon, title, subtitle, onEdit, onDelete, className 
+  icon, title, subtitle, onEdit, onDelete, onMoveUp, onMoveDown, className 
 }) => {
   // Map icon string to component
   const getIcon = (iconName: string) => {
@@ -24,8 +26,21 @@ export const DraggableBlock: React.FC<DraggableBlockProps> = ({
 
   return (
     <div className={cn("bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center group transition-all hover:shadow-2xl hover:shadow-slate-100 ", className)}>
-      <div className="mr-3 md:mr-6 text-slate-300 cursor-grab active:cursor-grabbing group-hover:text-slate-400 transition-colors shrink-0">
-        <OutlineIcons.Bars2Icon className="w-5 h-5 md:w-6 md:h-6" />
+      <div className="flex flex-col items-center mr-3 md:mr-5 gap-1 shrink-0">
+        <button 
+          onClick={onMoveUp}
+          disabled={!onMoveUp}
+          className="p-1 rounded-md text-slate-300 hover:text-primary hover:bg-primary/5 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-300 transition-all"
+        >
+          <OutlineIcons.ChevronUpIcon className="w-4 h-4 md:w-5 md:h-5" />
+        </button>
+        <button 
+          onClick={onMoveDown}
+          disabled={!onMoveDown}
+          className="p-1 rounded-md text-slate-300 hover:text-primary hover:bg-primary/5 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-300 transition-all"
+        >
+          <OutlineIcons.ChevronDownIcon className="w-4 h-4 md:w-5 md:h-5" />
+        </button>
       </div>
       
       <div className="flex-1 min-w-0 pr-2 md:pr-6">

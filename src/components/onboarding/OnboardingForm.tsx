@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import { 
-    CheckCircleIcon, 
-    ArrowRightIcon, 
+import {
+    CheckCircleIcon,
+    ArrowRightIcon,
     SparklesIcon,
     CameraIcon,
     GlobeAltIcon,
@@ -26,7 +26,7 @@ const ONBOARDING_STEPS = [
 
 const domainSchema = z.string()
     .min(3, "Minimal 3 karakter")
-    .regex(/^[a-zA-Z0-9-]+$/, "Error format");
+    .regex(/^[a-zA-Z0-9-]+$/, "Subdomain hanya boleh mengandung huruf, angka, dan tanda hubung (-)");
 
 const themes = [
     { id: 'atelier-dark', name: 'Atelier Dark', gradient: 'bg-slate-900 shadow-2xl' },
@@ -35,7 +35,7 @@ const themes = [
 ];
 
 const ThemeCard: React.FC<{ id: string; name: string; previewGradient: string; isActive: boolean; onSelect: (id: string) => void }> = ({ id, name, previewGradient, isActive, onSelect }) => (
-    <button 
+    <button
         onClick={() => onSelect(id)}
         className={cn(
             "group relative flex flex-col items-center gap-4 transition-all duration-500",
@@ -89,7 +89,7 @@ export const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialBranding 
             // Sync Regex Check
             const result = domainSchema.safeParse(domain);
             if (!result.success) {
-                setErrors({ domain: result.error.issues?.[0]?.message || "Error format" });
+                setErrors({ domain: result.error.issues?.[0]?.message || "Subdomain hanya boleh mengandung huruf, angka, dan tanda hubung (-)" });
                 setIsDomainAvailable(false);
                 return;
             }
@@ -123,11 +123,11 @@ export const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialBranding 
             if (isCheckingDomain) return;
             const result = domainSchema.safeParse(domain);
             if (!result.success) {
-                setErrors({ domain: result.error.issues?.[0]?.message || "Error format" });
+                setErrors({ domain: result.error.issues?.[0]?.message || "Subdomain hanya boleh mengandung huruf, angka, dan tanda hubung (-)" });
                 return;
             }
             if (isDomainAvailable === false) return;
-            
+
             if (isDomainAvailable === null) {
                 setIsSubmitting(true);
                 try {
@@ -197,7 +197,7 @@ export const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialBranding 
     return (
         <BrandingProvider initialData={initialBranding}>
             <div className="max-w-6xl mx-auto w-full px-6">
-                
+
                 {/* STEP INDICATOR */}
                 <div className="flex items-center justify-between mb-24 px-4 overflow-x-auto no-scrollbar py-4">
                     {ONBOARDING_STEPS.map((s, i) => (
@@ -205,10 +205,10 @@ export const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialBranding 
                             <div className="flex items-center gap-4 group shrink-0">
                                 <div className={cn(
                                     "w-12 h-12 rounded-2xl flex items-center justify-center text-[11px] font-black transition-all duration-500",
-                                    currentStep === i 
-                                        ? "bg-primary text-white shadow-2xl shadow-primary/20 scale-110 rotate-3" 
-                                        : currentStep > i 
-                                            ? "bg-slate-900 text-white" 
+                                    currentStep === i
+                                        ? "bg-primary text-white shadow-2xl shadow-primary/20 scale-110 rotate-3"
+                                        : currentStep > i
+                                            ? "bg-slate-900 text-white"
                                             : "bg-white text-slate-300 border border-slate-100"
                                 )}>
                                     {currentStep > i ? <CheckCircleIcon className="w-6 h-6" /> : `0${i + 1}`}
@@ -234,7 +234,7 @@ export const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialBranding 
                 <div className="bg-white rounded-[4rem] shadow-[0_40px_100px_-20px_rgba(15,23,42,0.08)] border border-slate-50 relative overflow-hidden">
                     {/* PROGRESS BAR */}
                     <div className="absolute top-0 left-0 right-0 h-1.5 bg-slate-50">
-                        <div 
+                        <div
                             className="h-full bg-primary transition-all duration-1000 ease-out"
                             style={{ width: `${((currentStep + 1) / ONBOARDING_STEPS.length) * 100}%` }}
                         ></div>
@@ -273,7 +273,7 @@ export const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialBranding 
                                             <div className="absolute left-8 top-1/2 -translate-y-1/2 flex items-center pointer-events-none z-10">
                                                 <span className="text-slate-300 font-black text-xl tracking-tight">tepak.id/</span>
                                             </div>
-                                            <Input 
+                                            <Input
                                                 className="h-24 pl-32 text-2xl font-black tracking-tight rounded-[2rem] border-2 border-slate-100 focus:border-primary shadow-none bg-slate-50/30 uppercase transition-all"
                                                 value={domain}
                                                 onChange={(e) => {
@@ -305,7 +305,7 @@ export const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialBranding 
                                         ) : isDomainAvailable && !isCheckingDomain && (
                                             <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] px-4 animate-in fade-in">
                                                 <SparklesIcon className="w-3.5 h-3.5 inline mr-2 -mt-0.5" />
-                                                Domain is available! 
+                                                Domain is available!
                                             </p>
                                         )}
                                     </div>
@@ -318,7 +318,7 @@ export const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialBranding 
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
                                             {themes.map((theme) => (
-                                                <ThemeCard 
+                                                <ThemeCard
                                                     key={theme.id}
                                                     id={theme.id}
                                                     name={theme.name}
@@ -346,8 +346,8 @@ export const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialBranding 
                                 <div className="flex flex-col lg:flex-row gap-20">
                                     {/* PHOTO & BIO */}
                                     <div className="lg:w-1/2 space-y-12">
-                                        <AvatarUpload 
-                                            className="mb-14" 
+                                        <AvatarUpload
+                                            className="mb-14"
                                             image={avatarUrl}
                                             onUpload={async (file: File) => {
                                                 try {
@@ -369,20 +369,20 @@ export const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialBranding 
                                                 }
                                             }}
                                         />
-                                        
+
                                         <div className="space-y-6">
                                             <div className="space-y-4">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1">Profile Full Name</label>
-                                                <Input 
-                                                    className="h-16 rounded-2xl border-slate-100 bg-slate-50/30 text-lg font-bold tracking-tight" 
-                                                    placeholder="Tepak Creator" 
+                                                <Input
+                                                    className="h-16 rounded-2xl border-slate-100 bg-slate-50/30 text-lg font-bold tracking-tight"
+                                                    placeholder="Tepak Creator"
                                                     value={fullName}
                                                     onChange={(e) => setFullName(e.target.value)}
                                                 />
                                             </div>
                                             <div className="space-y-4 pt-4">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1">Short Biography</label>
-                                                <textarea 
+                                                <textarea
                                                     className="w-full h-40 rounded-[2rem] border border-slate-100 bg-slate-50/30 text-sm font-medium p-8 focus:ring-1 focus:ring-primary focus:border-primary transition-all resize-none outline-none"
                                                     placeholder="Tell the world your story..."
                                                     value={bio}
@@ -399,7 +399,7 @@ export const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialBranding 
                                                 <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
                                                 <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.4em]">Presence & Socials</h3>
                                             </div>
-                                            
+
                                             <div className="space-y-8">
                                                 {[
                                                     { id: 'ig', label: 'Instagram Username', icon: 'IG' },
@@ -411,8 +411,8 @@ export const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialBranding 
                                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{s.label}</label>
                                                             <span className="text-[9px] font-black text-primary opacity-30">{s.icon}</span>
                                                         </div>
-                                                        <Input 
-                                                            className="h-14 rounded-xl border-slate-200 bg-white shadow-sm font-bold" 
+                                                        <Input
+                                                            className="h-14 rounded-xl border-slate-200 bg-white shadow-sm font-bold"
                                                             placeholder={`@username`}
                                                             value={(socials as any)[s.id]}
                                                             onChange={(e) => setSocials(prev => ({ ...prev, [s.id]: e.target.value }))}
@@ -436,14 +436,14 @@ export const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialBranding 
                                         <SparklesIcon className="w-6 h-6 text-amber-400" />
                                     </div>
                                 </div>
-                                
+
                                 <div className="space-y-6">
-                                    <h2 className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter uppercase leading-tight">Manifestation<br/>Complete!</h2>
+                                    <h2 className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter uppercase leading-tight">Manifestation<br />Complete!</h2>
                                     <p className="text-slate-400 font-bold uppercase tracking-[0.3em] text-[10px] max-w-sm mx-auto leading-relaxed">Your digital atelier is ready to welcome your audience. Step into your kingdom.</p>
                                 </div>
 
-                                <Button 
-                                    size="lg" 
+                                <Button
+                                    size="lg"
                                     className="px-20 py-8 rounded-[2rem] font-black uppercase text-[11px] tracking-[0.3em] shadow-2xl shadow-primary/30 hover:scale-105 active:scale-95 transition-all group"
                                     onClick={() => {
                                         window.location.href = `/editor?theme=${selectedTheme || 'atelier-dark'}&subdomain=${domain}`;
@@ -458,7 +458,7 @@ export const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialBranding 
                         {/* NAV ACTIONS */}
                         {currentStep < 2 && (
                             <div className="flex items-center justify-between mt-24 pt-16 border-t border-slate-50">
-                                <button 
+                                <button
                                     onClick={prevStep}
                                     className={cn(
                                         "text-[10px] font-black uppercase tracking-[0.4em] transition-all",
@@ -467,10 +467,10 @@ export const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialBranding 
                                 >
                                     Go Back
                                 </button>
-                                
-                                <Button 
+
+                                <Button
                                     onClick={nextStep}
-                                    disabled={isSubmitting || (currentStep === 0 && (isDomainAvailable === false || isCheckingDomain))}
+                                    disabled={isSubmitting || (currentStep === 0 && (isDomainAvailable === false || isCheckingDomain || !!errors.domain))}
                                     className="min-w-[240px] h-20 rounded-[2rem] font-black uppercase text-[10px] tracking-[0.4em] shadow-xl group"
                                 >
                                     {isSubmitting ? 'Syncing...' : (
