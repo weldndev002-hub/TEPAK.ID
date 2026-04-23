@@ -70,7 +70,7 @@ export const OrdersDashboard = () => {
     }
 
     return (
-        <div className="flex-1 p-10 min-h-screen bg-[#f8f9fb] ">
+        <div className="flex-1 px-10 pt-24 pb-12 min-h-screen bg-[#f8f9fb] ">
             {/* Breadcrumb / Section Header */}
             <div className="mb-12">
                 <h3 className="text-3xl font-black text-slate-900 tracking-tighter mb-2 uppercase">Pesanan Saya</h3>

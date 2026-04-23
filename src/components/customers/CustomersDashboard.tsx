@@ -128,7 +128,7 @@ export const CustomersDashboard = () => {
     ];
 
     return (
-        <div className="flex-1 p-8 min-h-screen bg-slate-50 relative">
+        <div className="flex-1 px-8 pt-24 pb-12 min-h-screen bg-slate-50 relative">
             {/* Toast Notification */}
             {toast && (
                 <div className="fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl text-sm font-bold bg-emerald-500 text-white animate-in slide-in-from-right duration-300">
