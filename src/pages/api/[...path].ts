@@ -1833,17 +1833,24 @@ app.post('/payments/duitku/webhook', async (c) => {
     const resultCode = (body.resultCode || body.statusCode || '') as string;
 
     console.log('[Webhook DuitKu] Processing Order:', merchantOrderId, 'Result:', resultCode);
+    console.log('[Webhook DuitKu] Full Body:', JSON.stringify(body, null, 2));
 
     // 1. KASUS LANGGANAN (SUB--)
     if (merchantOrderId.startsWith('SUB--')) {
       const parts = merchantOrderId.split('--');
       const targetUserId = parts[1];
+      
+      console.log('[Webhook DuitKu] Subscription order detected');
+      console.log('[Webhook DuitKu] Target User ID:', targetUserId);
+      console.log('[Webhook DuitKu] Result Code:', resultCode);
+      
       if (resultCode === '00' && targetUserId) {
-        console.log(`[Webhook DuitKu] UPGRADING USER ${targetUserId} TO PRO...`);
+        console.log(`[Webhook DuitKu] ✅ UPGRADING USER ${targetUserId} TO PRO...`);
 
-        // 1. Get Expiry Date
+        // 1. Get Expiry Date (30 hari dari now)
         const expiryDate = new Date();
         expiryDate.setDate(expiryDate.getDate() + 30);
+        const expireIso = expiryDate.toISOString();
 
         // 2. Update Subscription History
         const { error: histError } = await supabase
@@ -1854,35 +1861,61 @@ app.post('/payments/duitku/webhook', async (c) => {
           })
           .eq('invoice_id', merchantOrderId);
 
-        if (histError) console.error('[Webhook Duitku] Failed to update hist SUCCESS:', histError);
+        if (histError) {
+          console.error('[Webhook DuitKu] ❌ Failed to update history SUCCESS:', histError);
+          return c.json({ error: 'Gagal update subscription_history', details: histError }, 500);
+        }
+        console.log('[Webhook DuitKu] ✅ History updated to SUCCESS');
 
         // 3. Update User Settings
-        const { error: subError } = await supabase
+        const updateData = {
+          plan_status: 'pro' as const,
+          plan_expiry: expireIso,
+          auto_renewal: true,
+          updated_at: new Date().toISOString()
+        };
+        
+        console.log('[Webhook DuitKu] Updating user_settings with:', updateData);
+        
+        const { error: subError, data: subData } = await supabase
           .from('user_settings')
-          .update({
-            plan_status: 'pro',
-            plan_expiry: expiryDate.toISOString(),
-            auto_renewal: true,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', targetUserId);
+          .update(updateData)
+          .eq('user_id', targetUserId)
+          .select();
 
         if (subError) {
-          console.error('[Webhook DuitKu] Database Update Error (Sub):', subError);
-          return c.json({ error: 'Gagal update database langganan' }, 500);
+          console.error('[Webhook DuitKu] ❌ Database Update Error (Sub):', subError);
+          console.error('[Webhook DuitKu] Error Code:', subError.code);
+          console.error('[Webhook DuitKu] Error Message:', subError.message);
+          return c.json({ 
+            error: 'Gagal update database langganan',
+            code: subError.code,
+            message: subError.message,
+            details: subError
+          }, 500);
         }
 
-        console.log(`[Webhook DuitKu] BERHASIL! User ${targetUserId} sekarang PRO.`);
-        return c.json({ success: true, message: 'Subscription upgraded successfully' });
-      } else if (targetUserId) {
+        console.log(`[Webhook DuitKu] ✅ BERHASIL! User ${targetUserId} sekarang PRO.`);
+        console.log('[Webhook DuitKu] Updated data:', subData);
+        
+        return c.json({ 
+          success: true, 
+          message: 'Subscription upgraded successfully',
+          user_id: targetUserId,
+          plan_expiry: expireIso
+        });
+      } else if (targetUserId && resultCode !== '00') {
         // Failed/Cancelled status tracking for SUB--
+        console.log(`[Webhook DuitKu] ⚠️  Subscription payment not successful. Code: ${resultCode}`);
+        
         const statusMap: Record<string, string> = {
+          '01': 'PENDING',
           '02': 'CANCELED',
           '03': 'EXPIRED',
         };
         const subsStatus = statusMap[resultCode] || 'FAILED';
 
-        await supabase
+        const { error: updateError } = await supabase
           .from('subscription_history')
           .update({
             status: subsStatus,
@@ -1890,7 +1923,20 @@ app.post('/payments/duitku/webhook', async (c) => {
           })
           .eq('invoice_id', merchantOrderId);
 
-        return c.json({ success: false, status: subsStatus });
+        if (updateError) {
+          console.error('[Webhook DuitKu] Failed to update history to', subsStatus, ':', updateError);
+        }
+
+        return c.json({ 
+          success: false, 
+          status: subsStatus,
+          message: `Payment ${subsStatus.toLowerCase()}`
+        });
+      } else {
+        console.warn('[Webhook DuitKu] ⚠️  Invalid subscription order data');
+        console.warn('  - resultCode:', resultCode);
+        console.warn('  - targetUserId:', targetUserId);
+        return c.json({ error: 'Invalid subscription order data' }, 400);
       }
     }
 

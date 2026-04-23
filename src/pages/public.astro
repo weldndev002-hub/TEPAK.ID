@@ -24,6 +24,7 @@ const testUsername = urlParams.get('u');
 
 let merchantData = null;
 let products = [];
+let blocks = [];
 let queryError = null;
 
 try {
@@ -75,6 +76,7 @@ try {
             .order('created_at', { ascending: false });
         
         products = productList || [];
+        blocks = merchantData?.profiles?.blocks || [];
     }
 } catch (err) {
     console.error('[Public Page Error]', err);
@@ -140,8 +142,7 @@ const socials = [
     }
 ].filter(s => s.url);
 
-// Get blocks from database
-const blocks = merchantData?.profiles?.blocks || [];
+// blocks already initialized above
 
 // Map the products into UI format
 const formatted_products = products.map(p => ({
