@@ -15,13 +15,13 @@ const getEnv = (key: string): string | undefined => {
 
   try {
     // 1. Build-time (Vite/Astro) - Priority for Browser
-    if (key === 'PUBLIC_SUPABASE_URL') return clean(import.meta.env.PUBLIC_SUPABASE_URL, true);
-    if (key === 'PUBLIC_SUPABASE_ANON_KEY') return clean(import.meta.env.PUBLIC_SUPABASE_ANON_KEY);
-    if (key === 'SUPABASE_SERVICE_ROLE_KEY') return clean(import.meta.env.SUPABASE_SERVICE_ROLE_KEY);
-    if (key === 'ADMIN_PASSCODE') return clean(import.meta.env.ADMIN_PASSCODE);
+    if (key === 'PUBLIC_SUPABASE_URL' && import.meta.env.PUBLIC_SUPABASE_URL) return clean(import.meta.env.PUBLIC_SUPABASE_URL, true);
+    if (key === 'PUBLIC_SUPABASE_ANON_KEY' && import.meta.env.PUBLIC_SUPABASE_ANON_KEY) return clean(import.meta.env.PUBLIC_SUPABASE_ANON_KEY);
+    if (key === 'SUPABASE_SERVICE_ROLE_KEY' && import.meta.env.SUPABASE_SERVICE_ROLE_KEY) return clean(import.meta.env.SUPABASE_SERVICE_ROLE_KEY);
+    if (key === 'ADMIN_PASSCODE' && import.meta.env.ADMIN_PASSCODE) return clean(import.meta.env.ADMIN_PASSCODE);
 
     // Fallback for other keys
-    if (typeof import.meta !== 'undefined' && import.meta.env) {
+    if (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env as any)[key]) {
       return clean((import.meta.env as any)[key], key.includes('URL'));
     }
   } catch (e) {}
