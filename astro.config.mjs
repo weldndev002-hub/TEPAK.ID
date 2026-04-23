@@ -1,9 +1,13 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
+import { loadEnv } from 'vite';
 
 import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
 import cloudflare from '@astrojs/cloudflare';
+
+// Load .env file properly (Astro v6 / Vite standard)
+const env = loadEnv(process.env.NODE_ENV || 'development', process.cwd(), '');
 
 // https://astro.build/config
 export default defineConfig({
@@ -13,9 +17,9 @@ export default defineConfig({
     plugins: [tailwindcss()],
     define: {
       // Make env vars available at build time (must be set in environment)
-      'import.meta.env.PUBLIC_SUPABASE_URL': JSON.stringify(process.env.PUBLIC_SUPABASE_URL || ''),
-      'import.meta.env.PUBLIC_SUPABASE_ANON_KEY': JSON.stringify(process.env.PUBLIC_SUPABASE_ANON_KEY || ''),
-      'import.meta.env.PUBLIC_DUITKU_MERCHANT_CODE': JSON.stringify(process.env.PUBLIC_DUITKU_MERCHANT_CODE || ''),
+      'import.meta.env.PUBLIC_SUPABASE_URL': JSON.stringify(env.PUBLIC_SUPABASE_URL || ''),
+      'import.meta.env.PUBLIC_SUPABASE_ANON_KEY': JSON.stringify(env.PUBLIC_SUPABASE_ANON_KEY || ''),
+      'import.meta.env.PUBLIC_DUITKU_MERCHANT_CODE': JSON.stringify(env.PUBLIC_DUITKU_MERCHANT_CODE || ''),
     },
     ssr: {
       noExternal: ['@heroicons/react', 'lucide-react', '@supabase/supabase-js', '@supabase/ssr']

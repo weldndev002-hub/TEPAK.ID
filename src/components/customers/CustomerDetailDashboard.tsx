@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import {
@@ -14,7 +14,8 @@ import {
     EllipsisVerticalIcon,
     ArrowDownTrayIcon,
     ChatBubbleLeftEllipsisIcon,
-    CheckCircleIcon
+    CheckCircleIcon,
+    ArrowPathIcon
 } from '@heroicons/react/24/outline';
 
 export const CustomerDetailDashboard = () => {
@@ -31,15 +32,13 @@ export const CustomerDetailDashboard = () => {
         setTimeout(() => setToast(null), 4000);
     };
 
-    useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const id = params.get('id');
-        if (id) {
-            fetchCustomer(id);
-        }
-    }, []);
+    const [customerId, setCustomerId] = useState<string | null>(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
-    const fetchCustomer = async (id: string) => {
+    // Declare fetchCustomer FIRST, before any useEffect that uses it
+    const fetchCustomer = useCallback(async (id: string, silent = false) => {
+        if (!silent) setIsLoading(true);
+        else setIsRefreshing(true);
         try {
             const res = await fetch(`/api/customers/${id}`);
             if (res.ok) {
@@ -57,8 +56,30 @@ export const CustomerDetailDashboard = () => {
             console.error('Error fetching customer:', error);
         } finally {
             setIsLoading(false);
+            setIsRefreshing(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id');
+        if (id) {
+            setCustomerId(id);
+            fetchCustomer(id);
+        }
+    }, [fetchCustomer]);
+
+    // Auto-refresh every 10s if there are pending orders
+    useEffect(() => {
+        if (!customerId || !customer) return;
+        const hasPending = customer.orders?.some((o: any) => o.status === 'pending');
+        if (!hasPending) return;
+        const interval = setInterval(() => {
+            fetchCustomer(customerId, true);
+        }, 10000);
+        return () => clearInterval(interval);
+    }, [customerId, customer, fetchCustomer]);
+
 
     const handleSaveProfile = async () => {
         if (!customer) return;
@@ -165,6 +186,15 @@ export const CustomerDetailDashboard = () => {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
+                    <button 
+                        className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl font-bold text-sm text-slate-600 transition-all disabled:opacity-50"
+                        onClick={() => customerId && fetchCustomer(customerId, true)}
+                        disabled={isRefreshing}
+                        title="Refresh data terbaru"
+                    >
+                        <ArrowPathIcon className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        {isRefreshing ? 'Updating...' : 'Refresh'}
+                    </button>
                     <button 
                         className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl font-bold text-sm text-slate-600 transition-all"
                         onClick={() => showToast("Mengekspor data profil pelanggan...")}

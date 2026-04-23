@@ -95,45 +95,48 @@ export async function createDigitalDelivery(
         const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL') || '';
         const supabaseKey = getEnv('SUPABASE_SERVICE_ROLE_KEY') || '';
 
-        if (!supabaseUrl || !supabaseKey) {
-            return { success: false, error: 'Missing Supabase credentials' };
-        }
-
-        const supabase = createClient(supabaseUrl, supabaseKey);
-
-        // Generate token
         const token = generateToken();
-
-        // Set expiry to 7 days from now
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + 7);
 
-        // Generate signed URL
-        const signedUrl = await generateSignedUrl(fileUrl);
+        // Try to generate signed URL, but fall back to original URL if it fails
+        // (This handles both private buckets and public file URLs)
+        let signedUrl: string | null = null;
+        try {
+            signedUrl = await generateSignedUrl(fileUrl);
+        } catch (e) {
+            console.warn('[Digital Delivery] Could not generate signed URL, using original file URL:', e);
+        }
+        // For public buckets/URLs, just use the original file URL directly
+        const downloadUrl = signedUrl || fileUrl;
 
-        if (!signedUrl) {
-            return { success: false, error: 'Failed to generate signed URL' };
+        // Try to insert into digital_deliveries table (optional - email still sent if this fails)
+        if (supabaseUrl && supabaseKey) {
+            try {
+                const supabase = createClient(supabaseUrl, supabaseKey);
+                const { error: insertError } = await supabase
+                    .from('digital_deliveries')
+                    .insert({
+                        order_id: orderId,
+                        token,
+                        file_url: fileUrl,
+                        signed_url: downloadUrl,
+                        expires_at: expiresAt.toISOString(),
+                        accessed_email: customerEmail,
+                    });
+
+                if (insertError) {
+                    // Log the error but DO NOT stop email from being sent
+                    console.error('[Digital Delivery] DB insert error (non-fatal):', insertError.message);
+                    console.warn('[Digital Delivery] ⚠️ TABLE "digital_deliveries" may not exist yet. Run the migration SQL in Supabase!');
+                }
+            } catch (dbError) {
+                console.error('[Digital Delivery] DB error (non-fatal):', dbError);
+            }
         }
 
-        // Insert digital delivery record
-        const { error: insertError } = await supabase
-            .from('digital_deliveries')
-            .insert({
-                order_id: orderId,
-                token,
-                file_url: fileUrl,
-                signed_url: signedUrl,
-                expires_at: expiresAt.toISOString(),
-                accessed_email: customerEmail,
-            });
-
-        if (insertError) {
-            console.error('Error inserting digital delivery:', insertError);
-            return { success: false, error: insertError.message };
-        }
-
-        // Send email with tokenized URL
-        await sendDigitalDeliveryEmail(customerEmail, token, signedUrl, siteBaseUrl);
+        // ALWAYS send the email regardless of DB status
+        await sendDigitalDeliveryEmail(customerEmail, token, downloadUrl, siteBaseUrl);
 
         return { success: true, token };
     } catch (error: any) {
@@ -141,6 +144,7 @@ export async function createDigitalDelivery(
         return { success: false, error: error.message };
     }
 }
+
 
 /**
  * Send email with download link using Resend API
