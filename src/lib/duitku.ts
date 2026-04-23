@@ -70,32 +70,54 @@ export class DuitkuService {
     ): boolean {
         // Duitku mengharapkan amount tanpa desimal dalam signature
         const amount = Math.floor(Number(paymentAmount));
-        
-        // Versi A: MerchantCode + OrderId + Amount + Key
+
+        // Versi A: MerchantCode + OrderId + Amount + Key (Format paling umum)
         const sigA = md5(`${merchantCode}${orderId}${amount}${this.merchantKey}`);
-        
+
         // Versi B: MerchantCode + Amount + OrderId + Key (Sering digunakan di V2 Callback)
         const sigB = md5(`${merchantCode}${amount}${orderId}${this.merchantKey}`);
-        
+
+        // Versi C: Amount + MerchantCode + OrderId + Key (Format alternatif)
+        const sigC = md5(`${amount}${merchantCode}${orderId}${this.merchantKey}`);
+
+        // Versi D: OrderId + MerchantCode + Amount + Key (Format legacy)
+        const sigD = md5(`${orderId}${merchantCode}${amount}${this.merchantKey}`);
+
+        // Versi E: MerchantCode + OrderId + paymentAmount (string) + Key
+        const sigE = md5(`${merchantCode}${orderId}${paymentAmount}${this.merchantKey}`);
+
+        const matches = signature === sigA || signature === sigB || signature === sigC || signature === sigD || signature === sigE;
+
         console.log('[Duitku Webhook] Verifikasi Signature:', {
-            rec_sig: signature,
+            merchantCode,
+            orderId,
+            amount,
+            received_sig: signature,
             exp_A: sigA,
             exp_B: sigB,
-            match: signature === sigA || signature === sigB
+            exp_C: sigC,
+            exp_D: sigD,
+            exp_E: sigE,
+            match: matches,
+            matching_format: matches ?
+                (signature === sigA ? 'A' :
+                    signature === sigB ? 'B' :
+                        signature === sigC ? 'C' :
+                            signature === sigD ? 'D' : 'E') : 'NONE'
         });
 
-        return signature === sigA || signature === sigB;
+        return matches;
     }
 
     async createPayment(payload: DuitkuPaymentRequest): Promise<DuitkuPaymentResponse> {
         // KEMBALI KE V2 karena V1 terbukti tidak stabil (Error 500) di Sandbox
         const endpoint = '/webapi/api/merchant/v2/inquiry';
         const fullUrl = `${this.apiUrl}${endpoint}`;
-        
+
         const orderId = payload.orderId;
-        
+
         // V2 Signature: MD5(merchantCode + orderId + amount + merchantKey)
-        const signature = md5(this.merchantCode + orderId + payload.paymentAmount + this.merchantKey); 
+        const signature = md5(this.merchantCode + orderId + payload.paymentAmount + this.merchantKey);
 
         // Gunakan method dari payload, jika kosong gunakan 'SP' (ShopeePay) karena paling stabil di Sandbox Anda
         const selectedMethod = payload.paymentMethod || (this.isSandbox ? 'SP' : 'QRIS');

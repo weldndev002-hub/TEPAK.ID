@@ -1805,9 +1805,34 @@ app.post(
 
 // 2. Handler Webhook DuitKu (untuk notifikasi pembayaran)
 app.post('/payments/duitku/webhook', async (c) => {
-  // Duitku bisa mengirim JSON atau Form-UrlEncoded. Kita gunakan parseBody() yang mendukung keduanya.
-  const body = await c.req.parseBody();
+  // Duitku bisa mengirim JSON atau Form-UrlEncoded.
+  // parseBody() mengembalikan Record<string, string | File>, tapi Duitku selalu mengirim string values.
+  const rawBody = await c.req.parseBody();
+
+  // Convert all values to string, filter out File objects
+  const body: Record<string, string> = {};
+  for (const [key, value] of Object.entries(rawBody)) {
+    if (typeof value === 'string') {
+      body[key] = value;
+    } else if (value instanceof File) {
+      // Convert File to string if needed (shouldn't happen with Duitku)
+      body[key] = await value.text();
+    } else {
+      body[key] = String(value);
+    }
+  }
+
   console.log('[Webhook DuitKu] Request Received (Parsed):', JSON.stringify(body, null, 2));
+
+  // Log important headers
+  const headers = {
+    'content-type': c.req.header('content-type'),
+    'user-agent': c.req.header('user-agent'),
+    'x-forwarded-for': c.req.header('x-forwarded-for'),
+    'origin': c.req.header('origin'),
+    'referer': c.req.header('referer')
+  };
+  console.log('[Webhook DuitKu] Request Headers:', headers);
 
   try {
     // Webhook dipanggil oleh server Duitku, tidak ada session user.
@@ -1971,30 +1996,55 @@ app.post('/payments/duitku/webhook', async (c) => {
     // Trigger digital delivery for successful payments of digital products
     if (orderStatus === 'success') {
       try {
-        // Get order details with product and customer info
+        console.log(`[Webhook DuitKu] Checking for digital delivery for order: ${merchantOrderId}`);
+
+        // 1. Get the order first
         const { data: orderData, error: orderError } = await supabase
           .from('orders')
-          .select(`
-            id,
-            customer_id,
-            product_id,
-            customers!inner(email),
-            products!inner(type, file_url)
-          `)
+          .select('id, customer_id, product_id')
           .eq('invoice_id', merchantOrderId)
           .single();
 
-        if (!orderError && orderData) {
-          // Note: Supabase returns arrays for joined tables even with !inner
-          const product = Array.isArray(orderData.products) ? orderData.products[0] : orderData.products;
-          const customer = Array.isArray(orderData.customers) ? orderData.customers[0] : orderData.customers;
-          const customerEmail = customer?.email;
-          const productType = product?.type;
-          const fileUrl = product?.file_url;
+        if (orderError || !orderData) {
+          console.log(`[Webhook DuitKu] Order not found or error: ${orderError?.message}`);
+          // Continue without digital delivery
+        } else {
+          console.log(`[Webhook DuitKu] Found order: ${orderData.id}, customer: ${orderData.customer_id}, product: ${orderData.product_id}`);
 
-          // Check if product is digital and has a file URL
-          if (productType === 'digital' && fileUrl && customerEmail) {
-            console.log(`[Webhook DuitKu] Triggering digital delivery for order ${orderData.id}`);
+          // 2. Get customer email
+          const { data: customerData, error: customerError } = await supabase
+            .from('customers')
+            .select('email')
+            .eq('id', orderData.customer_id)
+            .single();
+
+          // 3. Get product details
+          const { data: productData, error: productError } = await supabase
+            .from('products')
+            .select('type, file_url')
+            .eq('id', orderData.product_id)
+            .single();
+
+          const customerEmail = customerData?.email;
+          const productType = productData?.type;
+          let fileUrl = productData?.file_url;
+
+          console.log(`[Webhook DuitKu] Customer email: ${customerEmail}, Product type: ${productType}, File URL: ${fileUrl ? 'Present' : 'Missing'}`);
+
+          // Normalize file URL - if it's relative, make it absolute
+          if (fileUrl && !fileUrl.startsWith('http') && !fileUrl.startsWith('https')) {
+            console.log(`[Webhook DuitKu] File URL is relative: ${fileUrl}`);
+            // Try to construct absolute URL (this depends on your storage setup)
+            // For now, we'll log it but keep as-is
+          }
+
+          // Check if product is digital/course and has a file URL
+          // Accept both 'digital' and 'course' types as digital products
+          const isDigitalProduct = productType === 'digital' || productType === 'course';
+
+          if (isDigitalProduct && fileUrl && customerEmail) {
+            console.log(`[Webhook DuitKu] ✅ Triggering digital delivery for ${productType} product order ${orderData.id}`);
+            console.log(`[Webhook DuitKu] Customer: ${customerEmail}, File: ${fileUrl}`);
 
             // Import and use digital delivery service
             const { createDigitalDelivery } = await import('../../lib/digital-delivery');
@@ -2011,17 +2061,22 @@ app.post('/payments/duitku/webhook', async (c) => {
             );
 
             if (result.success) {
-              console.log(`[Webhook DuitKu] Digital delivery created successfully with token: ${result.token}`);
+              console.log(`[Webhook DuitKu] ✅ Digital delivery created successfully with token: ${result.token}`);
+              console.log(`[Webhook DuitKu] Email should have been sent to: ${customerEmail}`);
             } else {
-              console.error(`[Webhook DuitKu] Failed to create digital delivery: ${result.error}`);
+              console.error(`[Webhook DuitKu] ❌ Failed to create digital delivery: ${result.error}`);
               // Continue anyway - don't fail the webhook
             }
           } else {
-            console.log(`[Webhook DuitKu] Not a digital product or missing file URL/email`);
+            console.log(`[Webhook DuitKu] ℹ️ Not a digital product or missing file URL/email.
+              Product type: ${productType},
+              Has file URL: ${!!fileUrl},
+              Has customer email: ${!!customerEmail}`);
           }
         }
-      } catch (deliveryError) {
-        console.error('[Webhook DuitKu] Error in digital delivery process:', deliveryError);
+      } catch (deliveryError: any) {
+        console.error('[Webhook DuitKu] ❌ Error in digital delivery process:', deliveryError);
+        console.error('[Webhook DuitKu] Error stack:', deliveryError.stack);
         // Don't fail the webhook - just log the error
       }
     }
@@ -3547,7 +3602,7 @@ app.get('/health', async (c) => {
 export const ALL: APIRoute = async (context) => {
   // In Astro v6+, 'locals.runtime' is removed. 
   // Accessing it even with '?' can trigger a throwing getter in the adapter.
-  
+
   if (!cfEnv || Object.keys(cfEnv).length === 0) {
     try {
       // @ts-ignore - Modern Astro v6 / Cloudflare standard
