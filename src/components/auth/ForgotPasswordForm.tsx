@@ -42,40 +42,22 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ supabase
         }
 
         try {
-            // Check if user exists before sending reset email
-            const { data: userData, error: userError } = await supabase
-                .from('profiles')
-                .select('id')
-                .eq('email', email)
-                .maybeSingle();
+            // Directly send reset email - Supabase handles user existence check internally
+            // Don't query profiles table as email may not be synced there
+            const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/reset-password`,
+            });
 
-            if (userError) {
-                console.error('Error checking user existence:', userError);
-                // Continue anyway to prevent email enumeration
-            }
-
-            // Only send reset email if user exists
-            if (userData) {
-                const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-                    redirectTo: `${window.location.origin}/reset-password`,
-                });
-
-                if (resetError) {
-                    // Only show error for rate limits, other errors are hidden
-                    if (resetError.message.includes('rate limit')) {
-                        setError('Terlalu banyak permintaan. Silakan coba lagi nanti.');
-                        setIsLoading(false);
-                        return;
-                    }
-                    // Other errors are ignored to prevent email enumeration
-                    console.error('Reset password error:', resetError);
+            if (resetError) {
+                if (resetError.message.toLowerCase().includes('rate limit')) {
+                    setError('Terlalu banyak permintaan. Silakan coba lagi dalam beberapa menit.');
+                    setIsLoading(false);
+                    return;
                 }
-            } else {
-                // User doesn't exist - log but don't show error to user
-                console.log('Email not found in database:', email);
+                console.error('Reset password error:', resetError);
             }
 
-            // Always show success message to prevent email enumeration
+            // Always show success to prevent email enumeration
             setIsSent(true);
         } catch (err: any) {
             console.error('Unexpected error:', err);
