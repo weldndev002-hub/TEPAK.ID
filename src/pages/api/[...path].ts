@@ -3545,20 +3545,30 @@ app.get('/health', async (c) => {
 
 // Export handler for Astro
 export const ALL: APIRoute = async (context) => {
-  // Attempt to capture env from cloudflare:workers for getEnv
-  if (!cfEnv || Object.keys(cfEnv).length === 0) {
-    try {
-      // @ts-ignore
-      const { env } = await import('cloudflare:workers');
-      cfEnv = env;
-    } catch (e) {
-      // Fallback
-    }
+  // Astro places Cloudflare env variables in context.locals.runtime.env
+  const astroEnv = context.locals?.runtime?.env || {};
+  
+  if (Object.keys(astroEnv).length > 0) {
+      cfEnv = { ...cfEnv, ...astroEnv };
+  } else {
+      // Attempt to capture env from cloudflare:workers for getEnv
+      try {
+        // @ts-ignore
+        const { env } = await import('cloudflare:workers');
+        cfEnv = { ...cfEnv, ...env };
+      } catch (e) {
+        // Fallback
+      }
+  }
+
+  // Inject into globalThis so other files (like digital-delivery.ts) can read them
+  if (typeof globalThis !== 'undefined') {
+      (globalThis as any).env = { ...((globalThis as any).env || {}), ...cfEnv };
   }
 
   return app.fetch(
     context.request,
-    cfEnv || {},
+    cfEnv,
     context
   );
 };
