@@ -3545,30 +3545,30 @@ app.get('/health', async (c) => {
 
 // Export handler for Astro
 export const ALL: APIRoute = async (context) => {
-  // Astro places Cloudflare env variables in context.locals.runtime.env
-  const astroEnv = context.locals?.runtime?.env || {};
+  // In Astro v6+, 'locals.runtime' is removed. 
+  // Accessing it even with '?' can trigger a throwing getter in the adapter.
   
-  if (Object.keys(astroEnv).length > 0) {
-      cfEnv = { ...cfEnv, ...astroEnv };
-  } else {
-      // Attempt to capture env from cloudflare:workers for getEnv
-      try {
-        // @ts-ignore
-        const { env } = await import('cloudflare:workers');
-        cfEnv = { ...cfEnv, ...env };
-      } catch (e) {
-        // Fallback
+  if (!cfEnv || Object.keys(cfEnv).length === 0) {
+    try {
+      // @ts-ignore - Modern Astro v6 / Cloudflare standard
+      const cfWorkers = await import('cloudflare:workers');
+      if (cfWorkers && cfWorkers.env) {
+        cfEnv = cfWorkers.env;
       }
+    } catch (e) {
+      // Local dev or non-cloudflare environment
+    }
   }
 
-  // Inject into globalThis so other files (like digital-delivery.ts) can read them
-  if (typeof globalThis !== 'undefined') {
-      (globalThis as any).env = { ...((globalThis as any).env || {}), ...cfEnv };
+  // Inject into globalThis for other modules (like digital-delivery.ts)
+  if (typeof globalThis !== 'undefined' && cfEnv) {
+    (globalThis as any).env = { ...((globalThis as any).env || {}), ...cfEnv };
   }
 
+  // Hono's fetch will automatically receive 'env' when deployed to Cloudflare
   return app.fetch(
     context.request,
-    cfEnv,
+    cfEnv || {},
     context
   );
 };
