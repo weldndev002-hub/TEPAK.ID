@@ -101,8 +101,20 @@ const seo = {
                             )}
 
                             <div class="mb-10">
-                                <h3 class="text-3xl font-black text-slate-900 mb-2 uppercase italic">{plan.name}</h3>
-                                <p class="text-slate-400 text-sm font-medium leading-relaxed">{plan.description}</p>
+                                <div class="flex items-start gap-3 mb-4">
+                                    <h3 class="text-3xl font-black text-slate-900 uppercase italic">{plan.name}</h3>
+                                    {plan.tier_category && (
+                                        <span class="text-[10px] font-black text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest mt-2 whitespace-nowrap">
+                                            {plan.tier_category}
+                                        </span>
+                                    )}
+                                </div>
+                                <p class="text-slate-400 text-sm font-medium leading-relaxed mb-2">{plan.description}</p>
+                                {plan.tier_description && (
+                                    <p class="text-slate-500 text-xs leading-relaxed italic border-l-2 border-primary/30 pl-3">
+                                        {plan.tier_description}
+                                    </p>
+                                )}
                             </div>
 
                             <div class="mb-10">

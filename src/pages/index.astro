@@ -1,25 +1,25 @@
 ---
-import { PricingFlow } from '../components/billing/PricingFlow';
-import BaseLayout from '../layouts/BaseLayout.astro';
-import Button from '../components/ui/Button';
-import ProductCard from '../components/ui/ProductCard';
-import { 
-    SparklesIcon, 
-    ArrowRightOnRectangleIcon, 
-    LinkIcon, 
-    ArchiveBoxIcon, 
-    TicketIcon, 
-    ChartBarIcon, 
-    CheckCircleIcon, 
+import { PricingFlow } from "../components/billing/PricingFlow";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Button from "../components/ui/Button";
+import ProductCard from "../components/ui/ProductCard";
+import {
+    SparklesIcon,
+    ArrowRightOnRectangleIcon,
+    LinkIcon,
+    ArchiveBoxIcon,
+    TicketIcon,
+    ChartBarIcon,
+    CheckCircleIcon,
     GlobeAltIcon,
     CheckBadgeIcon,
     CameraIcon,
     PlayCircleIcon,
-    EnvelopeIcon
-} from '@heroicons/react/24/outline';
-import { getServerClient } from '../lib/supabase';
-import { AnalyticsTracker } from '../components/analytics/AnalyticsTracker';
-import { createClient } from '@supabase/supabase-js';
+    EnvelopeIcon,
+} from "@heroicons/react/24/outline";
+import { getServerClient } from "../lib/supabase";
+import { AnalyticsTracker } from "../components/analytics/AnalyticsTracker";
+import { createClient } from "@supabase/supabase-js";
 
 const supabase = Astro.locals.supabase;
 
@@ -27,25 +27,26 @@ let branding: any = null;
 if (supabase) {
     try {
         const { data } = await supabase
-            .from('platform_configs')
-            .select('*')
-            .eq('id', 1)
+            .from("platform_configs")
+            .select("*")
+            .eq("id", 1)
             .single();
         branding = data;
     } catch (e) {
-        console.error('[Index] Branding Fetch Error:', e);
+        console.error("[Index] Branding Fetch Error:", e);
     }
 }
 
-const siteName = branding?.site_name || 'Tepak.ID';
-const siteTagline = branding?.site_tagline || 'Satu Link. Semua Kebutuhan Digitalmu.';
-const logoUrl = branding?.logo_url || '/logo-light.png';
+const siteName = branding?.site_name || "Tepak.ID";
+const siteTagline =
+    branding?.site_tagline || "Satu Link. Semua Kebutuhan Digitalmu.";
+const logoUrl = branding?.logo_url || "/logo-light.png";
 
 // 2. Detect Hostname & Identity Logic (Dynamic Routing)
 const hostname = Astro.url.hostname;
 const { cookies } = Astro;
 const urlParams = Astro.url.searchParams;
-const testUsername = urlParams.get('u');
+const testUsername = urlParams.get("u");
 
 let merchantData = null;
 let products = [];
@@ -53,62 +54,143 @@ let blocks = [];
 
 try {
     if (!supabase) {
-        console.warn('[Routing Warning] Supabase is null. Some features may not work.');
+        console.warn(
+            "[Routing Warning] Supabase is null. Some features may not work.",
+        );
     } else {
-    const isMainDomain = hostname.includes('tepak.id') || hostname.includes('workers.dev') || hostname === 'localhost' || hostname === '127.0.0.1';
-    
-    if (!isMainDomain) {
-        // Search by Custom Domain
-        const { data } = await supabase.from('user_settings').select('*, profiles(*)').eq('domain_name', hostname).eq('domain_verified', true).single();
-        if (data) merchantData = data;
-    } else {
-        // Search by Subdomain or Test Param
-        const subdomain = hostname.split('.')[0];
-        const isMainSiteAlias = subdomain === 'tepak' || subdomain === 'tepakid' || subdomain === 'localhost' || subdomain === 'www';
-        const identifier = (isMainDomain && !isMainSiteAlias) ? subdomain : testUsername;
-        
-        if (identifier) {
-            // Robust Lookup
-            const { data: profileByUsername } = await supabase.from('profiles').select('*, user_settings(*)').eq('username', identifier).single();
-            if (profileByUsername) {
-                merchantData = {
-                    ...profileByUsername.user_settings,
-                    profiles: { ...profileByUsername }
-                };
-            } else {
-                // Fallback to domain_name
-                const { data: profileBySubdomain } = await supabase.from('user_settings').select('*, profiles(*)').eq('domain_name', identifier).single();
-                if (profileBySubdomain) merchantData = profileBySubdomain;
+        const isMainDomain =
+            hostname.includes("tepak.id") ||
+            hostname.includes("workers.dev") ||
+            hostname === "localhost" ||
+            hostname === "127.0.0.1";
+
+        if (!isMainDomain) {
+            // Search by Custom Domain
+            const { data } = await supabase
+                .from("user_settings")
+                .select("*, profiles(*)")
+                .eq("domain_name", hostname)
+                .eq("domain_verified", true)
+                .single();
+            if (data) merchantData = data;
+        } else {
+            // Search by Subdomain or Test Param
+            const subdomain = hostname.split(".")[0];
+            const isMainSiteAlias =
+                subdomain === "tepak" ||
+                subdomain === "tepakid" ||
+                subdomain === "localhost" ||
+                subdomain === "www";
+            const identifier =
+                isMainDomain && !isMainSiteAlias ? subdomain : testUsername;
+
+            if (identifier) {
+                // Robust Lookup
+                const { data: profileByUsername } = await supabase
+                    .from("profiles")
+                    .select("*, user_settings(*)")
+                    .eq("username", identifier)
+                    .single();
+                if (profileByUsername) {
+                    merchantData = {
+                        ...profileByUsername.user_settings,
+                        profiles: { ...profileByUsername },
+                    };
+                } else {
+                    // Fallback to domain_name
+                    const { data: profileBySubdomain } = await supabase
+                        .from("user_settings")
+                        .select("*, profiles(*)")
+                        .eq("domain_name", identifier)
+                        .single();
+                    if (profileBySubdomain) merchantData = profileBySubdomain;
+                }
             }
         }
-    }
 
-    if (merchantData) {
-        const { data: productList } = await supabase.from('products').select('*').eq('merchant_id', merchantData.user_id || merchantData.profiles.id).eq('status', 'published').order('created_at', { ascending: false });
-        products = productList || [];
-        blocks = merchantData.profiles?.blocks || [];
-    }
+        if (merchantData) {
+            const { data: productList } = await supabase
+                .from("products")
+                .select("*")
+                .eq(
+                    "merchant_id",
+                    merchantData.user_id || merchantData.profiles.id,
+                )
+                .eq("status", "published")
+                .order("created_at", { ascending: false });
+            products = productList || [];
+            blocks = merchantData.profiles?.blocks || [];
+        }
     }
 } catch (err) {
-    console.error('[Routing Error]', err);
+    console.error("[Routing Error]", err);
 }
 
-// Map the profile & products if merchant found
-const profile = merchantData ? {
-    name: merchantData.profiles?.full_name || "Merchant",
-    username: merchantData.profiles?.username || "merchant",
-    bio: merchantData.profiles?.bio || "Welcome to my digital store.",
-    avatar: merchantData.profiles?.avatar_url || "https://images.unsplash.com/photo-1544006659-f0b21f04cb1b?w=400&h=400&fit=crop",
-    is_verified: true,
-} : null;
+let plans: any[] = [];
+if (supabase) {
+    try {
+        const { data: pData, error } = await supabase
+            .from("subscription_plans")
+            .select("*")
+            .eq("is_active", true)
+            .order("price_monthly", { ascending: true });
+        if (error) {
+            console.warn("[Index] Active plans fetch failed, falling back to all plans:", error);
+            // fallback: fetch all plans
+            const { data: allData } = await supabase
+                .from("subscription_plans")
+                .select("*")
+                .order("price_monthly", { ascending: true });
+            plans = allData || [];
+        } else {
+            plans = pData || [];
+        }
+        console.log("[Index] Fetched plans:", plans);
+    } catch (e) {
+        console.error("[Index] Plans Fetch Error:", e);
+        // fallback: fetch all plans
+        const { data: allData } = await supabase
+            .from("subscription_plans")
+            .select("*")
+            .order("price_monthly", { ascending: true });
+        plans = allData || [];
+    }
+}
 
-const seo = merchantData ? {
-    title: merchantData.seo_title || `${profile?.name || 'Merchant'} | ${siteName} Ecosystem`,
-    description: merchantData.seo_description || profile?.bio || ''
-} : {
-    title: `${siteName} - ${siteTagline}`,
-    description: branding?.site_tagline || "Satu Link. Semua Kebutuhan Digitalmu. Bangun halaman profesional, jual aset digital, dan kelola event tanpa coding."
-};
+const formattedPlans = plans.map((plan) => ({
+    ...plan,
+    features: Array.isArray(plan.features) ? plan.features : [],
+}));
+console.log("[Index] formattedPlans:", formattedPlans);
+console.log("[Index] merchantData:", merchantData);
+console.log("[Index] hostname:", hostname);
+
+// Map the profile & products if merchant found
+const profile = merchantData
+    ? {
+          name: merchantData.profiles?.full_name || "Merchant",
+          username: merchantData.profiles?.username || "merchant",
+          bio: merchantData.profiles?.bio || "Welcome to my digital store.",
+          avatar:
+              merchantData.profiles?.avatar_url ||
+              "https://images.unsplash.com/photo-1544006659-f0b21f04cb1b?w=400&h=400&fit=crop",
+          is_verified: true,
+      }
+    : null;
+
+const seo = merchantData
+    ? {
+          title:
+              merchantData.seo_title ||
+              `${profile?.name || "Merchant"} | ${siteName} Ecosystem`,
+          description: merchantData.seo_description || profile?.bio || "",
+      }
+    : {
+          title: `${siteName} - ${siteTagline}`,
+          description:
+              branding?.site_tagline ||
+              "Satu Link. Semua Kebutuhan Digitalmu. Bangun halaman profesional, jual aset digital, dan kelola event tanpa coding.",
+      };
 
 // Brand Icons as SVGs
 const BrandIcons = {
@@ -116,60 +198,111 @@ const BrandIcons = {
     tiktok: `<svg viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-4.17.07-8.33.07-12.5z"/></svg>`,
     twitter: `<svg viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.045 4.126H5.078z"/></svg>`,
     facebook: `<svg viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"/></svg>`,
-    threads: `<svg viewBox="0 0 192 192" fill="currentColor" class="w-6 h-6"><path d="M141.537 88.9883C140.71 88.5919 139.87 88.2104 139.019 87.8451C137.537 60.5382 122.616 44.905 97.5619 44.745C97.4484 44.7443 97.3355 44.7443 97.222 44.7443C82.2364 44.7443 69.7731 51.1409 62.102 62.7807L75.881 72.2328C81.6116 63.5383 90.6052 61.6848 97.2286 61.6848C97.3051 61.6848 97.3819 61.6848 97.4576 61.6855C105.707 61.7381 111.932 64.1366 115.961 68.814C118.893 72.2193 120.854 76.925 121.825 82.8638C114.511 81.6207 106.601 81.2385 98.145 81.7233C74.3247 83.0954 59.0111 96.9879 60.0396 116.292C60.5615 126.084 65.4397 134.508 73.775 140.011C80.8224 144.663 89.899 146.938 99.3323 146.423C111.79 145.74 121.563 140.987 128.381 132.296C133.559 125.696 136.834 117.143 138.28 106.366C144.217 109.949 148.617 114.664 151.047 120.332C155.179 129.967 155.42 145.8 142.501 158.708C131.182 170.016 117.576 174.908 97.0135 175.059C74.2042 174.89 56.9538 167.575 45.7381 153.317C35.2355 139.966 29.8077 120.682 29.6052 96C29.8077 71.3178 35.2355 52.0336 45.7381 38.6827C56.9538 24.4249 74.2039 17.11 97.0132 16.9405C119.988 17.1113 137.539 24.4614 149.184 38.788C154.894 45.8136 159.199 54.6488 162.037 64.9503L178.184 60.6422C174.744 47.9622 169.331 37.0357 161.965 27.974C147.036 9.60668 125.202 0.195148 97.0695 0H96.9569C68.8816 0.19447 47.2921 9.6418 32.7883 28.0793C19.8819 44.4864 13.2244 67.3157 13.0007 95.9325L13 96L13.0007 96.0675C13.2244 124.684 19.8819 147.514 32.7883 163.921C47.2921 182.358 68.8816 191.806 96.9569 192H97.0695C122.03 191.827 139.624 185.292 154.118 170.811C173.081 151.866 172.51 128.119 166.26 113.541C161.776 103.087 153.227 94.5962 141.537 88.9883ZM98.4405 129.507C88.0005 130.095 77.1544 125.409 76.6196 115.372C76.2232 107.93 81.9158 99.626 99.0812 98.6368C101.047 98.5234 102.976 98.468 104.871 98.468C111.106 98.468 116.939 99.0737 122.242 100.233C120.264 124.935 108.662 128.946 98.4405 129.507Z"/></svg>`
+    threads: `<svg viewBox="0 0 192 192" fill="currentColor" class="w-6 h-6"><path d="M141.537 88.9883C140.71 88.5919 139.87 88.2104 139.019 87.8451C137.537 60.5382 122.616 44.905 97.5619 44.745C97.4484 44.7443 97.3355 44.7443 97.222 44.7443C82.2364 44.7443 69.7731 51.1409 62.102 62.7807L75.881 72.2328C81.6116 63.5383 90.6052 61.6848 97.2286 61.6848C97.3051 61.6848 97.3819 61.6848 97.4576 61.6855C105.707 61.7381 111.932 64.1366 115.961 68.814C118.893 72.2193 120.854 76.925 121.825 82.8638C114.511 81.6207 106.601 81.2385 98.145 81.7233C74.3247 83.0954 59.0111 96.9879 60.0396 116.292C60.5615 126.084 65.4397 134.508 73.775 140.011C80.8224 144.663 89.899 146.938 99.3323 146.423C111.79 145.74 121.563 140.987 128.381 132.296C133.559 125.696 136.834 117.143 138.28 106.366C144.217 109.949 148.617 114.664 151.047 120.332C155.179 129.967 155.42 145.8 142.501 158.708C131.182 170.016 117.576 174.908 97.0135 175.059C74.2042 174.89 56.9538 167.575 45.7381 153.317C35.2355 139.966 29.8077 120.682 29.6052 96C29.8077 71.3178 35.2355 52.0336 45.7381 38.6827C56.9538 24.4249 74.2039 17.11 97.0132 16.9405C119.988 17.1113 137.539 24.4614 149.184 38.788C154.894 45.8136 159.199 54.6488 162.037 64.9503L178.184 60.6422C174.744 47.9622 169.331 37.0357 161.965 27.974C147.036 9.60668 125.202 0.195148 97.0695 0H96.9569C68.8816 0.19447 47.2921 9.6418 32.7883 28.0793C19.8819 44.4864 13.2244 67.3157 13.0007 95.9325L13 96L13.0007 96.0675C13.2244 124.684 19.8819 147.514 32.7883 163.921C47.2921 182.358 68.8816 191.806 96.9569 192H97.0695C122.03 191.827 139.624 185.292 154.118 170.811C173.081 151.866 172.51 128.119 166.26 113.541C161.776 103.087 153.227 94.5962 141.537 88.9883ZM98.4405 129.507C88.0005 130.095 77.1544 125.409 76.6196 115.372C76.2232 107.93 81.9158 99.626 99.0812 98.6368C101.047 98.5234 102.976 98.468 104.871 98.468C111.106 98.468 116.939 99.0737 122.242 100.233C120.264 124.935 108.662 128.946 98.4405 129.507Z"/></svg>`,
 };
 
 // Extract social data from page blocks (if available)
 // blocks already initialized above
-const socialBlock = blocks.find((b: any) => b.type === 'social');
+const socialBlock = blocks.find((b: any) => b.type === "social");
 const socialData = socialBlock?.data || {};
 
-const socials = merchantData ? [
-    { icon: BrandIcons.instagram, url: socialData.instagram ? `https://instagram.com/${socialData.instagram.replace('@', '')}` : null },
-    { icon: BrandIcons.tiktok, url: socialData.tiktok ? `https://tiktok.com/@${socialData.tiktok.replace('@', '')}` : null },
-    { icon: BrandIcons.twitter, url: socialData.twitter ? `https://twitter.com/${socialData.twitter.replace('@', '')}` : null },
-    { icon: BrandIcons.threads, url: socialData.threads ? `https://threads.net/@${socialData.threads.replace('@', '')}` : null },
-    { icon: BrandIcons.facebook, url: socialData.facebook ? `https://facebook.com/${socialData.facebook}` : null }
-].filter(s => s.url) : [];
+const socials = merchantData
+    ? [
+          {
+              icon: BrandIcons.instagram,
+              url: socialData.instagram
+                  ? `https://instagram.com/${socialData.instagram.replace("@", "")}`
+                  : null,
+          },
+          {
+              icon: BrandIcons.tiktok,
+              url: socialData.tiktok
+                  ? `https://tiktok.com/@${socialData.tiktok.replace("@", "")}`
+                  : null,
+          },
+          {
+              icon: BrandIcons.twitter,
+              url: socialData.twitter
+                  ? `https://twitter.com/${socialData.twitter.replace("@", "")}`
+                  : null,
+          },
+          {
+              icon: BrandIcons.threads,
+              url: socialData.threads
+                  ? `https://threads.net/@${socialData.threads.replace("@", "")}`
+                  : null,
+          },
+          {
+              icon: BrandIcons.facebook,
+              url: socialData.facebook
+                  ? `https://facebook.com/${socialData.facebook}`
+                  : null,
+          },
+      ].filter((s) => s.url)
+    : [];
 
-const formatted_products = products.map(p => ({
+const formatted_products = products.map((p) => ({
     id: p.id,
     title: p.title,
-    price: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p.price),
+    price: new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        maximumFractionDigits: 0,
+    }).format(p.price),
     description: p.description,
-    image: p.cover_url || "https://images.unsplash.com/photo-1544006659-f0b21f04cb1b?w=400&h=400&fit=crop"
+    image:
+        p.cover_url ||
+        "https://images.unsplash.com/photo-1544006659-f0b21f04cb1b?w=400&h=400&fit=crop",
 }));
 
-const is_banned = merchantData?.plan_status === 'banned' || merchantData?.profiles?.is_banned;
+const is_banned =
+    merchantData?.plan_status === "banned" || merchantData?.profiles?.is_banned;
 ---
 
 <BaseLayout title={seo.title} description={seo.description}>
-    <div class="min-h-screen bg-surface font-['Funnel_Display',sans-serif] selection:bg-primary-container selection:text-on-primary-container">
-        
-        {merchantData && (
-            <div class="relative overflow-hidden min-h-screen bg-[#F1F5F9]">
-                {/* DESIGNER BACKGROUND ELEMENTS */}
-                <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/[0.03] blur-[120px] rounded-full"></div>
-                <div class="absolute bottom-[20%] right-[-5%] w-[30%] h-[50%] bg-amber-200/[0.05] blur-[100px] rounded-full"></div>
+    <div
+        class="min-h-screen bg-surface font-['Funnel_Display',sans-serif] selection:bg-primary-container selection:text-on-primary-container"
+    >
+        {
+            merchantData && (
+                <div class="relative overflow-hidden min-h-screen bg-[#F1F5F9]">
+                    {/* DESIGNER BACKGROUND ELEMENTS */}
+                    <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/[0.03] blur-[120px] rounded-full" />
+                    <div class="absolute bottom-[20%] right-[-5%] w-[30%] h-[50%] bg-amber-200/[0.05] blur-[100px] rounded-full" />
 
-                <main class="relative z-10 pt-16 md:pt-32 pb-32 max-w-5xl mx-auto px-6">
-                    {is_banned ? (
-                        <div class="py-32 flex flex-col items-center text-center space-y-8 animate-in zoom-in duration-500">
-                            <div class="w-24 h-24 bg-rose-50 text-rose-500 rounded-[2.5rem] flex items-center justify-center shadow-sm border border-rose-100">
-                                <span class="material-symbols-outlined text-5xl">block</span>
+                    <main class="relative z-10 pt-16 md:pt-32 pb-32 max-w-5xl mx-auto px-6">
+                        {is_banned ? (
+                            <div class="py-32 flex flex-col items-center text-center space-y-8 animate-in zoom-in duration-500">
+                                <div class="w-24 h-24 bg-rose-50 text-rose-500 rounded-[2.5rem] flex items-center justify-center shadow-sm border border-rose-100">
+                                    <span class="material-symbols-outlined text-5xl">
+                                        block
+                                    </span>
+                                </div>
+                                <h2 class="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">
+                                    Halaman Tidak Tersedia
+                                </h2>
+                                <p class="text-slate-500 font-medium max-w-md mx-auto leading-relaxed mb-8">
+                                    Maaf, halaman ini telah dinonaktifkan oleh
+                                    sistem keamanan kami.
+                                </p>
+                                <a
+                                    href="/"
+                                    class="px-8 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-slate-900/20 hover:-translate-y-1 transition-all"
+                                >
+                                    Kembali Beranda
+                                </a>
                             </div>
-                            <h2 class="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">Halaman Tidak Tersedia</h2>
-                            <p class="text-slate-500 font-medium max-w-md mx-auto leading-relaxed mb-8">Maaf, halaman ini telah dinonaktifkan oleh sistem keamanan kami.</p>
-                            <a href="/" class="px-8 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-slate-900/20 hover:-translate-y-1 transition-all">Kembali Beranda</a>
-                        </div>
-                    ) : (
-                        <>
-                            {/* PROFILE HERO SECTION (REFINED) */}
-                            <section class="mb-24 flex flex-col items-center text-center relative animate-in fade-in slide-in-from-bottom-12 duration-1000 ease-out group">
-                                    
+                        ) : (
+                            <>
+                                {/* PROFILE HERO SECTION (REFINED) */}
+                                <section class="mb-24 flex flex-col items-center text-center relative animate-in fade-in slide-in-from-bottom-12 duration-1000 ease-out group">
                                     <div class="relative mb-8 md:mb-12">
                                         <div class="w-32 h-32 md:w-48 md:h-48 rounded-[3rem] overflow-hidden border-[6px] border-white shadow-2xl bg-white transition-all duration-700">
-                                            <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src={profile.avatar} alt={profile.name} />
+                                            <img
+                                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                                                src={profile.avatar}
+                                                alt={profile.name}
+                                            />
                                         </div>
                                         <div class="absolute -bottom-2 -right-2 bg-primary text-white p-2.5 rounded-2xl flex items-center justify-center border-4 border-white shadow-xl">
                                             <CheckBadgeIcon className="w-5 h-5" />
@@ -186,8 +319,15 @@ const is_banned = merchantData?.plan_status === 'banned' || merchantData?.profil
 
                                         <div class="flex flex-wrap justify-center gap-4">
                                             {socials.map((social) => (
-                                                <a href={social.url} target="_blank" rel="noopener noreferrer" class="w-14 h-14 flex items-center justify-center rounded-2xl bg-slate-50 text-slate-400 hover:bg-primary hover:text-white hover:-translate-y-2 transition-all duration-500 shadow-sm hover:shadow-xl hover:shadow-primary/20 border border-slate-100/50">
-                                                    <Fragment set:html={social.icon} />
+                                                <a
+                                                    href={social.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    class="w-14 h-14 flex items-center justify-center rounded-2xl bg-slate-50 text-slate-400 hover:bg-primary hover:text-white hover:-translate-y-2 transition-all duration-500 shadow-sm hover:shadow-xl hover:shadow-primary/20 border border-slate-100/50"
+                                                >
+                                                    <Fragment
+                                                        set:html={social.icon}
+                                                    />
                                                 </a>
                                             ))}
                                         </div>
@@ -196,212 +336,499 @@ const is_banned = merchantData?.plan_status === 'banned' || merchantData?.profil
                                         {blocks.length > 0 && (
                                             <div class="w-full mt-8 space-y-3 text-left">
                                                 {blocks.map((block: any) => {
-                                                    if (block.type === 'social') return null;
-                                                    if (block.type === 'text') return (
-                                                        <div class="py-3 px-2 text-center space-y-2">
-                                                            {block.data?.title && <h4 class="text-lg font-black text-slate-900 tracking-tighter uppercase">{block.data.title}</h4>}
-                                                            {block.data?.content && <p class="text-sm text-slate-500 font-medium leading-relaxed italic">{block.data.content}</p>}
-                                                        </div>
-                                                    );
-                                                    if (block.type === 'image') return (
-                                                        <div class="w-full space-y-2">
-                                                            {block.data?.imageUrl && (
-                                                                <div class="w-full aspect-video rounded-3xl overflow-hidden border border-slate-100 shadow-sm">
-                                                                    <img src={block.data.imageUrl} class="w-full h-full object-cover" alt={block.data?.title || ''} />
-                                                                </div>
-                                                            )}
-                                                            {block.data?.title && <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest text-center italic">{block.data.title}</p>}
-                                                        </div>
-                                                    );
-                                                    if (block.type === 'video' && block.data?.isYouTube && block.data?.videoId) return (
-                                                        <div class="w-full space-y-2">
-                                                            <div class="w-full aspect-video rounded-3xl overflow-hidden shadow-lg">
-                                                                <iframe
-                                                                    width="100%" height="100%"
-                                                                    src={`https://www.youtube.com/embed/${block.data.videoId}`}
-                                                                    title={block.title || 'Video'}
-                                                                    frameborder="0"
-                                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                                    allowfullscreen
-                                                                />
+                                                    if (block.type === "social")
+                                                        return null;
+                                                    if (block.type === "text")
+                                                        return (
+                                                            <div class="py-3 px-2 text-center space-y-2">
+                                                                {block.data
+                                                                    ?.title && (
+                                                                    <h4 class="text-lg font-black text-slate-900 tracking-tighter uppercase">
+                                                                        {
+                                                                            block
+                                                                                .data
+                                                                                .title
+                                                                        }
+                                                                    </h4>
+                                                                )}
+                                                                {block.data
+                                                                    ?.content && (
+                                                                    <p class="text-sm text-slate-500 font-medium leading-relaxed italic">
+                                                                        {
+                                                                            block
+                                                                                .data
+                                                                                .content
+                                                                        }
+                                                                    </p>
+                                                                )}
                                                             </div>
-                                                            {block.title && <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest text-center italic">{block.title}</p>}
-                                                        </div>
-                                                    );
+                                                        );
+                                                    if (block.type === "image")
+                                                        return (
+                                                            <div class="w-full space-y-2">
+                                                                {block.data
+                                                                    ?.imageUrl && (
+                                                                    <div class="w-full aspect-video rounded-3xl overflow-hidden border border-slate-100 shadow-sm">
+                                                                        <img
+                                                                            src={
+                                                                                block
+                                                                                    .data
+                                                                                    .imageUrl
+                                                                            }
+                                                                            class="w-full h-full object-cover"
+                                                                            alt={
+                                                                                block
+                                                                                    .data
+                                                                                    ?.title ||
+                                                                                ""
+                                                                            }
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                                {block.data
+                                                                    ?.title && (
+                                                                    <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest text-center italic">
+                                                                        {
+                                                                            block
+                                                                                .data
+                                                                                .title
+                                                                        }
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    if (
+                                                        block.type ===
+                                                            "video" &&
+                                                        block.data?.isYouTube &&
+                                                        block.data?.videoId
+                                                    )
+                                                        return (
+                                                            <div class="w-full space-y-2">
+                                                                <div class="w-full aspect-video rounded-3xl overflow-hidden shadow-lg">
+                                                                    <iframe
+                                                                        width="100%"
+                                                                        height="100%"
+                                                                        src={`https://www.youtube.com/embed/${block.data.videoId}`}
+                                                                        title={
+                                                                            block.title ||
+                                                                            "Video"
+                                                                        }
+                                                                        frameborder="0"
+                                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                                        allowfullscreen
+                                                                    />
+                                                                </div>
+                                                                {block.title && (
+                                                                    <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest text-center italic">
+                                                                        {
+                                                                            block.title
+                                                                        }
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        );
                                                     // Default: link / article block
                                                     return (
                                                         <a
-                                                            href={block.data?.url || block.url || (block.subtitle?.startsWith('http') ? block.subtitle : '#')}
+                                                            href={
+                                                                block.data
+                                                                    ?.url ||
+                                                                block.url ||
+                                                                (block.subtitle?.startsWith(
+                                                                    "http",
+                                                                )
+                                                                    ? block.subtitle
+                                                                    : "#")
+                                                            }
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             class="flex items-center gap-4 w-full bg-slate-50 hover:bg-white px-5 py-4 rounded-2xl border border-slate-100 hover:shadow-md hover:scale-[1.01] transition-all group"
                                                         >
                                                             <div class="w-9 h-9 rounded-xl bg-primary/5 text-primary flex items-center justify-center shrink-0">
-                                                                <span class="material-symbols-outlined text-base">{block.type === 'link' ? 'link' : block.type === 'article' ? 'article' : 'info'}</span>
+                                                                <span class="material-symbols-outlined text-base">
+                                                                    {block.type ===
+                                                                    "link"
+                                                                        ? "link"
+                                                                        : block.type ===
+                                                                            "article"
+                                                                          ? "article"
+                                                                          : "info"}
+                                                                </span>
                                                             </div>
                                                             <div class="flex-1 min-w-0 text-left">
-                                                                <p class="text-sm font-black text-slate-900 uppercase tracking-tight truncate">{block.title || block.data?.title}</p>
-                                                                {block.subtitle && <p class="text-[11px] text-slate-400 truncate mt-0.5">{block.subtitle}</p>}
+                                                                <p class="text-sm font-black text-slate-900 uppercase tracking-tight truncate">
+                                                                    {block.title ||
+                                                                        block
+                                                                            .data
+                                                                            ?.title}
+                                                                </p>
+                                                                {block.subtitle && (
+                                                                    <p class="text-[11px] text-slate-400 truncate mt-0.5">
+                                                                        {
+                                                                            block.subtitle
+                                                                        }
+                                                                    </p>
+                                                                )}
                                                             </div>
-                                                            <span class="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors text-base shrink-0">arrow_forward</span>
+                                                            <span class="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors text-base shrink-0">
+                                                                arrow_forward
+                                                            </span>
                                                         </a>
                                                     );
                                                 })}
                                             </div>
                                         )}
                                     </div>
-                            </section>
+                                </section>
 
-                            {/* PRODUCTS COLLECTION SECTION */}
-                            <section class="animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-300">
-                                <div class="flex flex-col md:flex-row justify-between items-center md:items-end mb-16 gap-6">
-                                    <div class="text-center md:text-left">
-                                        <div class="flex items-center gap-3 mb-4 justify-center md:justify-start">
-                                            <span class="w-12 h-[2px] bg-amber-400"></span>
-                                            <span class="text-[10px] font-black uppercase tracking-[0.4em] text-amber-500">Premium Catalog</span>
+                                {/* PRODUCTS COLLECTION SECTION */}
+                                <section class="animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-300">
+                                    <div class="flex flex-col md:flex-row justify-between items-center md:items-end mb-16 gap-6">
+                                        <div class="text-center md:text-left">
+                                            <div class="flex items-center gap-3 mb-4 justify-center md:justify-start">
+                                                <span class="w-12 h-[2px] bg-amber-400" />
+                                                <span class="text-[10px] font-black uppercase tracking-[0.4em] text-amber-500">
+                                                    Premium Catalog
+                                                </span>
+                                            </div>
+                                            <h2 class="text-4xl md:text-6xl font-black tracking-tighter text-slate-900 leading-none uppercase italic">
+                                                Digital Works
+                                            </h2>
                                         </div>
-                                        <h2 class="text-4xl md:text-6xl font-black tracking-tighter text-slate-900 leading-none uppercase italic">
-                                            Digital Works
-                                        </h2>
+                                        <div class="hidden md:block">
+                                            <p class="text-slate-400 text-sm font-bold uppercase tracking-widest">
+                                                {products.length} Items
+                                                Available
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div class="hidden md:block">
-                                        <p class="text-slate-400 text-sm font-bold uppercase tracking-widest">{products.length} Items Available</p>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
+                                        {formatted_products.map((product) => (
+                                            <ProductCard
+                                                id={product.id}
+                                                image={product.image}
+                                                title={product.title}
+                                                price={product.price}
+                                                description={
+                                                    product.description
+                                                }
+                                            />
+                                        ))}
                                     </div>
-                                </div>
+                                </section>
+                            </>
+                        )}
+                    </main>
+                </div>
+            )
+        }
 
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
-                                    {formatted_products.map((product) => (
-                                        <ProductCard 
-                                            id={product.id}
-                                            image={product.image}
-                                            title={product.title}
-                                            price={product.price}
-                                            description={product.description}
-                                        />
-                                    ))}
-                                </div>
-                            </section>
-                        </>
-                    )}
-                </main>
-            </div>
-        )}
+        {
+            !merchantData && (
+                <>
+                    {/* HERO SECTION */}
+                    <section class="relative px-8 pt-12 md:pt-24 pb-32 overflow-hidden bg-surface">
+                        <div class="max-w-6xl mx-auto text-center relative z-10">
+                            <div class="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-primary/5 text-primary text-[10px] font-black mb-10 tracking-widest uppercase border border-primary/10">
+                                <SparklesIcon className="w-4 h-4" />
+                                Solusi Kreator Terintegrasi
+                            </div>
 
-        {!merchantData && (
-            <>
-                {/* HERO SECTION */}
-                <section class="relative px-8 pt-12 md:pt-24 pb-32 overflow-hidden bg-surface">
-                    <div class="max-w-6xl mx-auto text-center relative z-10">
-                        <div class="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-primary/5 text-primary text-[10px] font-black mb-10 tracking-widest uppercase border border-primary/10">
-                            <SparklesIcon className="w-4 h-4" />
-                            Solusi Kreator Terintegrasi
-                        </div>
-                        
-                        <h1 class="text-6xl md:text-[5.5rem] font-black tracking-tighter text-slate-900 mb-8 leading-[0.95] uppercase">
-                            {siteName}. <br/>{siteTagline.split('.')[0]}. <span class="text-primary italic">{siteTagline.split('.')[1] || ''}</span>
-                        </h1>
-                        
-                        <p class="text-lg md:text-xl text-slate-500 max-w-2xl mx-auto mb-16 font-medium leading-relaxed">
-                            {branding?.seo_description || branding?.site_tagline || "Bangun halaman profesional, jual aset digital, dan kelola event tanpa coding. Platform andalan untuk kreator modern Indonesia."}
-                        </p>
-                        
-                        <div class="flex flex-col sm:flex-row items-center justify-center gap-5">
-                            <a href="/signup" class="w-full sm:w-auto">
-                                <Button variant="amber" size="lg" className="w-full px-12 py-5 text-lg shadow-2xl shadow-primary/30 transform hover:scale-105 transition-all duration-300 font-bold">
-                                    Mulai Gratis Sekarang
-                                </Button>
-                            </a>
-                            <a href="/login" class="w-full sm:w-auto">
-                                <Button variant="outline" size="lg" className="w-full px-12 py-5 text-lg border-2 border-slate-200 hover:bg-white transition-all duration-300 group font-bold">
-                                    <ArrowRightOnRectangleIcon className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors" />
-                                    Masuk ke Akun
-                                </Button>
-                            </a>
-                        </div>
-                    </div>
+                            <h1 class="text-6xl md:text-[5.5rem] font-black tracking-tighter text-slate-900 mb-8 leading-[0.95] uppercase">
+                                {siteName}. <br />
+                                {siteTagline.split(".")[0]}.{" "}
+                                <span class="text-primary italic">
+                                    {siteTagline.split(".")[1] || ""}
+                                </span>
+                            </h1>
 
-                    <div class="mt-24 max-w-7xl mx-auto px-6">
-                        <div class="relative rounded-[3rem] overflow-hidden shadow-[0_48px_80px_-16px_rgba(0,0,0,0.12)] bg-surface-container-low p-2 border border-white/50">
-                            <img class="w-full h-auto rounded-[2.5rem] shadow-inner border border-slate-100" src="/illustrations/hero_dashboard.png" alt="Dashboard Orbit Site" />
-                        </div>
-                    </div>
-                </section>
-
-                <section class="py-32 px-8 bg-surface-container-low/50">
-                    <div class="max-w-7xl mx-auto text-center md:text-left">
-                        <h2 class="text-4xl md:text-5xl font-black tracking-tighter text-slate-900 mb-20 uppercase">Ekosistem Kreator</h2>
-                        <div class="grid grid-cols-12 gap-8">
-                            <div class="col-span-12 md:col-span-8 bg-white p-12 rounded-[2.5rem]">
-                                <h3 class="text-3xl font-black mb-4 uppercase">Link-in-Bio Premium</h3>
-                                <p class="text-slate-500">Bangun identitas digitalmu dengan desain fleksibel.</p>
-                            </div>
-                            <div class="col-span-12 md:col-span-4 amber-gradient p-12 rounded-[2.5rem] text-white">
-                                <h3 class="text-3xl font-black mb-4 uppercase">Produk Digital</h3>
-                                <p>Jual e-book atau aset digital secara instan.</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-                <footer class="py-20 px-8 bg-white border-t border-slate-100">
-                    <div class="max-w-7xl mx-auto">
-                        <div class="grid grid-cols-1 md:grid-cols-12 gap-12 mb-16">
-                            <div class="md:col-span-4">
-                                <img src={logoUrl} alt={siteName} class="w-32 h-auto mb-6" />
-                                <p class="text-slate-500 text-sm font-medium leading-relaxed mb-8 max-w-sm">
-                                    {branding?.site_tagline || 'Satu Link. Semua Kebutuhan Digitalmu. Bangun halaman profesional, jual aset digital, dan kelola event tanpa coding.'}
-                                </p>
-                                <div class="flex gap-4">
-                                    <a href={`mailto:${branding?.support_email}`} class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-sm">
-                                        <span class="material-symbols-outlined text-lg">mail</span>
-                                    </a>
-                                    <a href={`https://wa.me/${branding?.whatsapp_number?.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all shadow-sm">
-                                        <span class="material-symbols-outlined text-lg">chat</span>
-                                    </a>
-                                </div>
-                            </div>
-                            <div class="md:col-span-2">
-                                <h4 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-6">Platform</h4>
-                                <ul class="space-y-4 text-sm font-bold text-slate-500">
-                                    <li><a href="/pricing" class="hover:text-primary transition-colors uppercase tracking-tight">Pricing</a></li>
-                                    <li><a href="/academy" class="hover:text-primary transition-colors uppercase tracking-tight">Academy</a></li>
-                                    <li><a href="/login" class="hover:text-primary transition-colors uppercase tracking-tight">Login</a></li>
-                                    <li><a href="/signup" class="hover:text-primary transition-colors uppercase tracking-tight">Register</a></li>
-                                </ul>
-                            </div>
-                            <div class="md:col-span-3">
-                                <h4 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-6">Support & Contact</h4>
-                                <ul class="space-y-4 text-sm font-bold text-slate-500">
-                                    <li class="flex items-center gap-3">
-                                        <span class="material-symbols-outlined text-slate-300 text-lg">mail</span>
-                                        <span class="lowercase opacity-80">{branding?.support_email || 'support@tepak.id'}</span>
-                                    </li>
-                                    <li class="flex items-center gap-3">
-                                        <span class="material-symbols-outlined text-slate-300 text-lg">chat</span>
-                                        <span class="opacity-80">{branding?.whatsapp_number || '+62 8xx'}</span>
-                                    </li>
-                                </ul>
-                            </div>
-                            <div class="md:col-span-3">
-                                <h4 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-6">Office</h4>
-                                <p class="text-sm font-bold text-slate-500 leading-relaxed italic opacity-80">
-                                    {branding?.office_address || 'Studio Nusantara Hub, 4th Floor, Jl. Sudirman No. 12, Jakarta'}
-                                </p>
-                            </div>
-                        </div>
-                        <div class="pt-8 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
-                            <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                                © {new Date().getFullYear()} {siteName} - Building the Future of Creator Economy
+                            <p class="text-lg md:text-xl text-slate-500 max-w-2xl mx-auto mb-16 font-medium leading-relaxed">
+                                {branding?.seo_description ||
+                                    branding?.site_tagline ||
+                                    "Bangun halaman profesional, jual aset digital, dan kelola event tanpa coding. Platform andalan untuk kreator modern Indonesia."}
                             </p>
-                            <div class="flex gap-8 text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                                <a href="/terms" class="hover:text-slate-900 transition-colors">Terms</a>
-                                <a href="/privacy" class="hover:text-slate-900 transition-colors">Privacy</a>
+
+                            <div class="flex flex-col sm:flex-row items-center justify-center gap-5">
+                                <a href="/signup" class="w-full sm:w-auto">
+                                    <Button
+                                        variant="amber"
+                                        size="lg"
+                                        className="w-full px-12 py-5 text-lg shadow-2xl shadow-primary/30 transform hover:scale-105 transition-all duration-300 font-bold"
+                                    >
+                                        Mulai Gratis Sekarang
+                                    </Button>
+                                </a>
+                                <a href="/login" class="w-full sm:w-auto">
+                                    <Button
+                                        variant="outline"
+                                        size="lg"
+                                        className="w-full px-12 py-5 text-lg border-2 border-slate-200 hover:bg-white transition-all duration-300 group font-bold"
+                                    >
+                                        <ArrowRightOnRectangleIcon className="w-5 h-5 text-slate-400 group-hover:text-primary transition-colors" />
+                                        Masuk ke Akun
+                                    </Button>
+                                </a>
                             </div>
                         </div>
-                    </div>
-                </footer>
-            </>
-        )}
+
+                        <div class="mt-24 max-w-7xl mx-auto px-6">
+                            <div class="relative rounded-[3rem] overflow-hidden shadow-[0_48px_80px_-16px_rgba(0,0,0,0.12)] bg-surface-container-low p-2 border border-white/50">
+                                <img
+                                    class="w-full h-auto rounded-[2.5rem] shadow-inner border border-slate-100"
+                                    src="/illustrations/hero_dashboard.png"
+                                    alt="Dashboard Orbit Site"
+                                />
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- PRICING SECTION -->
+                    <section class="py-32 px-8 bg-white">
+                        <div class="max-w-7xl mx-auto">
+                            <div class="text-center mb-20">
+                                <h2 class="text-4xl md:text-5xl font-black tracking-tighter text-slate-900 mb-6 uppercase">Pilih Paket yang Tepat</h2>
+                                <p class="text-slate-500 text-lg max-w-2xl mx-auto">Mulai dengan gratis dan tingkatkan paket Anda seiring pertumbuhan bisnis digital Anda.</p>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                {formattedPlans.map((plan) => (
+                                    <div class={`relative group animate-in fade-in slide-in-from-bottom-12 duration-1000 ${plan.id === 'pro' ? 'delay-200' : 'delay-0'}`}>
+                                        <div class={`h-full bg-white rounded-[2.5rem] p-10 border transition-all duration-500 flex flex-col ${
+                                            plan.id === 'pro'
+                                            ? 'border-primary shadow-[0_32px_64px_-16px_rgba(255,185,76,0.2)] scale-105 z-10'
+                                            : 'border-slate-100 shadow-sm hover:shadow-xl hover:border-slate-200'
+                                        }`}>
+                                            
+                                            {plan.badge && plan.badge !== 'DEFAULT' && (
+                                                <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-primary text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-xl">
+                                                    {plan.badge}
+                                                </div>
+                                            )}
+
+                                            <div class="mb-10">
+                                                <div class="flex items-start gap-3 mb-4">
+                                                    <h3 class="text-3xl font-black text-slate-900 uppercase italic">{plan.name}</h3>
+                                                    {plan.tier_category && (
+                                                        <span class="text-[10px] font-black text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest mt-2 whitespace-nowrap">
+                                                            {plan.tier_category}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p class="text-slate-400 text-sm font-medium leading-relaxed mb-2">{plan.description}</p>
+                                                {plan.tier_description && (
+                                                    <p class="text-slate-500 text-xs leading-relaxed italic border-l-2 border-primary/30 pl-3">
+                                                        {plan.tier_description}
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            <div class="mb-10">
+                                                <div class="flex items-baseline gap-1">
+                                                    <span class="text-5xl font-black text-slate-900 italic tracking-tighter">
+                                                        {plan.price_monthly === 0 ? 'Gratis' : `Rp ${Number(plan.price_monthly).toLocaleString('id-ID')}`}
+                                                    </span>
+                                                    {plan.price_monthly > 0 && <span class="text-slate-400 font-bold text-sm uppercase tracking-widest">/Bulan</span>}
+                                                </div>
+                                                {plan.price_yearly > 0 && (
+                                                    <p class="text-primary text-[10px] font-black uppercase tracking-widest mt-2">
+                                                        Hemat 20% jika bayar tahunan
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            <div class="flex-1 space-y-5 mb-12">
+                                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Apa yang Anda dapatkan:</p>
+                                                <ul class="space-y-4">
+                                                    {plan.features.map((feature: string) => (
+                                                        <li class="flex items-start gap-3">
+                                                            <div class="mt-1">
+                                                                <CheckCircleIcon className={`w-5 h-5 ${plan.id === 'pro' ? 'text-primary' : 'text-slate-300'}`} />
+                                                            </div>
+                                                            <span class="text-sm font-bold text-slate-600 leading-tight">{feature}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+
+                                            <a href={plan.price_monthly === 0 ? '/signup' : '/login'} class="block mt-auto">
+                                                <Button
+                                                    variant={plan.id === 'pro' ? 'primary' : 'ghost'}
+                                                    className={`w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
+                                                        plan.id === 'pro'
+                                                        ? 'bg-primary text-white shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95'
+                                                        : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                                                    }`}
+                                                >
+                                                    {plan.price_monthly === 0 ? 'Mulai Gratis' : 'Pilih Paket Pro'}
+                                                </Button>
+                                            </a>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="py-32 px-8 bg-surface-container-low/50">
+                        <div class="max-w-7xl mx-auto text-center md:text-left">
+                            <h2 class="text-4xl md:text-5xl font-black tracking-tighter text-slate-900 mb-20 uppercase">
+                                Ekosistem Kreator
+                            </h2>
+                            <div class="grid grid-cols-12 gap-8">
+                                <div class="col-span-12 md:col-span-8 bg-white p-12 rounded-[2.5rem]">
+                                    <h3 class="text-3xl font-black mb-4 uppercase">
+                                        Link-in-Bio Premium
+                                    </h3>
+                                    <p class="text-slate-500">
+                                        Bangun identitas digitalmu dengan desain
+                                        fleksibel.
+                                    </p>
+                                </div>
+                                <div class="col-span-12 md:col-span-4 amber-gradient p-12 rounded-[2.5rem] text-white">
+                                    <h3 class="text-3xl font-black mb-4 uppercase">
+                                        Produk Digital
+                                    </h3>
+                                    <p>
+                                        Jual e-book atau aset digital secara
+                                        instan.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    <footer class="py-20 px-8 bg-white border-t border-slate-100">
+                        <div class="max-w-7xl mx-auto">
+                            <div class="grid grid-cols-1 md:grid-cols-12 gap-12 mb-16">
+                                <div class="md:col-span-4">
+                                    <img
+                                        src={logoUrl}
+                                        alt={siteName}
+                                        class="w-32 h-auto mb-6"
+                                    />
+                                    <p class="text-slate-500 text-sm font-medium leading-relaxed mb-8 max-w-sm">
+                                        {branding?.site_tagline ||
+                                            "Satu Link. Semua Kebutuhan Digitalmu. Bangun halaman profesional, jual aset digital, dan kelola event tanpa coding."}
+                                    </p>
+                                    <div class="flex gap-4">
+                                        <a
+                                            href={`mailto:${branding?.support_email}`}
+                                            class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-sm"
+                                        >
+                                            <span class="material-symbols-outlined text-lg">
+                                                mail
+                                            </span>
+                                        </a>
+                                        <a
+                                            href={`https://wa.me/${branding?.whatsapp_number?.replace(/[^0-9]/g, "")}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all shadow-sm"
+                                        >
+                                            <span class="material-symbols-outlined text-lg">
+                                                chat
+                                            </span>
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <h4 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-6">
+                                        Platform
+                                    </h4>
+                                    <ul class="space-y-4 text-sm font-bold text-slate-500">
+                                        <li>
+                                            <a
+                                                href="/pricing"
+                                                class="hover:text-primary transition-colors uppercase tracking-tight"
+                                            >
+                                                Pricing
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a
+                                                href="/academy"
+                                                class="hover:text-primary transition-colors uppercase tracking-tight"
+                                            >
+                                                Academy
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a
+                                                href="/login"
+                                                class="hover:text-primary transition-colors uppercase tracking-tight"
+                                            >
+                                                Login
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a
+                                                href="/signup"
+                                                class="hover:text-primary transition-colors uppercase tracking-tight"
+                                            >
+                                                Register
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="md:col-span-3">
+                                    <h4 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-6">
+                                        Support & Contact
+                                    </h4>
+                                    <ul class="space-y-4 text-sm font-bold text-slate-500">
+                                        <li class="flex items-center gap-3">
+                                            <span class="material-symbols-outlined text-slate-300 text-lg">
+                                                mail
+                                            </span>
+                                            <span class="lowercase opacity-80">
+                                                {branding?.support_email ||
+                                                    "support@tepak.id"}
+                                            </span>
+                                        </li>
+                                        <li class="flex items-center gap-3">
+                                            <span class="material-symbols-outlined text-slate-300 text-lg">
+                                                chat
+                                            </span>
+                                            <span class="opacity-80">
+                                                {branding?.whatsapp_number ||
+                                                    "+62 8xx"}
+                                            </span>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="md:col-span-3">
+                                    <h4 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-6">
+                                        Office
+                                    </h4>
+                                    <p class="text-sm font-bold text-slate-500 leading-relaxed italic opacity-80">
+                                        {branding?.office_address ||
+                                            "Studio Nusantara Hub, 4th Floor, Jl. Sudirman No. 12, Jakarta"}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="pt-8 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                                <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                                    © {new Date().getFullYear()} {siteName} -
+                                    Building the Future of Creator Economy
+                                </p>
+                                <div class="flex gap-8 text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                                    <a
+                                        href="/terms"
+                                        class="hover:text-slate-900 transition-colors"
+                                    >
+                                        Terms
+                                    </a>
+                                    <a
+                                        href="/privacy"
+                                        class="hover:text-slate-900 transition-colors"
+                                    >
+                                        Privacy
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </footer>
+                </>
+            )
+        }
     </div>
 </BaseLayout>
-
-

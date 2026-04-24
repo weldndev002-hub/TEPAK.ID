@@ -9,7 +9,8 @@ import {
     ExclamationTriangleIcon,
     ArrowPathIcon,
     DocumentTextIcon,
-    BoltIcon
+    BoltIcon,
+    CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import { SubscriptionProvider, useSubscription } from '../../context/SubscriptionContext';
 
@@ -33,6 +34,8 @@ const PlanInfoContent = () => {
     const { plan, expiryDate, autoRenewal, upgradeToPro, cancelSubscription, isLoading } = useSubscription();
     const [countdown, setCountdown] = useState<string | null>(null);
     const [selectedMethod, setSelectedMethod] = useState<string>('SP'); // Default ShopeePay
+    const [allPlans, setAllPlans] = useState<any[]>([]);
+    const [plansLoading, setPlansLoading] = useState(true);
 
     useEffect(() => {
         if (expiryDate && plan !== 'free') {
@@ -42,6 +45,25 @@ const PlanInfoContent = () => {
             return () => clearInterval(timer);
         }
     }, [expiryDate, plan]);
+
+    // Fetch all available plans
+    useEffect(() => {
+        const fetchAllPlans = async () => {
+            try {
+                setPlansLoading(true);
+                const res = await fetch('/api/plans');
+                if (res.ok) {
+                    const data = await res.json();
+                    setAllPlans(data || []);
+                }
+            } catch (err) {
+                console.error('Failed to fetch plans:', err);
+            } finally {
+                setPlansLoading(false);
+            }
+        };
+        fetchAllPlans();
+    }, []);
 
     const formattedExpiry = expiryDate 
         ? new Date(expiryDate).toLocaleDateString('id-ID', { 
@@ -195,6 +217,118 @@ const PlanInfoContent = () => {
                     </div>
                 </div>
             )}
+
+            {/* Available Plans Section */}
+            <div className="mt-16 pt-16 border-t border-slate-100">
+                <header className="flex flex-col gap-1 mb-12">
+                    <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Paket Tersedia</span>
+                    <h2 className="text-3xl font-black tracking-tight text-slate-900 uppercase">Pilih Paket Terbaik Anda</h2>
+                    <p className="text-slate-500 font-medium mt-2">Bandingkan semua paket dan temukan yang paling sesuai untuk kebutuhan Anda.</p>
+                </header>
+
+                {plansLoading ? (
+                    <div className="flex items-center justify-center py-20">
+                        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                ) : allPlans.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {allPlans.map((availablePlan) => (
+                            <div key={availablePlan.id} className={`relative group animate-in fade-in slide-in-from-bottom-12 duration-1000`}>
+                                <div className={`h-full bg-white rounded-[2.5rem] p-10 border transition-all duration-500 flex flex-col ${
+                                    plan === availablePlan.id
+                                        ? 'border-emerald-500 shadow-[0_32px_64px_-16px_rgba(16,185,129,0.2)] ring-2 ring-emerald-500/20'
+                                        : availablePlan.id === 'pro'
+                                        ? 'border-primary shadow-[0_32px_64px_-16px_rgba(255,185,76,0.2)] scale-105 z-10'
+                                        : 'border-slate-100 shadow-sm hover:shadow-xl hover:border-slate-200'
+                                }`}>
+                                    
+                                    {availablePlan.badge && availablePlan.badge !== 'DEFAULT' && (
+                                        <div className={`absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-xl ${
+                                            plan === availablePlan.id
+                                                ? 'bg-emerald-500 text-white'
+                                                : 'bg-primary text-white'
+                                        }`}>
+                                            {plan === availablePlan.id ? 'Paket Aktif' : availablePlan.badge}
+                                        </div>
+                                    )}
+
+                                    <div className="mb-10">
+                                        <div className="flex items-start gap-3 mb-4">
+                                            <h3 className="text-3xl font-black text-slate-900 uppercase italic">{availablePlan.name}</h3>
+                                            {availablePlan.tier_category && (
+                                                <span className="text-[10px] font-black text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest mt-2 whitespace-nowrap">
+                                                    {availablePlan.tier_category}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-slate-400 text-sm font-medium leading-relaxed mb-2">{availablePlan.description}</p>
+                                        {availablePlan.tier_description && (
+                                            <p className="text-slate-500 text-xs leading-relaxed italic border-l-2 border-primary/30 pl-3">
+                                                {availablePlan.tier_description}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div className="mb-10">
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="text-5xl font-black text-slate-900 italic tracking-tighter">
+                                                {availablePlan.price_monthly === 0 ? 'Gratis' : `Rp ${Number(availablePlan.price_monthly).toLocaleString('id-ID')}`}
+                                            </span>
+                                            {availablePlan.price_monthly > 0 && <span className="text-slate-400 font-bold text-sm uppercase tracking-widest">/Bulan</span>}
+                                        </div>
+                                        {availablePlan.price_yearly > 0 && (
+                                            <p className="text-primary text-[10px] font-black uppercase tracking-widest mt-2">
+                                                Hemat 20% jika bayar tahunan
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div className="flex-1 space-y-5 mb-12">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Apa yang Anda dapatkan:</p>
+                                        <ul className="space-y-4">
+                                            {(availablePlan.features || []).map((feature: string, idx: number) => (
+                                                <li key={idx} className="flex items-start gap-3">
+                                                    <div className="mt-1">
+                                                        <CheckCircleIcon className={`w-5 h-5 ${availablePlan.id === 'pro' ? 'text-primary' : 'text-slate-300'}`} />
+                                                    </div>
+                                                    <span className="text-sm font-bold text-slate-600 leading-tight">{feature}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+
+                                    {plan === availablePlan.id ? (
+                                        <Button
+                                            disabled
+                                            variant="primary"
+                                            className="w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all bg-emerald-500 text-white shadow-xl shadow-emerald-500/20"
+                                        >
+                                            ✓ Paket Anda Saat Ini
+                                        </Button>
+                                    ) : (
+                                        <a href={availablePlan.price_monthly === 0 ? '/signup' : '#'} className="block mt-auto">
+                                            <Button
+                                                variant={availablePlan.id === 'pro' ? 'primary' : 'ghost'}
+                                                className={`w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
+                                                    availablePlan.id === 'pro'
+                                                        ? 'bg-primary text-white shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95'
+                                                        : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                                                }`}
+                                            >
+                                                {availablePlan.price_monthly === 0 ? 'Downgrade ke Gratis' : 'Lihat Rincian'}
+                                            </Button>
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <Card className="bg-slate-50 border-dashed border-slate-200 p-12 text-center">
+                        <p className="text-slate-400 text-sm font-medium">Belum ada paket tersedia. Mohon hubungi admin.</p>
+                    </Card>
+                )}
+            </div>
         </div>
     );
 };
