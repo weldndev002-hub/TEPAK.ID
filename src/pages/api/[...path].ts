@@ -467,22 +467,31 @@ app.get('/wallet/stats', async (c) => {
     // 2. Get total net revenue from net_amount column in orders
     const { data: orders, error: orderError } = await supabase
       .from('orders')
-      .select('net_amount, amount')
+      .select('net_amount, amount, status')
       .eq('merchant_id', user.id)
       .in('status', ['success', 'paid']);
 
     if (orderError) throw orderError;
 
     // Use net_amount if available, fallback to 5% calculation for old legacy data
-    const totalNet = orders?.reduce((sum, o) => {
+    const totalNet = orders?.reduce((sum: number, o: any) => {
       const val = o.net_amount !== null ? Number(o.net_amount) : Math.floor(Number(o.amount) * 0.95);
       return sum + val;
     }, 0) || 0;
 
+    // 3. Fetch payout config for dynamic fee display
+    const { data: payoutConfig } = await supabase
+      .from('platform_configs')
+      .select('payout_fee, min_withdrawal')
+      .eq('id', 1)
+      .single();
+
     return c.json({
       available: wallet?.available_balance || 0,
       pending: wallet?.pending_balance || 0,
-      total_net: totalNet
+      total_net: totalNet,
+      payout_fee: payoutConfig?.payout_fee || 5000,
+      min_withdrawal: payoutConfig?.min_withdrawal || 50000
     });
   } catch (err: any) {
     console.error('[Wallet Stats API] error:', err);
@@ -535,6 +544,8 @@ app.post('/wallet/withdraw', async (c) => {
     const { amount, bankAccountId } = await c.req.json();
     if (!amount || amount <= 0) throw new Error('Invalid amount');
     if (!bankAccountId) throw new Error('Bank account is required');
+
+    console.log(`[Withdraw Request API] User ${user.id} requesting withdrawal of ${amount}, bankAccountId: ${bankAccountId}`);
 
     // Use RPC for atomic transaction: check balance + subtract + create record
     const { data: withdrawalId, error } = await supabase.rpc('initiate_withdrawal', {
@@ -1515,15 +1526,17 @@ app.post(
 
     if (custError) return c.json({ error: custError.message }, 500);
 
-    // 2. Fetch current Platform Fee from Config
+    // 2. Fetch current Platform Fee & PG Fee from Config
     const { data: pConfig } = await supabase
       .from('platform_configs')
-      .select('platform_fee')
+      .select('platform_fee, pg_fee')
       .eq('id', 1)
       .single();
 
     const currentFee = pConfig?.platform_fee || 5;
-    const netAmount = Math.floor(body.amount * (1 - (currentFee / 100)));
+    const pgFee = pConfig?.pg_fee || 0;
+    // net_amount = amount - (platform_fee% of amount) - pg_fee (flat)
+    const netAmount = Math.floor(body.amount * (1 - (currentFee / 100))) - pgFee;
 
     // 3. Create Order (Status Pending)
     const invoiceId = `TPK-${Math.floor(Math.random() * 1000000)}`;
@@ -1536,7 +1549,8 @@ app.post(
         merchant_id: body.merchant_id,
         amount: body.amount,
         platform_fee: currentFee,
-        net_amount: netAmount,
+        pg_fee: pgFee,
+        net_amount: Math.max(netAmount, 0),
         status: 'pending', // Awalnya pending
         payment_method: body.payment_method
       })
@@ -1965,7 +1979,7 @@ app.post('/payments/duitku/webhook', async (c) => {
       }
     }
 
-    // 2. KASUS PESURAN PRODUK (Invoice Biasa)
+    // 2. KASUS PESANAN PRODUK (Invoice Biasa)
     // Perbarui status pesanan berdasarkan respons DuitKu
     const statusMap: Record<string, string> = {
       '00': 'success',    // Pembayaran berhasil
@@ -1978,6 +1992,8 @@ app.post('/payments/duitku/webhook', async (c) => {
 
     console.log(`[Webhook DuitKu] Updating Order ${merchantOrderId} to status: ${orderStatus}`);
 
+    // Update order status - the DB trigger (handle_order_status_change) will
+    // automatically update wallet.pending_balance/available_balance
     const { error: updateError } = await supabase
       .from('orders')
       .update({
@@ -1992,6 +2008,7 @@ app.post('/payments/duitku/webhook', async (c) => {
     }
 
     console.log(`[Webhook DuitKu] Pesanan ${merchantOrderId} -> ${orderStatus} (Ref: ${body.reference})`);
+    console.log(`[Webhook DuitKu] Wallet balance will be auto-updated by DB trigger handle_order_status_change`);
 
     // Trigger digital delivery for successful payments of digital products
     if (orderStatus === 'success') {

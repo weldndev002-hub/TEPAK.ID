@@ -31,7 +31,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 3. Function to initiate withdrawal (Move available to pending)
+-- 3. Function to initiate withdrawal (Move available to pending) with row locking
 CREATE OR REPLACE FUNCTION public.initiate_withdrawal(
     p_merchant_id UUID,
     p_amount NUMERIC,
@@ -39,12 +39,19 @@ CREATE OR REPLACE FUNCTION public.initiate_withdrawal(
 ) RETURNS UUID AS $$
 DECLARE
     v_withdrawal_id UUID;
+    v_available_balance NUMERIC;
 BEGIN
-    -- Check balance
-    IF NOT EXISTS (
-        SELECT 1 FROM public.wallets 
-        WHERE merchant_id = p_merchant_id AND available_balance >= p_amount
-    ) THEN
+    -- Lock the wallet row for this merchant and retrieve current balance
+    SELECT available_balance INTO v_available_balance
+    FROM public.wallets
+    WHERE merchant_id = p_merchant_id
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Insufficient balance';
+    END IF;
+
+    IF v_available_balance < p_amount THEN
         RAISE EXCEPTION 'Insufficient balance';
     END IF;
 
@@ -53,9 +60,9 @@ BEGIN
     VALUES (p_merchant_id, p_amount, p_bank_account_id, 'pending')
     RETURNING id INTO v_withdrawal_id;
 
-    -- Update wallet
+    -- Update wallet (same row already locked)
     UPDATE public.wallets
-    SET 
+    SET
         available_balance = available_balance - p_amount,
         pending_balance = pending_balance + p_amount,
         updated_at = NOW()
