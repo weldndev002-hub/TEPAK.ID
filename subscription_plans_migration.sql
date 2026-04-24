@@ -21,7 +21,14 @@ ALTER TABLE public.subscription_plans ENABLE ROW LEVEL SECURITY;
 
 -- Policies: Everyone can view active plans, only Admin can manage
 CREATE POLICY "Public can view active plans" ON public.subscription_plans FOR SELECT USING (is_active = true);
--- Admins will be managed by a service role or explicit checkAdmin logic in API
+-- Admins can manage all subscription plans
+CREATE POLICY "Admins can manage all subscription plans" ON public.subscription_plans
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
+    )
+  );
 
 -- Seed Initial Data
 INSERT INTO public.subscription_plans (id, name, badge, price_monthly, price_yearly, description, features, config)

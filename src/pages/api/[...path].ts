@@ -3241,7 +3241,7 @@ app.post('/admin/plans/update', async (c) => {
           price_yearly: Number(plan.price_yearly),
           features: plan.features,
           config: plan.config,
-          is_popular: !!plan.is_popular,
+          // is_active column may not exist in schema cache, omit for now
           updated_at: new Date().toISOString()
         });
 
@@ -3251,6 +3251,36 @@ app.post('/admin/plans/update', async (c) => {
     return c.json({ success: true });
   } catch (err: any) {
     console.error('[Admin Plans Update API] error:', err);
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+// Delete a plan (admin only)
+app.delete('/admin/plans/:planId', async (c) => {
+  const { supabase, user } = await getAuthContext(c);
+  const isAdmin = await checkAdmin(supabase, user, c);
+  if (!isAdmin) return c.json({ error: 'Unauthorized' }, 403);
+
+  const planId = c.req.param('planId');
+  if (!planId) return c.json({ error: 'Plan ID required' }, 400);
+
+  // Prevent deletion of free/pro plans
+  if (['free', 'pro'].includes(planId)) {
+    return c.json({ error: 'Cannot delete free or pro plans' }, 400);
+  }
+
+  try {
+    console.log(`[Admin Plans Delete API] Attempting to delete plan ${planId}`);
+    const { error } = await supabase
+      .from('subscription_plans')
+      .delete()
+      .eq('id', planId);
+
+    console.log(`[Admin Plans Delete API] Delete result: error=${error}`);
+    if (error) throw error;
+    return c.json({ success: true });
+  } catch (err: any) {
+    console.error('[Admin Plans Delete API] error:', err);
     return c.json({ error: err.message }, 500);
   }
 });

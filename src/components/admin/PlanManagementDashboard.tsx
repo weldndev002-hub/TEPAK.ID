@@ -5,7 +5,7 @@ import { Toggle } from '../ui/Toggle';
 import { Badge } from '../ui/Badge';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '../ui/Table';
 import { z } from 'zod';
-import { cn } from '../../lib/utils';
+import { cn, formatNumber, parseFormattedNumber, validateNumber } from '../../lib/utils';
 import { ExclamationCircleIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
 // Reusable Confirm Modal
@@ -92,16 +92,29 @@ export const PlanManagementDashboard = () => {
 
     // Zod Schema for Plan Validation
     const planSchema = z.object({
-        price_monthly: z.number({ 
-            invalid_type_error: "Harus berupa angka" 
+        price_monthly: z.number({
+            invalid_type_error: "Harus berupa angka"
         }).min(0, "Harga tidak boleh negatif"),
-        price_yearly: z.number({ 
-            invalid_type_error: "Harus berupa angka" 
+        price_yearly: z.number({
+            invalid_type_error: "Harus berupa angka"
         }).min(0, "Harga tidak boleh negatif"),
     });
 
     const [isAddingFeature, setIsAddingFeature] = React.useState(false);
     const [newFeatureName, setNewFeatureName] = React.useState('');
+
+    // New Plan Modal
+    const [isAddingPlan, setIsAddingPlan] = React.useState(false);
+    const [newPlan, setNewPlan] = React.useState({
+        id: '',
+        name: '',
+        badge: 'DEFAULT',
+        description: '',
+        price_monthly: '0',
+        price_yearly: '0',
+        features: [] as string[],
+        config: { allowed_blocks: [] as string[], can_direct_order: false }
+    });
 
     // Toast
     const [toast, setToast] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -113,13 +126,17 @@ export const PlanManagementDashboard = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
+            console.log('[PlanManagement] Fetching plans...');
             const [plansRes, statsRes] = await Promise.all([
                 fetch('/api/admin/plans'),
                 fetch('/api/admin/subscriptions')
             ]);
             if (plansRes.ok) {
                 const data = await plansRes.json();
+                console.log('[PlanManagement] Fetched plans:', data.map((p: any) => p.id));
                 setPlans(data);
+            } else {
+                console.error('[PlanManagement] Failed to fetch plans:', plansRes.status);
             }
             if (statsRes.ok) {
                 const stats = await statsRes.json();
@@ -137,15 +154,30 @@ export const PlanManagementDashboard = () => {
     }, []);
 
     const handlePriceChange = (planId: string, type: 'price_monthly' | 'price_yearly', value: string) => {
-        // Allow empty string for clearing input, or validate if it's a number
-        const numVal = value === '' ? 0 : parseFloat(value.replace(/[^0-9.]/g, ''));
-        
-        // Update plan state (raw value for UI, or parsed number for state)
-        setPlans(prev => prev.map(p => p.id === planId ? { ...p, [type]: value } : p));
+        // Hapus semua karakter selain digit dan tanda minus (untuk angka negatif)
+        let cleaned = value.replace(/[^0-9\-]/g, '');
 
-        // Validate using Zod
-        const validation = planSchema.safeParse({ [type]: Number(value) || 0 });
-        
+        // Jika kosong, set ke '0'
+        if (cleaned === '' || cleaned === '-') {
+            cleaned = '0';
+        }
+
+        // Parse ke number
+        const num = parseInt(cleaned, 10);
+        if (isNaN(num)) {
+            // Fallback: set ke 0
+            cleaned = '0';
+        }
+
+        // Format dengan pemisah ribuan untuk tampilan
+        const formatted = formatNumber(cleaned);
+
+        // Update plan state dengan string yang sudah diformat
+        setPlans(prev => prev.map(p => p.id === planId ? { ...p, [type]: formatted } : p));
+
+        // Validasi menggunakan Zod dengan angka yang sudah diparse
+        const validation = planSchema.safeParse({ [type]: num });
+
         if (!validation.success) {
             const errorMsg = validation.error.format()[type]?._errors[0] || "Invalid";
             setErrors(prev => ({
@@ -174,7 +206,66 @@ export const PlanManagementDashboard = () => {
         }));
     };
 
-    // handleDeletePlan was removed as adding/deleting plans is no longer supported
+    const handleDeletePlan = async (planId: string) => {
+        if (['free', 'pro'].includes(planId)) {
+            showToast('error', 'Cannot delete free or pro plans');
+            return;
+        }
+        try {
+            console.log(`[PlanManagement] Deleting plan ${planId}`);
+            const res = await fetch(`/api/admin/plans/${planId}`, {
+                method: 'DELETE',
+            });
+            const responseText = await res.text();
+            console.log(`[PlanManagement] Delete response status: ${res.status}, body: ${responseText}`);
+            if (!res.ok) {
+                throw new Error(responseText || 'Failed to delete plan');
+            }
+            // Remove from local state
+            setPlans(prev => prev.filter(p => p.id !== planId));
+            showToast('success', `Plan ${planId} deleted`);
+            console.log(`[PlanManagement] Plan ${planId} removed from local state`);
+        } catch (err: any) {
+            console.error('Delete plan error:', err);
+            showToast('error', `Failed to delete plan: ${err.message}`);
+        }
+    };
+
+    const handleAddPlan = () => {
+        if (!newPlan.id.trim() || !newPlan.name.trim()) {
+            showToast('error', 'Plan ID and Name are required');
+            return;
+        }
+
+        // Check if plan ID already exists
+        if (plans.some(p => p.id === newPlan.id)) {
+            showToast('error', `Plan ID "${newPlan.id}" already exists`);
+            return;
+        }
+
+        const newPlanData = {
+            ...newPlan,
+            price_monthly: parseFormattedNumber(newPlan.price_monthly) || 0,
+            price_yearly: parseFormattedNumber(newPlan.price_yearly) || 0,
+            features: newPlan.features || [],
+            config: newPlan.config || { allowed_blocks: [], can_direct_order: false },
+            is_active: true
+        };
+
+        setPlans(prev => [...prev, newPlanData]);
+        setIsAddingPlan(false);
+        setNewPlan({
+            id: '',
+            name: '',
+            badge: 'DEFAULT',
+            description: '',
+            price_monthly: '0',
+            price_yearly: '0',
+            features: [],
+            config: { allowed_blocks: [] as string[], can_direct_order: false }
+        });
+        showToast('success', `New plan "${newPlan.name}" added`);
+    };
 
     const handleOpenJsonEditor = (plan: any) => {
         setJsonEditPlanId(plan.id);
@@ -215,15 +306,26 @@ export const PlanManagementDashboard = () => {
         setSaveConfirm(false);
         setLoading(true);
         try {
+            // Convert formatted string prices to numbers before sending
+            const plansToSend = plans.map(plan => ({
+                ...plan,
+                price_monthly: parseFormattedNumber(plan.price_monthly),
+                price_yearly: parseFormattedNumber(plan.price_yearly)
+            }));
+            console.log('[PlanManagement] Saving plans:', plansToSend.map(p => p.id));
+
             const res = await fetch('/api/admin/plans/update', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(plans)
+                body: JSON.stringify(plansToSend)
             });
+            const responseText = await res.text();
+            console.log('[PlanManagement] Save response status:', res.status, 'body:', responseText);
             if (!res.ok) throw new Error('Failed to save plans');
             showToast('success', 'Pricing and configuration updated successfully across the platform!');
             await fetchData();
         } catch (err: any) {
+            console.error('[PlanManagement] Save error:', err);
             showToast('error', err.message);
         } finally {
             setLoading(false);
@@ -290,6 +392,9 @@ export const PlanManagementDashboard = () => {
                     <h2 className="text-3xl font-extrabold text-primary tracking-tight">Manage PRO Subscription</h2>
                 </div>
                 <div className="flex gap-3">
+                    <Button variant="ghost" className="bg-white border-slate-200 text-slate-600 hover:bg-slate-50 transition-all font-bold text-sm" onClick={() => setIsAddingPlan(true)}>
+                        + Add New Plan
+                    </Button>
                     <Button variant="ghost" className="bg-white border-slate-200 text-slate-600 hover:bg-slate-50 transition-all font-bold text-sm" onClick={() => setDiscardConfirm(true)}>
                         Discard Changes
                     </Button>
@@ -303,19 +408,19 @@ export const PlanManagementDashboard = () => {
                 {plans.map((plan) => (
                     <Card key={plan.id} className={cn(
                         "p-8 relative group overflow-hidden border transition-all",
-                        plan.id === 'pro' 
-                            ? "border-[#d6e3ff] bg-gradient-to-br from-white to-[#f8faff] shadow-xl shadow-blue-500/5" 
+                        plan.id === 'pro'
+                            ? "border-[#d6e3ff] bg-gradient-to-br from-white to-[#f8faff] shadow-xl shadow-blue-500/5"
                             : "border-slate-200/60 shadow-sm"
                     )}>
                         {!['free', 'pro'].includes(plan.id) && (
-                            <button 
+                            <button
                                 onClick={() => handleDeletePlan(plan.id)}
                                 className="absolute top-4 right-4 z-20 p-2 text-rose-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                             >
                                 <span className="material-symbols-outlined text-sm text-[18px]">delete</span>
                             </button>
                         )}
-                        
+
                         <div className={cn(
                             "absolute top-0 right-0 w-32 h-32 rounded-full -mr-16 -mt-16 group-hover:transition-colors",
                             plan.id === 'pro' ? "bg-[#d6e3ff]/30 group-hover:bg-[#d6e3ff]/50" : "bg-slate-50 group-hover:bg-slate-100"
@@ -329,7 +434,7 @@ export const PlanManagementDashboard = () => {
                                     <span className="material-symbols-outlined text-2xl">{plan.id === 'pro' ? 'rocket_launch' : 'eco'}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <button 
+                                    <button
                                         onClick={() => handleOpenJsonEditor(plan)}
                                         className="p-2 text-slate-400 hover:text-primary hover:bg-slate-50 rounded-xl transition-all"
                                         title="Edit JSON Config"
@@ -347,14 +452,14 @@ export const PlanManagementDashboard = () => {
                             </div>
                             <h3 className={cn("text-2xl font-black mb-2", plan.id === 'pro' ? "text-primary" : "text-slate-900")}>{plan.name}</h3>
                             <p className="text-sm text-slate-500 mb-8 leading-relaxed max-w-[200px]">{plan.description}</p>
-                            
+
                             <div className="grid grid-cols-2 gap-4 mt-auto">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Monthly (Rp)</label>
                                     <div className="relative">
-                                        <input 
-                                            type="text" 
-                                            value={plan.price_monthly} 
+                                        <input
+                                            type="text"
+                                            value={plan.price_monthly}
                                             onChange={(e) => handlePriceChange(plan.id, 'price_monthly', e.target.value)}
                                             className={cn(
                                                 "w-full border rounded-xl py-2.5 px-3 text-lg font-black focus:ring-2 outline-none transition-all",
@@ -372,9 +477,9 @@ export const PlanManagementDashboard = () => {
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Yearly (Rp)</label>
                                     <div className="relative">
-                                        <input 
-                                            type="text" 
-                                            value={plan.price_yearly} 
+                                        <input
+                                            type="text"
+                                            value={plan.price_yearly}
                                             onChange={(e) => handlePriceChange(plan.id, 'price_yearly', e.target.value)}
                                             className={cn(
                                                 "w-full border rounded-xl py-2.5 px-3 text-lg font-black focus:ring-2 outline-none transition-all",
@@ -402,7 +507,7 @@ export const PlanManagementDashboard = () => {
                     <div className="flex items-center gap-3">
                         {isAddingFeature ? (
                             <div className="flex items-center gap-2 animate-in slide-in-from-right-4 duration-300">
-                                <input 
+                                <input
                                     className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-[#005ab4]/20"
                                     placeholder="Enter feature name..."
                                     value={newFeatureName}
@@ -440,9 +545,9 @@ export const PlanManagementDashboard = () => {
                                     {plans.map(plan => (
                                         <TableCell key={plan.id} className="text-center">
                                             <div className="flex justify-center">
-                                                <Toggle 
-                                                    checked={(plan.features || []).includes(feature)} 
-                                                    onChange={() => handleFeatureToggle(plan.id, feature)} 
+                                                <Toggle
+                                                    checked={(plan.features || []).includes(feature)}
+                                                    onChange={() => handleFeatureToggle(plan.id, feature)}
                                                 />
                                             </div>
                                         </TableCell>
@@ -451,7 +556,7 @@ export const PlanManagementDashboard = () => {
                                         <Badge variant="ghost" className={cn(
                                             "border-none text-[9px] font-black",
                                             feature.toLowerCase().includes('builder') ? "bg-blue-50 text-blue-600" :
-                                            feature.toLowerCase().includes('custom') ? "bg-purple-50 text-purple-600" : "bg-slate-50 text-slate-400"
+                                                feature.toLowerCase().includes('custom') ? "bg-purple-50 text-purple-600" : "bg-slate-50 text-slate-400"
                                         )}>DYNAMIC</Badge>
                                     </TableCell>
                                 </TableRow>
@@ -461,7 +566,139 @@ export const PlanManagementDashboard = () => {
                 </Card>
             </div>
 
-            {/* Add Plan Modal was here and is removed */}
+            {/* Add Plan Modal */}
+            {isAddingPlan && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-2xl rounded-[24px] shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+                        <div className="p-8">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Create New Subscription Plan</h3>
+                                <button
+                                    onClick={() => setIsAddingPlan(false)}
+                                    className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+                                >
+                                    <span className="material-symbols-outlined text-[20px]">close</span>
+                                </button>
+                            </div>
+
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Plan ID *</label>
+                                        <input
+                                            type="text"
+                                            value={newPlan.id}
+                                            onChange={(e) => setNewPlan({ ...newPlan, id: e.target.value })}
+                                            className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-bold outline-none focus:ring-2 focus:ring-[#005ab4]/20"
+                                            placeholder="e.g., business, premium"
+                                        />
+                                        <p className="text-[10px] text-slate-400">Unique identifier (lowercase, no spaces)</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Plan Name *</label>
+                                        <input
+                                            type="text"
+                                            value={newPlan.name}
+                                            onChange={(e) => setNewPlan({ ...newPlan, name: e.target.value })}
+                                            className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-bold outline-none focus:ring-2 focus:ring-[#005ab4]/20"
+                                            placeholder="e.g., Business Plan"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Badge</label>
+                                        <select
+                                            value={newPlan.badge}
+                                            onChange={(e) => setNewPlan({ ...newPlan, badge: e.target.value })}
+                                            className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-bold outline-none focus:ring-2 focus:ring-[#005ab4]/20"
+                                        >
+                                            <option value="DEFAULT">Default</option>
+                                            <option value="POPULAR">Popular</option>
+                                            <option value="RECOMMENDED">Recommended</option>
+                                            <option value="NEW">New</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Description</label>
+                                        <input
+                                            type="text"
+                                            value={newPlan.description}
+                                            onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })}
+                                            className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-bold outline-none focus:ring-2 focus:ring-[#005ab4]/20"
+                                            placeholder="Short description of the plan"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Monthly Price (Rp)</label>
+                                        <input
+                                            type="text"
+                                            value={newPlan.price_monthly}
+                                            onChange={(e) => setNewPlan({ ...newPlan, price_monthly: e.target.value })}
+                                            className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-bold outline-none focus:ring-2 focus:ring-[#005ab4]/20"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Yearly Price (Rp)</label>
+                                        <input
+                                            type="text"
+                                            value={newPlan.price_yearly}
+                                            onChange={(e) => setNewPlan({ ...newPlan, price_yearly: e.target.value })}
+                                            className="w-full border border-slate-200 rounded-xl py-2.5 px-3 text-sm font-bold outline-none focus:ring-2 focus:ring-[#005ab4]/20"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Select Features</label>
+                                    <div className="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto p-2 border border-slate-100 rounded-xl">
+                                        {allFeatureNames.map(feature => (
+                                            <div key={feature} className="flex items-center gap-2">
+                                                <input
+                                                    type="checkbox"
+                                                    id={`feature-${feature}`}
+                                                    checked={newPlan.features.includes(feature)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setNewPlan({ ...newPlan, features: [...newPlan.features, feature] });
+                                                        } else {
+                                                            setNewPlan({ ...newPlan, features: newPlan.features.filter(f => f !== feature) });
+                                                        }
+                                                    }}
+                                                    className="rounded border-slate-300 text-[#005ab4] focus:ring-[#005ab4]/20"
+                                                />
+                                                <label htmlFor={`feature-${feature}`} className="text-sm font-medium text-slate-700">{feature}</label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <p className="text-[10px] text-slate-400">Select features to include in this plan. You can also add new features using the "Add Global Feature" button above.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                            <button
+                                className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest"
+                                onClick={() => setIsAddingPlan(false)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="px-6 py-2.5 rounded-xl font-black bg-[#465f89] text-white hover:shadow-lg hover:shadow-[#465f89]/20 transition-all text-[10px] uppercase tracking-widest"
+                                onClick={handleAddPlan}
+                            >
+                                Create Plan
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Save Confirm Modal */}
             <ConfirmModal

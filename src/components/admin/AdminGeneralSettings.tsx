@@ -25,7 +25,7 @@ export const AdminGeneralSettings = () => {
         payouts_enabled: true,
         seo_description: "Transform your creative potential into a sustainable digital career with Orbit Site"
     });
-    
+
     const [isLoading, setIsLoading] = React.useState(true);
     const [isSaving, setIsSaving] = React.useState(false);
     const [isUploadingLogo, setIsUploadingLogo] = React.useState(false);
@@ -49,7 +49,7 @@ export const AdminGeneralSettings = () => {
                 const res = await fetch('/api/admin/settings');
                 if (!res.ok) throw new Error('Failed to fetch settings');
                 const data = await res.json();
-                
+
                 // Merge default state with DB data
                 setSettings((prev: any) => ({
                     ...prev,
@@ -64,6 +64,17 @@ export const AdminGeneralSettings = () => {
         };
         fetchSettings();
     }, []);
+
+    const handleFeeChange = (value: number) => {
+        setSettings({ ...settings, platform_fee: value });
+        // Real-time validation
+        try {
+            feeSchema.parse(value);
+            setFeeError(null);
+        } catch (err: any) {
+            setFeeError(err.errors[0].message);
+        }
+    };
 
     const handleSave = () => {
         try {
@@ -84,9 +95,9 @@ export const AdminGeneralSettings = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(settings)
             });
-            
+
             if (!res.ok) throw new Error('Failed to update settings');
-            
+
             showToast('success', `Pengaturan platform berhasil diperbarui.`);
         } catch (err) {
             console.error('[Settings Update Error]', err);
@@ -117,7 +128,7 @@ export const AdminGeneralSettings = () => {
 
             if (!res.ok) throw new Error('Failed to upload logo');
             const data = await res.json();
-            
+
             setSettings({ ...settings, logo_url: data.url });
             showToast('success', 'Logo uploaded successfully!');
         } catch (err: any) {
@@ -144,7 +155,7 @@ export const AdminGeneralSettings = () => {
 
             if (!res.ok) throw new Error('Failed to upload favicon');
             const data = await res.json();
-            
+
             setSettings({ ...settings, favicon_url: data.url });
             showToast('success', 'Favicon uploaded successfully!');
         } catch (err: any) {
@@ -226,35 +237,35 @@ export const AdminGeneralSettings = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Platform Name</label>
-                                    <input 
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" 
-                                        type="text" 
+                                    <input
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold"
+                                        type="text"
                                         value={settings.site_name || ''}
-                                        onChange={(e) => setSettings({...settings, site_name: e.target.value})}
+                                        onChange={(e) => setSettings({ ...settings, site_name: e.target.value })}
                                     />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Slogan / Tagline</label>
-                                    <input 
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" 
-                                        type="text" 
+                                    <input
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold"
+                                        type="text"
                                         value={settings.site_tagline || ''}
-                                        onChange={(e) => setSettings({...settings, site_tagline: e.target.value})}
+                                        onChange={(e) => setSettings({ ...settings, site_tagline: e.target.value })}
                                     />
                                 </div>
                             </div>
-                            
+
                             <div className="pt-4 grid grid-cols-1 md:grid-cols-3 gap-8">
                                 <div className="space-y-3">
                                     <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider block">Official Logo</label>
-                                    <input 
-                                        type="file" 
-                                        ref={fileInputRef} 
-                                        className="hidden" 
-                                        accept="image/*" 
-                                        onChange={handleLogoUpload} 
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        className="hidden"
+                                        accept="image/*"
+                                        onChange={handleLogoUpload}
                                     />
-                                    <div 
+                                    <div
                                         onClick={() => fileInputRef.current?.click()}
                                         className={cn(
                                             "w-24 h-24 bg-slate-100 rounded-2xl flex items-center justify-center border-2 border-dashed border-slate-200 relative group cursor-pointer overflow-hidden transition-all",
@@ -278,45 +289,45 @@ export const AdminGeneralSettings = () => {
                                 </div>
 
                                 <div className="md:col-span-2 space-y-4">
-                                 <div className="space-y-3">
-                                    <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider block">Platform Favicon</label>
-                                    <input 
-                                        type="file" 
-                                        ref={faviconInputRef} 
-                                        className="hidden" 
-                                        accept="image/x-icon,image/png,image/svg+xml" 
-                                        onChange={handleFaviconUpload} 
-                                    />
-                                    <div 
-                                        onClick={() => faviconInputRef.current?.click()}
-                                        className={cn(
-                                            "w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center border-2 border-dashed border-slate-200 relative group cursor-pointer overflow-hidden transition-all",
-                                            isUploadingFavicon && "opacity-50 cursor-wait"
-                                        )}
-                                    >
-                                        {settings.favicon_url ? (
-                                            <img src={settings.favicon_url} alt="Favicon" className="w-full h-full object-contain p-2" />
-                                        ) : (
-                                            <div className="text-[10px] font-black text-slate-400">ICO</div>
-                                        )}
-                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                            {isUploadingFavicon ? (
-                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                            ) : (
-                                                <span className="material-symbols-outlined text-white text-sm">upload</span>
+                                    <div className="space-y-3">
+                                        <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider block">Platform Favicon</label>
+                                        <input
+                                            type="file"
+                                            ref={faviconInputRef}
+                                            className="hidden"
+                                            accept="image/x-icon,image/png,image/svg+xml"
+                                            onChange={handleFaviconUpload}
+                                        />
+                                        <div
+                                            onClick={() => faviconInputRef.current?.click()}
+                                            className={cn(
+                                                "w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center border-2 border-dashed border-slate-200 relative group cursor-pointer overflow-hidden transition-all",
+                                                isUploadingFavicon && "opacity-50 cursor-wait"
                                             )}
+                                        >
+                                            {settings.favicon_url ? (
+                                                <img src={settings.favicon_url} alt="Favicon" className="w-full h-full object-contain p-2" />
+                                            ) : (
+                                                <div className="text-[10px] font-black text-slate-400">ICO</div>
+                                            )}
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                {isUploadingFavicon ? (
+                                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                ) : (
+                                                    <span className="material-symbols-outlined text-white text-sm">upload</span>
+                                                )}
+                                            </div>
                                         </div>
+                                        <p className="text-[9px] text-slate-400 font-medium">ICO, PNG, or SVG (Square Recommended)</p>
                                     </div>
-                                    <p className="text-[9px] text-slate-400 font-medium">ICO, PNG, or SVG (Square Recommended)</p>
-                                </div>
                                     <div className="space-y-2">
                                         <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Primary System Theme (HSL/Hex)</label>
                                         <div className="flex gap-4 items-center">
-                                            <input 
+                                            <input
                                                 type="color"
                                                 className="w-10 h-10 rounded-full border-none cursor-pointer"
                                                 value={settings.primary_color || ''}
-                                                onChange={(e) => setSettings({...settings, primary_color: e.target.value})}
+                                                onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
                                             />
                                             <span className="text-xs font-mono text-slate-500 uppercase">{settings.primary_color}</span>
                                         </div>
@@ -343,11 +354,11 @@ export const AdminGeneralSettings = () => {
                                 <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Support Email Address</label>
                                 <div className="relative">
                                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg">mail</span>
-                                    <input 
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" 
-                                        type="email" 
+                                    <input
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold"
+                                        type="email"
                                         value={settings.support_email || ''}
-                                        onChange={(e) => setSettings({...settings, support_email: e.target.value})}
+                                        onChange={(e) => setSettings({ ...settings, support_email: e.target.value })}
                                     />
                                 </div>
                             </div>
@@ -355,20 +366,20 @@ export const AdminGeneralSettings = () => {
                                 <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">WhatsApp Support Number</label>
                                 <div className="relative">
                                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg">chat</span>
-                                    <input 
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold" 
-                                        type="text" 
+                                    <input
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold"
+                                        type="text"
                                         value={settings.whatsapp_number || ''}
-                                        onChange={(e) => setSettings({...settings, whatsapp_number: e.target.value})}
+                                        onChange={(e) => setSettings({ ...settings, whatsapp_number: e.target.value })}
                                     />
                                 </div>
                             </div>
                             <div className="space-y-2 md:col-span-2">
                                 <label className="text-xs font-bold text-[#00458d] uppercase tracking-wider">Physical Office Address</label>
-                                <textarea 
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold h-24 resize-none" 
+                                <textarea
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-[#465f89] outline-none transition-all font-semibold h-24 resize-none"
                                     value={settings.office_address || ''}
-                                    onChange={(e) => setSettings({...settings, office_address: e.target.value})}
+                                    onChange={(e) => setSettings({ ...settings, office_address: e.target.value })}
                                 />
                             </div>
                         </div>
@@ -390,11 +401,11 @@ export const AdminGeneralSettings = () => {
                             <div className="space-y-3">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Global Transaction Fee (%)</label>
                                 <div className="relative">
-                                    <input 
-                                        type="number" 
+                                    <input
+                                        type="number"
                                         className={`w-full bg-white border ${feeError ? 'border-rose-500 ring-4 ring-rose-500/5' : 'border-slate-200'} rounded-xl py-3 px-4 text-sm font-black text-[#005ab4] focus:ring-4 focus:ring-blue-600/5 outline-none transition-all`}
                                         value={settings.platform_fee || 0}
-                                        onChange={(e) => setSettings({...settings, platform_fee: Number(e.target.value)})}
+                                        onChange={(e) => handleFeeChange(Number(e.target.value))}
                                     />
                                     <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-slate-300">%</span>
                                 </div>
@@ -432,27 +443,27 @@ export const AdminGeneralSettings = () => {
                         <div className="relative z-10">
                             <h3 className="text-lg font-bold text-[#005ab4] mb-1">Platform Mode</h3>
                             <p className="text-xs text-slate-500 mb-6 font-medium">Control global accessibility</p>
-                            
+
                             <div className="space-y-6">
                                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
                                     <div>
                                         <p className="text-sm font-bold text-slate-700">Maintenance Mode</p>
                                         <p className="text-[10px] text-slate-500">Stop all traffic except Admin</p>
                                     </div>
-                                    <Toggle 
-                                        checked={settings.maintenance_mode} 
-                                        onChange={(e) => setSettings({...settings, maintenance_mode: e.target.checked})} 
+                                    <Toggle
+                                        checked={settings.maintenance_mode}
+                                        onChange={(e) => setSettings({ ...settings, maintenance_mode: e.target.checked })}
                                     />
                                 </div>
-                                
+
                                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
                                     <div>
                                         <p className="text-sm font-bold text-slate-700">New Registration</p>
                                         <p className="text-[10px] text-slate-500">Allow new creators to join</p>
                                     </div>
-                                    <Toggle 
-                                        checked={settings.registration_enabled} 
-                                        onChange={(e) => setSettings({...settings, registration_enabled: e.target.checked})} 
+                                    <Toggle
+                                        checked={settings.registration_enabled}
+                                        onChange={(e) => setSettings({ ...settings, registration_enabled: e.target.checked })}
                                     />
                                 </div>
 
@@ -461,9 +472,9 @@ export const AdminGeneralSettings = () => {
                                         <p className="text-sm font-bold text-slate-700">Payout Requests</p>
                                         <p className="text-[10px] text-slate-500">Pause wallet withdrawals</p>
                                     </div>
-                                    <Toggle 
-                                        checked={settings.payouts_enabled} 
-                                        onChange={(e) => setSettings({...settings, payouts_enabled: e.target.checked})} 
+                                    <Toggle
+                                        checked={settings.payouts_enabled}
+                                        onChange={(e) => setSettings({ ...settings, payouts_enabled: e.target.checked })}
                                     />
                                 </div>
                             </div>
@@ -476,7 +487,7 @@ export const AdminGeneralSettings = () => {
                                 <p className="text-[10px] text-slate-400 mt-2 font-medium">Synced with Database</p>
                             </div>
                         </div>
-                        
+
                         {/* Decorative BG element */}
                         <div className="absolute -right-8 -top-8 w-32 h-32 bg-slate-50 rounded-full blur-3xl opacity-50"></div>
                     </Card>
@@ -490,21 +501,21 @@ export const AdminGeneralSettings = () => {
                             </div>
                             <h4 className="text-xl font-bold text-white mb-4">Meta Optimization</h4>
                             <p className="text-slate-400 text-sm mb-6 leading-relaxed">Ensure your platform is indexed correctly by search engines to attract organic creators.</p>
-                            
+
                             <div className="space-y-4">
                                 <div className="space-y-1.5">
                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Default Meta Description</p>
-                                    <textarea 
+                                    <textarea
                                         className="w-full p-3 bg-white/5 rounded-lg border border-white/10 text-xs text-slate-300 italic group-hover:border-blue-500/30 transition-colors resize-none h-20 outline-none focus:ring-1 focus:ring-blue-500/50"
                                         value={settings.seo_description || ''}
-                                        onChange={(e) => setSettings({...settings, seo_description: e.target.value})}
+                                        onChange={(e) => setSettings({ ...settings, seo_description: e.target.value })}
                                     />
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div className="absolute right-0 bottom-0 opacity-[0.05] pointer-events-none transform translate-x-1/4 translate-y-1/4">
-                             <span className="material-symbols-outlined text-[180px]">public</span>
+                            <span className="material-symbols-outlined text-[180px]">public</span>
                         </div>
                     </Card>
                 </div>
