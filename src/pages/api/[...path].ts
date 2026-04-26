@@ -1314,6 +1314,101 @@ app.get('/products/:id/stats', async (c) => {
   });
 });
 
+// 4.2 Global Analytics Dashboard (Real Aggregation)
+app.get('/analytics/dashboard', async (c) => {
+  const { supabase, user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  const range = c.req.query('range') || '7d';
+  const start = c.req.query('start');
+  const end = c.req.query('end');
+
+  // Calculate time filter
+  let startDate = new Date();
+  if (start) {
+    startDate = new Date(start);
+  } else {
+    if (range === '24h') startDate.setHours(startDate.getHours() - 24);
+    else if (range === '7d') startDate.setDate(startDate.getDate() - 7);
+    else if (range === '30d') startDate.setDate(startDate.getDate() - 30);
+    else if (range === '90d') startDate.setDate(startDate.getDate() - 90);
+  }
+  
+  const endDate = end ? new Date(end) : new Date();
+
+  try {
+    const [{ data: events }, { data: orders }] = await Promise.all([
+      supabase
+        .from('analytics_events')
+        .select('*')
+        .eq('merchant_id', user.id)
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString()),
+      supabase
+        .from('orders')
+        .select('amount, status, net_amount, created_at')
+        .eq('merchant_id', user.id)
+        .in('status', ['success', 'paid'])
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString())
+    ]);
+
+    const ev = events || [];
+    const ord = orders || [];
+
+    const totalViews = ev.filter(e => e.event_type === 'view' || e.event_type === 'page_view').length;
+    const totalClicks = ev.filter(e => e.event_type === 'click').length;
+    const totalRevenue = ord.reduce((sum, o) => sum + (o.net_amount || (o.amount * 0.95)), 0);
+    const orderCount = ord.length;
+
+    // Device Detection
+    const deviceCounts = ev.reduce((acc: any, e: any) => {
+      const ua = (e.user_agent || '').toLowerCase();
+      const type = /mobile|android|iphone|ipad|phone/i.test(ua) ? 'Mobile' : 'Desktop';
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {});
+
+    const totalDevices = (deviceCounts.Mobile || 0) + (deviceCounts.Desktop || 0) || 1;
+    const devices = [
+      { type: 'Mobile', percentage: Math.round(((deviceCounts.Mobile || 0) / totalDevices) * 100) },
+      { type: 'Desktop', percentage: Math.round(((deviceCounts.Desktop || 0) / totalDevices) * 100) }
+    ];
+
+    // Browser Detection
+    const browserCounts = ev.reduce((acc: any, e: any) => {
+      const ua = (e.user_agent || '').toLowerCase();
+      let name = 'Other';
+      if (ua.includes('chrome')) name = 'Chrome';
+      else if (ua.includes('safari') && !ua.includes('chrome')) name = 'Safari';
+      else if (ua.includes('firefox')) name = 'Firefox';
+      else if (ua.includes('edg')) name = 'Edge';
+      acc[name] = (acc[name] || 0) + 1;
+      return acc;
+    }, {});
+
+    const sortedBrowsers = Object.entries(browserCounts)
+      .map(([name, count]: [string, any]) => ({
+        name,
+        percentage: Math.round((count / (ev.length || 1)) * 100),
+        icon: name === 'Chrome' ? '🌐' : name === 'Safari' ? '🍎' : name === 'Firefox' ? '🦊' : '💻'
+      }))
+      .sort((a, b) => b.percentage - a.percentage)
+      .slice(0, 3);
+
+    return c.json({
+      totalViews,
+      totalClicks,
+      sales: { total_revenue: totalRevenue, order_count: orderCount },
+      devices,
+      browsers: sortedBrowsers,
+      time_series: { labels: [], views: [], clicks: [], sales: [] }
+    });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
 // 5. Delete Product
 app.delete('/products/:id', async (c) => {
   const { supabase, user } = await getAuthContext(c);

@@ -17,9 +17,16 @@ export const AnalyticsDashboard = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [dateError, setDateError] = useState<string | null>(null);
-    const [dateRange, setDateRange] = useState({
-        start: '2026-04-03',
-        end: '2026-04-10'
+    
+    // Set default range to last 7 days from today
+    const [dateRange, setDateRange] = useState(() => {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(start.getDate() - 7);
+        return {
+            start: start.toISOString().split('T')[0],
+            end: end.toISOString().split('T')[0]
+        };
     });
 
     // Simulated Analytics Data
@@ -60,7 +67,9 @@ export const AnalyticsDashboard = () => {
         setIsLoading(true);
         setError(null);
         try {
-            const res = await fetch(`/api/analytics/dashboard?range=${range}`);
+            // Include date range if available
+            const url = `/api/analytics/dashboard?range=${range}&start=${dateRange.start}&end=${dateRange.end}`;
+            const res = await fetch(url);
             const result = await res.json();
             
             if (res.ok) {
@@ -111,23 +120,24 @@ export const AnalyticsDashboard = () => {
         
         // Validation: startDate > endDate
         if (type === 'start' && val > newRange.end) {
-            showDateError('Tanggal awal tidak boleh lebih besar dari tanggal akhir!');
+            showDateError('Tanggal awal tidak boleh melampaui tanggal akhir! Form di-reset.');
+            setDateRange({ ...dateRange, start: dateRange.end }); // Auto reset to end date
             return;
         }
         if (type === 'end' && val < newRange.start) {
-            showDateError('Tanggal akhir tidak boleh lebih kecil dari tanggal awal!');
-            setDateRange({ ...dateRange, end: dateRange.start });
+            showDateError('Tanggal akhir tidak boleh lebih kecil dari tanggal awal! Form di-reset.');
+            setDateRange({ ...dateRange, end: dateRange.start }); // Auto reset to start date
             return;
         }
 
         setDateError(null);
         setDateRange(newRange);
-        handleRefresh();
+        // We will call handleRefresh in a useEffect that watches dateRange
     };
 
     useEffect(() => {
         handleRefresh();
-    }, [range]);
+    }, [range, dateRange.start, dateRange.end]);
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -137,7 +147,19 @@ export const AnalyticsDashboard = () => {
                     {['24h', '7d', '30d', '90d'].map((r) => (
                         <button 
                             key={r}
-                            onClick={() => setRange(r)}
+                            onClick={() => {
+                                setRange(r);
+                                const end = new Date();
+                                const start = new Date();
+                                if (r === '24h') start.setHours(start.getHours() - 24);
+                                else if (r === '7d') start.setDate(start.getDate() - 7);
+                                else if (r === '30d') start.setDate(start.getDate() - 30);
+                                else if (r === '90d') start.setDate(start.getDate() - 90);
+                                setDateRange({
+                                    start: start.toISOString().split('T')[0],
+                                    end: end.toISOString().split('T')[0]
+                                });
+                            }}
                             className={cn(
                                 "px-4 md:px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
                                 range === r ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-slate-50 text-slate-400 hover:bg-slate-100"

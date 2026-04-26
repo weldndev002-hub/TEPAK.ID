@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '../../lib/utils';
 import { 
   Squares2X2Icon, 
@@ -17,6 +17,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase';
 import { useBranding } from '../../hooks/useBranding.tsx';
+import { useSubscription, SubscriptionProvider } from '../../context/SubscriptionContext';
 
 interface NavItemProps {
   icon: React.ElementType;
@@ -44,18 +45,22 @@ interface LightSidebarProps {
   activePage?: 'dashboard' | 'analytics' | 'editor' | 'products' | 'orders' | 'wallet' | 'customers' | 'academy' | 'settings' | 'plan-info' | 'profile';
 }
 
-export const LightSidebar: React.FC<LightSidebarProps> = ({ activePage = 'dashboard' }) => {
-  const [username, setUsername] = React.useState<string | null>(null);
+export const LightSidebar: React.FC<LightSidebarProps> = (props) => {
+  return (
+    <SubscriptionProvider>
+      <LightSidebarContent {...props} />
+    </SubscriptionProvider>
+  );
+};
+
+const LightSidebarContent: React.FC<LightSidebarProps> = ({ activePage = 'dashboard' }) => {
+  const [username, setUsername] = useState<string | null>(null);
   const { branding } = useBranding();
+  const { plan, isLoading: subLoading } = useSubscription();
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchUser = async () => {
-      // Safety Check: Avoid crash if supabase is null
-      if (!supabase) {
-        console.warn('Supabase client is not initialized in the browser. Check PUBLIC_SUPABASE_URL.');
-        return;
-      }
-
+      if (!supabase) return;
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -70,52 +75,53 @@ export const LightSidebar: React.FC<LightSidebarProps> = ({ activePage = 'dashbo
   }, []);
 
   const supportWA = branding?.whatsapp_number?.replace(/[^0-9]/g, '') || '628';
-
+  
+  // Logic to determine which features to show
+  const isPro = plan === 'pro' || plan === 'premium'; // Basic check
+  const isFree = plan === 'free' || !plan;
 
   return (
     <>
-      {/* Fixed sidebar — never scrolls with page content */}
       <aside 
         style={{ top: 'var(--banner-height, 0px)' }}
         className="hidden md:flex flex-col fixed left-0 z-40 h-screen shrink-0 w-64 p-4 gap-2 bg-slate-50 border-r border-slate-200 antialiased overflow-y-auto no-scrollbar transition-all duration-300"
       >
-        {/* BRANDING - Logo handled by TopNavbar. Navigation starts immediately below */}
-
-        {/* NAVIGATION */}
         <nav className="flex-1 space-y-1 pt-16 md:pt-20">
           <NavItem icon={Squares2X2Icon} label="Dashboard" href="/dashboard" active={activePage === 'dashboard'} />
-          <NavItem icon={ChartBarIcon} label="Analytics" href="/analytics" active={activePage === 'analytics'} />
+          
+          {/* Analytics & Customers only for non-free users */}
+          {!isFree && (
+            <>
+              <NavItem icon={ChartBarIcon} label="Analytics" href="/analytics" active={activePage === 'analytics'} />
+              <NavItem icon={UsersIcon} label="Customers" href="/customers" active={activePage === 'customers'} />
+            </>
+          )}
+
           <NavItem icon={WindowIcon} label="Editor" href="/editor" active={activePage === 'editor'} />
           <NavItem icon={ArchiveBoxIcon} label="Products" href="/products" active={activePage === 'products'} />
           <NavItem icon={DocumentTextIcon} label="Orders" href="/orders" active={activePage === 'orders'} />
-          <NavItem icon={UsersIcon} label="Customers" href="/customers" active={activePage === 'customers'} />
           <NavItem icon={WalletIcon} label="Wallet" href="/wallet" active={activePage === 'wallet'} />
           <NavItem icon={AcademicCapIcon} label="Academy" href="/academy" active={activePage === 'academy'} />
           <NavItem icon={UserIcon} label="Profile" href="/settings" active={activePage === 'profile'} />
           <NavItem icon={Cog6ToothIcon} label="Settings" href="/account-management" active={activePage === 'settings'} />
           <NavItem icon={TicketIcon} label="Informasi Paket" href="/plan-info" active={activePage === 'plan-info'} />
+          
           <div className="pt-4 mt-4 border-t border-slate-100 italic opacity-60">
             <NavItem icon={ChatBubbleLeftRightIcon} label="Bantuan" href={`https://wa.me/${supportWA}`} />
           </div>
         </nav>
 
-        {/* BOTTOM ACTION */}
         <div className="mt-auto pt-4 border-t border-slate-200">
           <button 
             type="button"
             onClick={async () => {
-              console.log('Logout button clicked - Creator');
-              
               if (supabase) {
                 try {
-                  const { error } = await supabase.auth.signOut();
-                  if (error) console.error('SignOut error:', error);
+                  await supabase.auth.signOut();
                 } catch (e) {
                   console.error('SignOut Exception:', e);
                 }
               }
-              
-              // Force redirect to login even if signOut fails or supabase is missing
               window.location.replace('/login');
             }}
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-rose-500 hover:bg-rose-50 hover:text-rose-700 font-bold transition-all w-full group text-left"
@@ -126,7 +132,6 @@ export const LightSidebar: React.FC<LightSidebarProps> = ({ activePage = 'dashbo
         </div>
       </aside>
 
-      {/* Spacer: reserves the sidebar width in the flex row so content isn't hidden behind the fixed sidebar */}
       <div className="hidden md:block shrink-0 w-64" aria-hidden="true" />
     </>
   );
