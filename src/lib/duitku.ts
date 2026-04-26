@@ -1,6 +1,12 @@
 // Gunakan lightweight MD5 untuk menghindari masalah node:crypto di environment Edge/Worker
 import md5 from 'md5';
 
+export interface DuitkuItemDetail {
+    name: string;
+    price: number;
+    qty: number;
+}
+
 export interface DuitkuPaymentRequest {
     merchantCode: string;
     merchantKey: string;
@@ -14,6 +20,7 @@ export interface DuitkuPaymentRequest {
     callbackUrl: string;
     paymentMethod?: string;
     expiryPeriod?: number;
+    itemDetails?: DuitkuItemDetail[];
 }
 
 export interface DuitkuPaymentResponse {
@@ -122,7 +129,7 @@ export class DuitkuService {
         // Gunakan method dari payload, jika kosong gunakan 'SP' (ShopeePay) karena paling stabil di Sandbox Anda
         const selectedMethod = payload.paymentMethod || (this.isSandbox ? 'SP' : 'QRIS');
 
-        const requestBodyV2 = {
+        const requestBodyV2: any = {
             merchantCode: this.merchantCode,
             paymentAmount: payload.paymentAmount,
             merchantOrderId: orderId,
@@ -136,6 +143,11 @@ export class DuitkuService {
             expiryPeriod: 60,
             paymentMethod: selectedMethod
         };
+
+        // Tambahkan itemDetails jika disediakan (informasi paket yang lebih detail)
+        if (payload.itemDetails && payload.itemDetails.length > 0) {
+            requestBodyV2.itemDetails = payload.itemDetails;
+        }
 
         console.log(`[Duitku] ${this.isSandbox ? 'SANDBOX' : 'PROD'} V2 Request (${selectedMethod}):`, fullUrl);
 

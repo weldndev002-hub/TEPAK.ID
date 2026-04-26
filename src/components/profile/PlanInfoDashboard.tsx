@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
-import { 
-    TicketIcon, 
-    CalendarIcon, 
-    ShieldCheckIcon, 
+import {
+    TicketIcon,
+    CalendarIcon,
+    ShieldCheckIcon,
     ExclamationTriangleIcon,
     ArrowPathIcon,
     DocumentTextIcon,
@@ -13,6 +13,8 @@ import {
     CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import { SubscriptionProvider, useSubscription } from '../../context/SubscriptionContext';
+
+type BillingPeriod = 'monthly' | 'yearly';
 
 const formatCountdown = (expiryDate: string | null) => {
     if (!expiryDate) return null;
@@ -31,9 +33,11 @@ const formatCountdown = (expiryDate: string | null) => {
 };
 
 const PlanInfoContent = () => {
-    const { plan, expiryDate, autoRenewal, upgradeToPro, cancelSubscription, isLoading } = useSubscription();
+    const { plan, expiryDate, autoRenewal, upgradeToPlan, cancelSubscription, isLoading } = useSubscription();
     const [countdown, setCountdown] = useState<string | null>(null);
     const [selectedMethod, setSelectedMethod] = useState<string>('SP'); // Default ShopeePay
+    const [selectedBillingPeriod, setSelectedBillingPeriod] = useState<BillingPeriod>('monthly');
+    const [selectedPlanId, setSelectedPlanId] = useState<string>('pro');
     const [allPlans, setAllPlans] = useState<any[]>([]);
     const [plansLoading, setPlansLoading] = useState(true);
 
@@ -55,6 +59,11 @@ const PlanInfoContent = () => {
                 if (res.ok) {
                     const data = await res.json();
                     setAllPlans(data || []);
+                    // Set default selected plan ke plan berbayar pertama yang bukan free
+                    const firstPaidPlan = (data || []).find((p: any) => p.price_monthly > 0);
+                    if (firstPaidPlan) {
+                        setSelectedPlanId(firstPaidPlan.id);
+                    }
                 }
             } catch (err) {
                 console.error('Failed to fetch plans:', err);
@@ -65,15 +74,29 @@ const PlanInfoContent = () => {
         fetchAllPlans();
     }, []);
 
-    const formattedExpiry = expiryDate 
-        ? new Date(expiryDate).toLocaleDateString('id-ID', { 
-            day: 'numeric', 
-            month: 'long', 
+    const formattedExpiry = expiryDate
+        ? new Date(expiryDate).toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'long',
             year: 'numeric',
             hour: '2-digit',
             minute: '2-digit'
-          }) 
+        })
         : '-';
+
+    // Dapatkan plan yang sedang dipilih untuk upgrade
+    const selectedPlan = allPlans.find((p: any) => p.id === selectedPlanId);
+    const selectedPrice = selectedBillingPeriod === 'yearly'
+        ? Number(selectedPlan?.price_yearly || 0)
+        : Number(selectedPlan?.price_monthly || 0);
+
+    // Dapatkan nama plan saat ini (bukan hardcoded PRO)
+    const currentPlanInfo = allPlans.find((p: any) => p.id === plan);
+
+    const handleUpgrade = () => {
+        if (!selectedPlanId) return;
+        upgradeToPlan(selectedPlanId, selectedBillingPeriod, selectedMethod);
+    };
 
     if (isLoading && !plan) {
         return (
@@ -105,13 +128,15 @@ const PlanInfoContent = () => {
                                 </Badge>
                             </div>
                             <h3 className="text-2xl font-black uppercase tracking-tight mb-2">
-                                {plan === 'free' ? 'Paket Standar' : 'Orbit Site Pro'}
+                                {currentPlanInfo?.name || (plan === 'free' ? 'Paket Standar' : `Paket ${plan.charAt(0).toUpperCase() + plan.slice(1)}`)}
                             </h3>
                             <p className={plan !== 'free' ? "text-white/70 font-medium text-sm" : "text-slate-400 font-medium text-sm"}>
-                                {plan !== 'free' ? "Anda sedang menikmati fitur premium tanpa batas." : "Tingkatkan ke PRO untuk fitur kustom domain dan analitik lengkap."}
+                                {plan !== 'free'
+                                    ? `Anda sedang menikmati paket ${currentPlanInfo?.name || plan.toUpperCase()} dengan fitur premium.`
+                                    : "Tingkatkan paket Anda untuk fitur kustom domain dan analitik lengkap."}
                             </p>
                         </div>
-                        
+
                         <div className={`mt-12 pt-8 border-t ${plan !== 'free' ? 'border-white/10' : 'border-slate-50'} flex items-center justify-between`}>
                             {plan !== 'free' ? (
                                 <>
@@ -130,7 +155,57 @@ const PlanInfoContent = () => {
                                     )}
                                 </>
                             ) : (
-                                <div className="space-y-6">
+                                <div className="space-y-6 w-full">
+                                    {/* Pilih Paket */}
+                                    {allPlans.filter(p => p.price_monthly > 0).length > 0 && (
+                                        <div className="space-y-3">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Pilih Paket</p>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {allPlans.filter(p => p.price_monthly > 0).map((p: any) => (
+                                                    <button
+                                                        key={p.id}
+                                                        onClick={() => setSelectedPlanId(p.id)}
+                                                        className={`p-3 rounded-xl border text-[10px] font-bold uppercase transition-all text-left flex flex-col justify-center ${selectedPlanId === p.id
+                                                                ? 'border-primary bg-primary/5 text-primary shadow-sm ring-1 ring-primary'
+                                                                : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
+                                                            }`}
+                                                    >
+                                                        <span className="font-black">{p.name}</span>
+                                                        <span className="text-[9px] mt-0.5">Rp {Number(p.price_monthly).toLocaleString('id-ID')}/bln</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Pilih Periode Billing */}
+                                    <div className="space-y-3">
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Pilih Periode</p>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <button
+                                                onClick={() => setSelectedBillingPeriod('monthly')}
+                                                className={`p-3 rounded-xl border text-[10px] font-bold uppercase transition-all text-left flex flex-col justify-center ${selectedBillingPeriod === 'monthly'
+                                                        ? 'border-primary bg-primary/5 text-primary shadow-sm ring-1 ring-primary'
+                                                        : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
+                                                    }`}
+                                            >
+                                                <span className="font-black">Bulanan</span>
+                                                <span className="text-[9px] mt-0.5">Rp {Number(selectedPlan?.price_monthly || 0).toLocaleString('id-ID')}/bln</span>
+                                            </button>
+                                            <button
+                                                onClick={() => setSelectedBillingPeriod('yearly')}
+                                                className={`p-3 rounded-xl border text-[10px] font-bold uppercase transition-all text-left flex flex-col justify-center ${selectedBillingPeriod === 'yearly'
+                                                        ? 'border-primary bg-primary/5 text-primary shadow-sm ring-1 ring-primary'
+                                                        : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
+                                                    }`}
+                                            >
+                                                <span className="font-black">Tahunan</span>
+                                                <span className="text-[9px] mt-0.5">Rp {Number(selectedPlan?.price_yearly || 0).toLocaleString('id-ID')}/thn</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Pilih Metode Pembayaran */}
                                     <div className="space-y-3">
                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">Pilih Metode Pembayaran</p>
                                         <div className="grid grid-cols-2 gap-3">
@@ -144,24 +219,23 @@ const PlanInfoContent = () => {
                                                 <button
                                                     key={m.id}
                                                     onClick={() => setSelectedMethod(m.id)}
-                                                    className={`p-3 rounded-xl border text-[10px] font-bold uppercase transition-all text-left flex flex-col justify-center ${
-                                                        selectedMethod === m.id 
-                                                        ? 'border-primary bg-primary/5 text-primary shadow-sm ring-1 ring-primary' 
-                                                        : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
-                                                    }`}
+                                                    className={`p-3 rounded-xl border text-[10px] font-bold uppercase transition-all text-left flex flex-col justify-center ${selectedMethod === m.id
+                                                            ? 'border-primary bg-primary/5 text-primary shadow-sm ring-1 ring-primary'
+                                                            : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
+                                                        }`}
                                                 >
                                                     {m.name}
                                                 </button>
                                             ))}
                                         </div>
                                     </div>
-                                    <Button 
-                                        onClick={() => upgradeToPro(selectedMethod)} 
-                                        disabled={isLoading}
+                                    <Button
+                                        onClick={handleUpgrade}
+                                        disabled={isLoading || !selectedPlanId}
                                         className="w-full bg-primary hover:opacity-90 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-2"
                                     >
                                         <BoltIcon className="w-5 h-5" />
-                                        {isLoading ? 'Memproses...' : `Bayar via ${selectedMethod === 'SP' ? 'ShopeePay' : selectedMethod === 'OV' ? 'OVO' : selectedMethod === 'BT' ? 'Permata' : 'Alfamart'}`}
+                                        {isLoading ? 'Memproses...' : `Bayar ${selectedPlan?.name || 'Paket'} ${selectedBillingPeriod === 'yearly' ? 'Tahunan' : 'Bulanan'} — Rp ${selectedPrice.toLocaleString('id-ID')}`}
                                     </Button>
                                 </div>
                             )}
@@ -206,10 +280,10 @@ const PlanInfoContent = () => {
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                         <Button 
+                        <Button
                             onClick={cancelSubscription}
                             disabled={!autoRenewal || isLoading}
-                            variant="ghost" 
+                            variant="ghost"
                             className={`text-slate-400 hover:text-rose-500 px-6 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${!autoRenewal ? 'opacity-50 grayscale' : ''}`}
                         >
                             Matikan Auto-Renew
@@ -232,96 +306,139 @@ const PlanInfoContent = () => {
                     </div>
                 ) : allPlans.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {allPlans.map((availablePlan) => (
-                            <div key={availablePlan.id} className={`relative group animate-in fade-in slide-in-from-bottom-12 duration-1000`}>
-                                <div className={`h-full bg-white rounded-[2.5rem] p-10 border transition-all duration-500 flex flex-col ${
-                                    plan === availablePlan.id
-                                        ? 'border-emerald-500 shadow-[0_32px_64px_-16px_rgba(16,185,129,0.2)] ring-2 ring-emerald-500/20'
-                                        : availablePlan.id === 'pro'
-                                        ? 'border-primary shadow-[0_32px_64px_-16px_rgba(255,185,76,0.2)] scale-105 z-10'
-                                        : 'border-slate-100 shadow-sm hover:shadow-xl hover:border-slate-200'
-                                }`}>
-                                    
-                                    {availablePlan.badge && availablePlan.badge !== 'DEFAULT' && (
-                                        <div className={`absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-xl ${
-                                            plan === availablePlan.id
-                                                ? 'bg-emerald-500 text-white'
-                                                : 'bg-primary text-white'
-                                        }`}>
-                                            {plan === availablePlan.id ? 'Paket Aktif' : availablePlan.badge}
-                                        </div>
-                                    )}
+                        {allPlans.map((availablePlan) => {
+                            const isCurrentPlan = plan === availablePlan.id;
+                            const isFreePlan = availablePlan.price_monthly === 0;
 
-                                    <div className="mb-10">
-                                        <div className="flex items-start gap-3 mb-4">
-                                            <h3 className="text-3xl font-black text-slate-900 uppercase italic">{availablePlan.name}</h3>
-                                            {availablePlan.tier_category && (
-                                                <span className="text-[10px] font-black text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest mt-2 whitespace-nowrap">
-                                                    {availablePlan.tier_category}
-                                                </span>
+                            return (
+                                <div key={availablePlan.id} className={`relative group animate-in fade-in slide-in-from-bottom-12 duration-1000`}>
+                                    <div className={`h-full bg-white rounded-[2.5rem] p-10 border transition-all duration-500 flex flex-col ${isCurrentPlan
+                                            ? 'border-emerald-500 shadow-[0_32px_64px_-16px_rgba(16,185,129,0.2)] ring-2 ring-emerald-500/20'
+                                            : availablePlan.id === 'pro'
+                                                ? 'border-primary shadow-[0_32px_64px_-16px_rgba(255,185,76,0.2)] scale-105 z-10'
+                                                : 'border-slate-100 shadow-sm hover:shadow-xl hover:border-slate-200'
+                                        }`}>
+
+                                        {availablePlan.badge && availablePlan.badge !== 'DEFAULT' && (
+                                            <div className={`absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-xl ${isCurrentPlan
+                                                    ? 'bg-emerald-500 text-white'
+                                                    : 'bg-primary text-white'
+                                                }`}>
+                                                {isCurrentPlan ? 'Paket Aktif' : availablePlan.badge}
+                                            </div>
+                                        )}
+
+                                        <div className="mb-10">
+                                            <div className="flex items-start gap-3 mb-4">
+                                                <h3 className="text-3xl font-black text-slate-900 uppercase italic">{availablePlan.name}</h3>
+                                                {availablePlan.tier_category && (
+                                                    <span className="text-[10px] font-black text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest mt-2 whitespace-nowrap">
+                                                        {availablePlan.tier_category}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-slate-400 text-sm font-medium leading-relaxed mb-2">{availablePlan.description}</p>
+                                            {availablePlan.tier_description && (
+                                                <p className="text-slate-500 text-xs leading-relaxed italic border-l-2 border-primary/30 pl-3">
+                                                    {availablePlan.tier_description}
+                                                </p>
                                             )}
                                         </div>
-                                        <p className="text-slate-400 text-sm font-medium leading-relaxed mb-2">{availablePlan.description}</p>
-                                        {availablePlan.tier_description && (
-                                            <p className="text-slate-500 text-xs leading-relaxed italic border-l-2 border-primary/30 pl-3">
-                                                {availablePlan.tier_description}
-                                            </p>
-                                        )}
-                                    </div>
 
-                                    <div className="mb-10">
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-5xl font-black text-slate-900 italic tracking-tighter">
-                                                {availablePlan.price_monthly === 0 ? 'Gratis' : `Rp ${Number(availablePlan.price_monthly).toLocaleString('id-ID')}`}
-                                            </span>
-                                            {availablePlan.price_monthly > 0 && <span className="text-slate-400 font-bold text-sm uppercase tracking-widest">/Bulan</span>}
+                                        <div className="mb-10">
+                                            <div className="flex items-baseline gap-1">
+                                                <span className="text-5xl font-black text-slate-900 italic tracking-tighter">
+                                                    {isFreePlan ? 'Gratis' : `Rp ${Number(availablePlan.price_monthly).toLocaleString('id-ID')}`}
+                                                </span>
+                                                {!isFreePlan && <span className="text-slate-400 font-bold text-sm uppercase tracking-widest">/Bulan</span>}
+                                            </div>
+                                            {!isFreePlan && availablePlan.price_yearly > 0 && (
+                                                <p className="text-primary text-[10px] font-black uppercase tracking-widest mt-2">
+                                                    Rp {Number(availablePlan.price_yearly).toLocaleString('id-ID')}/tahun — Hemat {Math.round((1 - availablePlan.price_yearly / (availablePlan.price_monthly * 12)) * 100)}%
+                                                </p>
+                                            )}
                                         </div>
-                                        {availablePlan.price_yearly > 0 && (
-                                            <p className="text-primary text-[10px] font-black uppercase tracking-widest mt-2">
-                                                Hemat 20% jika bayar tahunan
-                                            </p>
+
+                                        <div className="flex-1 space-y-5 mb-12">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Apa yang Anda dapatkan:</p>
+                                            <ul className="space-y-4">
+                                                {(availablePlan.features || []).map((feature: string, idx: number) => (
+                                                    <li key={idx} className="flex items-start gap-3">
+                                                        <div className="mt-1">
+                                                            <CheckCircleIcon className={`w-5 h-5 ${availablePlan.id === 'pro' ? 'text-primary' : 'text-slate-300'}`} />
+                                                        </div>
+                                                        <span className="text-sm font-bold text-slate-600 leading-tight">{feature}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+
+                                        {isCurrentPlan ? (
+                                            <Button
+                                                disabled
+                                                variant="primary"
+                                                className="w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all bg-emerald-500 text-white shadow-xl shadow-emerald-500/20"
+                                            >
+                                                ✓ Paket Anda Saat Ini
+                                            </Button>
+                                        ) : isFreePlan ? (
+                                            <a href="/signup" className="block mt-auto">
+                                                <Button
+                                                    variant="ghost"
+                                                    className="w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all bg-slate-50 text-slate-600 hover:bg-slate-100"
+                                                >
+                                                    Downgrade ke Gratis
+                                                </Button>
+                                            </a>
+                                        ) : (
+                                            <div className="space-y-3 mt-auto">
+                                                {/* Billing Period Toggle */}
+                                                <div className="flex rounded-xl border border-slate-100 overflow-hidden">
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedPlanId(availablePlan.id);
+                                                            setSelectedBillingPeriod('monthly');
+                                                        }}
+                                                        className={`flex-1 py-2.5 text-[9px] font-black uppercase tracking-widest transition-all ${selectedPlanId === availablePlan.id && selectedBillingPeriod === 'monthly'
+                                                                ? 'bg-primary text-white'
+                                                                : 'bg-white text-slate-400 hover:text-slate-600'
+                                                            }`}
+                                                    >
+                                                        Bulanan
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedPlanId(availablePlan.id);
+                                                            setSelectedBillingPeriod('yearly');
+                                                        }}
+                                                        className={`flex-1 py-2.5 text-[9px] font-black uppercase tracking-widest transition-all ${selectedPlanId === availablePlan.id && selectedBillingPeriod === 'yearly'
+                                                                ? 'bg-primary text-white'
+                                                                : 'bg-white text-slate-400 hover:text-slate-600'
+                                                            }`}
+                                                    >
+                                                        Tahunan
+                                                    </button>
+                                                </div>
+                                                <Button
+                                                    onClick={() => {
+                                                        setSelectedPlanId(availablePlan.id);
+                                                        // Scroll ke atas ke form pembayaran
+                                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                    }}
+                                                    variant={availablePlan.id === 'pro' ? 'primary' : 'ghost'}
+                                                    className={`w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${availablePlan.id === 'pro'
+                                                            ? 'bg-primary text-white shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95'
+                                                            : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                                                        }`}
+                                                >
+                                                    Pilih {availablePlan.name}
+                                                </Button>
+                                            </div>
                                         )}
                                     </div>
-
-                                    <div className="flex-1 space-y-5 mb-12">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Apa yang Anda dapatkan:</p>
-                                        <ul className="space-y-4">
-                                            {(availablePlan.features || []).map((feature: string, idx: number) => (
-                                                <li key={idx} className="flex items-start gap-3">
-                                                    <div className="mt-1">
-                                                        <CheckCircleIcon className={`w-5 h-5 ${availablePlan.id === 'pro' ? 'text-primary' : 'text-slate-300'}`} />
-                                                    </div>
-                                                    <span className="text-sm font-bold text-slate-600 leading-tight">{feature}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-
-                                    {plan === availablePlan.id ? (
-                                        <Button
-                                            disabled
-                                            variant="primary"
-                                            className="w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all bg-emerald-500 text-white shadow-xl shadow-emerald-500/20"
-                                        >
-                                            ✓ Paket Anda Saat Ini
-                                        </Button>
-                                    ) : (
-                                        <a href={availablePlan.price_monthly === 0 ? '/signup' : '#'} className="block mt-auto">
-                                            <Button
-                                                variant={availablePlan.id === 'pro' ? 'primary' : 'ghost'}
-                                                className={`w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
-                                                    availablePlan.id === 'pro'
-                                                        ? 'bg-primary text-white shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95'
-                                                        : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-                                                }`}
-                                            >
-                                                {availablePlan.price_monthly === 0 ? 'Downgrade ke Gratis' : 'Lihat Rincian'}
-                                            </Button>
-                                        </a>
-                                    )}
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 ) : (
                     <Card className="bg-slate-50 border-dashed border-slate-200 p-12 text-center">

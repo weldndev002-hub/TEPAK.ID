@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-type Plan = 'free' | 'pro' | 'enterprise';
+type Plan = 'free' | 'pro' | 'enterprise' | string;
 type Status = 'SUCCESS' | 'PENDING' | 'CANCELED';
+type BillingPeriod = 'monthly' | 'yearly';
 
 interface SubscriptionContextType {
     plan: Plan;
@@ -9,6 +10,7 @@ interface SubscriptionContextType {
     autoRenewal: boolean;
     isLoading: boolean;
     upgradeToPro: (method?: string) => Promise<void>;
+    upgradeToPlan: (planId: string, billingPeriod: BillingPeriod, method?: string) => Promise<void>;
     cancelSubscription: () => Promise<void>;
     refreshStatus: () => Promise<void>;
     transactions: any[];
@@ -66,19 +68,28 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     };
 
     const upgradeToPro = async (method?: string) => {
+        // Backward compatibility — delegate ke upgradeToPlan
+        return upgradeToPlan('pro', 'monthly', method);
+    };
+
+    const upgradeToPlan = async (planId: string, billingPeriod: BillingPeriod = 'monthly', method?: string) => {
         setIsLoading(true);
         try {
-            // Kita kirim pilihan metode di body request
-            const res = await fetch('/api/subscription/upgrade', { 
+            // Kirim planId, billingPeriod, dan metode pembayaran di body request
+            const res = await fetch('/api/subscription/upgrade', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ method }) // 'BT', 'SP', 'OV', dll
+                body: JSON.stringify({
+                    method,
+                    planId,
+                    billingPeriod
+                })
             });
-            
+
             if (!res.ok) throw new Error('Gagal melakukan upgrade');
-            
+
             const data = await res.json();
-            
+
             // Redirect to Duitku Payment URL
             if (data.paymentUrl) {
                 window.location.href = data.paymentUrl;
@@ -108,12 +119,13 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     };
 
     return (
-        <SubscriptionContext.Provider value={{ 
-            plan, 
+        <SubscriptionContext.Provider value={{
+            plan,
             expiryDate,
             autoRenewal,
             isLoading,
-            upgradeToPro, 
+            upgradeToPro,
+            upgradeToPlan,
             cancelSubscription,
             refreshStatus,
             transactions,

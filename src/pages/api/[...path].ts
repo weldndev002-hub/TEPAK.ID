@@ -1658,7 +1658,7 @@ app.get('/plans', async (c) => {
   }
 });
 
-// 2. Upgrade to PRO (Create Duitku Invoice)
+// 2. Upgrade to Plan (Create Duitku Invoice) — mendukung semua paket & billing period
 app.post('/subscription/upgrade', async (c) => {
   console.log('[Subscription Upgrade] Request received');
   const { supabase, user } = await getAuthContext(c);
@@ -1686,6 +1686,8 @@ app.post('/subscription/upgrade', async (c) => {
     }
 
     const selectedMethod = body.method || 'SP'; // Default ShopeePay untuk Sandbox jika tidak pilih
+    const planId = body.planId || 'pro'; // Default PRO untuk backward compatibility
+    const billingPeriod = body.billingPeriod || 'monthly'; // 'monthly' atau 'yearly'
 
     if (!merchantCode || !merchantKey) {
       throw new Error(`Konfigurasi Duitku tidak ditemukan. Code: ${!!merchantCode}, Key: ${!!merchantKey}`);
@@ -1694,34 +1696,74 @@ app.post('/subscription/upgrade', async (c) => {
     const { DuitkuService } = await import('../../lib/duitku');
     const duitkuService = new DuitkuService(merchantCode, merchantKey);
 
-    // Fetch PRO plan for price content
-    const { data: proPlan } = await supabase
+    // Fetch plan yang dipilih (bukan hanya PRO)
+    const { data: selectedPlan, error: planError } = await supabase
       .from('subscription_plans')
-      .select('price_monthly')
-      .eq('id', 'pro')
+      .select('id, name, price_monthly, price_yearly, description')
+      .eq('id', planId)
       .single();
 
-    const amount = proPlan ? Number(proPlan.price_monthly) : 99000; // Harga Paket PRO (Dynamic with Fallback)
+    if (planError || !selectedPlan) {
+      throw new Error(`Paket "${planId}" tidak ditemukan. ${planError?.message || ''}`);
+    }
+
+    // Tentukan harga berdasarkan billing period
+    const amount = billingPeriod === 'yearly'
+      ? Number(selectedPlan.price_yearly)
+      : Number(selectedPlan.price_monthly);
+
+    if (!amount || amount <= 0) {
+      throw new Error(`Harga paket "${selectedPlan.name}" untuk periode ${billingPeriod} tidak valid (${amount}).`);
+    }
+
+    const periodLabel = billingPeriod === 'yearly' ? '1 Year' : '1 Month';
+    // Duitku membatasi merchantOrderId maksimal 50 karakter.
+    // Format: SUB--{userId}--{4-digit timestamp} ≈ 47 karakter (aman).
+    // plan_id dan billing_period disimpan di subscription_history, BUKAN di orderId.
     const orderId = `SUB--${user.id}--${Date.now().toString().slice(-4)}`;
 
-    // Create initial record in history
+    // Create initial record in history — menyimpan plan_id dan billing_period untuk webhook
+    // billing_period mungkin belum ada di schema, jadi kita coba insert dengan field tersebut,
+    // jika gagal (kolom belum ada), fallback tanpa billing_period
     try {
-      await supabase
+      const insertWithBilling = {
+        user_id: user.id,
+        invoice_id: orderId,
+        plan_id: planId,
+        amount: amount,
+        status: 'PENDING',
+        payment_method: selectedMethod,
+        billing_period: billingPeriod,
+        created_at: new Date().toISOString()
+      };
+      const { error: insertError } = await supabase
         .from('subscription_history')
-        .insert({
+        .insert(insertWithBilling);
+
+      if (insertError) {
+        // Jika gagal karena kolom billing_period belum ada, coba tanpa field tersebut
+        console.warn('[Subscription Upgrade] Insert with billing_period failed, trying without:', insertError.message);
+        const insertWithoutBilling = {
           user_id: user.id,
           invoice_id: orderId,
-          plan_id: 'pro',
+          plan_id: planId,
           amount: amount,
           status: 'PENDING',
           payment_method: selectedMethod,
           created_at: new Date().toISOString()
-        });
+        };
+        const { error: fallbackError } = await supabase
+          .from('subscription_history')
+          .insert(insertWithoutBilling);
+        if (fallbackError) {
+          console.error('[Subscription Upgrade] Fallback insert also failed:', fallbackError);
+        }
+      }
     } catch (e) {
       console.error('[Subscription Upgrade] Failed to create history record:', e);
     }
 
-    console.log('[Subscription Upgrade] Creating payment for:', user.email, orderId);
+    console.log('[Subscription Upgrade] Creating payment for:', user.email, orderId, `Plan: ${planId}, Period: ${billingPeriod}, Amount: ${amount}`);
 
     // Fetch Branding for Product Details
     const { data: branding } = await supabase
@@ -1731,6 +1773,8 @@ app.post('/subscription/upgrade', async (c) => {
       .single();
     const siteName = branding?.site_name || 'Tepak.ID';
 
+    const productDetailStr = `${siteName} ${selectedPlan.name} Subscription (${periodLabel})`;
+
     const requestOrigin = new URL(c.req.url).origin;
     const isLocalOrTunnel = requestOrigin.includes('localhost') || requestOrigin.includes('trycloudflare.com');
 
@@ -1739,13 +1783,20 @@ app.post('/subscription/upgrade', async (c) => {
       merchantKey,
       paymentAmount: amount,
       orderId: orderId,
-      productDetails: `${siteName} PRO Subscription (1 Month)`,
+      productDetails: productDetailStr,
       customerEmail: user.email || '',
       customerPhone: '',
       customerName: user.user_metadata?.full_name || 'Creator',
       returnUrl: `${requestOrigin}/plan-info?status=pending`,
       callbackUrl: isLocalOrTunnel ? `${requestOrigin}/api/payments/duitku/webhook` : (callbackUrl || `${requestOrigin}/api/payments/duitku/webhook`),
       paymentMethod: selectedMethod,
+      itemDetails: [
+        {
+          name: `${selectedPlan.name} - ${periodLabel}`,
+          price: amount,
+          qty: 1
+        }
+      ]
     });
 
     console.log('[Subscription Upgrade] Duitku response:', paymentResponse);
@@ -1883,12 +1934,37 @@ app.post('/payments/duitku/webhook', async (c) => {
       console.log('[Webhook DuitKu] Target User ID:', targetUserId);
       console.log('[Webhook DuitKu] Result Code:', resultCode);
 
-      if (resultCode === '00' && targetUserId) {
-        console.log(`[Webhook DuitKu] ✅ UPGRADING USER ${targetUserId} TO PRO...`);
+      // Ambil plan_id dan billing_period dari subscription_history (bukan dari orderId)
+      // karena orderId dibatasi 50 karakter oleh Duitku
+      const { data: histRecord } = await supabase
+        .from('subscription_history')
+        .select('plan_id, billing_period')
+        .eq('invoice_id', merchantOrderId)
+        .single();
 
-        // 1. Get Expiry Date (30 hari dari now)
+      const planIdFromHistory = histRecord?.plan_id || 'pro';
+      const billingPeriodFromHistory = histRecord?.billing_period || 'monthly';
+
+      console.log('[Webhook DuitKu] Plan ID (from history):', planIdFromHistory);
+      console.log('[Webhook DuitKu] Billing Period (from history):', billingPeriodFromHistory);
+
+      if (resultCode === '00' && targetUserId) {
+        console.log(`[Webhook DuitKu] ✅ UPGRADING USER ${targetUserId} TO ${planIdFromHistory.toUpperCase()}...`);
+
+        // Fetch plan info untuk nama paket yang akurat
+        const { data: planInfo } = await supabase
+          .from('subscription_plans')
+          .select('id, name')
+          .eq('id', planIdFromHistory)
+          .single();
+
+        // Tentukan durasi berdasarkan billing period
         const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 30);
+        if (billingPeriodFromHistory === 'yearly') {
+          expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+        } else {
+          expiryDate.setDate(expiryDate.getDate() + 30);
+        }
         const expireIso = expiryDate.toISOString();
 
         // 2. Update Subscription History
@@ -1906,9 +1982,9 @@ app.post('/payments/duitku/webhook', async (c) => {
         }
         console.log('[Webhook DuitKu] ✅ History updated to SUCCESS');
 
-        // 3. Update User Settings
-        const updateData = {
-          plan_status: 'pro' as const,
+        // 3. Update User Settings — gunakan plan_id yang sebenarnya dari history
+        const updateData: any = {
+          plan_status: planIdFromHistory,
           plan_expiry: expireIso,
           auto_renewal: true,
           updated_at: new Date().toISOString()
@@ -1934,13 +2010,14 @@ app.post('/payments/duitku/webhook', async (c) => {
           }, 500);
         }
 
-        console.log(`[Webhook DuitKu] ✅ BERHASIL! User ${targetUserId} sekarang PRO.`);
+        console.log(`[Webhook DuitKu] ✅ BERHASIL! User ${targetUserId} sekarang ${planIdFromHistory.toUpperCase()}.`);
         console.log('[Webhook DuitKu] Updated data:', subData);
 
         return c.json({
           success: true,
-          message: 'Subscription upgraded successfully',
+          message: `Subscription upgraded to ${planInfo?.name || planIdFromHistory} successfully`,
           user_id: targetUserId,
+          plan_id: planIdFromHistory,
           plan_expiry: expireIso
         });
       } else if (targetUserId && resultCode !== '00') {
