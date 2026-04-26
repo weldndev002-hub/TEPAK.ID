@@ -37,14 +37,27 @@ export const LoginForm: React.FC<LoginFormProps> = ({ supabaseUrl, supabaseAnonK
         setIsLoading(true);
 
         try {
-            if (!supabase) throw new Error('Supabase client not initialized');
+            console.log('[LoginForm] Auth attempt:', { email, hasPassword: !!password });
+            
+            if (!supabase) {
+                const msg = 'Supabase client not initialized';
+                console.error('[LoginForm] FATAL:', msg);
+                throw new Error(msg);
+            }
 
+            console.log('[LoginForm] Calling signInWithPassword...');
             const { error } = await supabase.auth.signInWithPassword({
                 email,
                 password,
             });
 
             if (error) {
+                console.error('[LoginForm] Auth Error:', {
+                    message: error.message,
+                    status: error.status,
+                    code: (error as any).code
+                });
+                
                 if (error.message.toLowerCase().includes('email')) {
                     setEmailError('Email tidak terdaftar atau salah');
                 } else if (error.message.toLowerCase().includes('password') || error.message.toLowerCase().includes('invalid login credentials')) {
@@ -53,31 +66,56 @@ export const LoginForm: React.FC<LoginFormProps> = ({ supabaseUrl, supabaseAnonK
                     setEmailError(error.message);
                 }
             } else {
+                console.log('[LoginForm] Auth success, fetching user...');
                 const { data: { user } } = await supabase.auth.getUser();
                 
                 if (user) {
-                    const { data: profile } = await supabase
-                        .from('profiles')
-                        .select('role, is_banned')
-                        .eq('id', user.id)
-                        .single();
+                    console.log('[LoginForm] User:', user.email, user.id);
                     
-                    if (profile?.is_banned) {
-                        await supabase.auth.signOut();
-                        setEmailError('Akun Anda telah dinonaktifkan. Silakan hubungi admin.');
-                        setIsLoading(false);
-                        return;
-                    }
+                    try {
+                        const { data: profile, error: profileError } = await supabase
+                            .from('profiles')
+                            .select('role, is_banned')
+                            .eq('id', user.id)
+                            .single();
+                        
+                        if (profileError) {
+                            console.error('[LoginForm] Profile fetch error:', profileError);
+                            throw profileError;
+                        }
 
-                    setIsSuccess(true);
-                    let targetPath = profile?.role === 'admin' ? '/admin' : '/dashboard';
-                    setTimeout(() => {
-                        window.location.href = targetPath;
-                    }, 1500);
+                        console.log('[LoginForm] Profile:', profile);
+                        
+                        if (profile?.is_banned) {
+                            await supabase.auth.signOut();
+                            setEmailError('Akun Anda telah dinonaktifkan. Silakan hubungi admin.');
+                            setIsLoading(false);
+                            return;
+                        }
+
+                        setIsSuccess(true);
+                        let targetPath = profile?.role === 'admin' ? '/admin' : '/dashboard';
+                        console.log('[LoginForm] Redirecting to:', targetPath);
+                        setTimeout(() => {
+                            window.location.href = targetPath;
+                        }, 1500);
+                    } catch (profileErr: any) {
+                        console.error('[LoginForm] Profile check failed:', profileErr);
+                        setEmailError(`Gagal mengambil data profil: ${profileErr.message}`);
+                    }
+                } else {
+                    console.warn('[LoginForm] No user returned after successful auth');
+                    setEmailError('Login berhasil tapi tidak bisa ambil data user');
                 }
             }
         } catch (err: any) {
-            setEmailError('Terjadi kesalahan sistem. Silakan coba lagi.');
+            console.error('[LoginForm] CATCH BLOCK ERROR:', {
+                message: err.message,
+                stack: err.stack,
+                name: err.name,
+                fullError: err
+            });
+            setEmailError(`Kesalahan sistem: ${err.message || 'Unknown error'}. Cek console untuk detail.`);
         } finally {
             setIsLoading(false);
         }
