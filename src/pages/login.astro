@@ -28,6 +28,7 @@ let supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 
 // Aggressive Runtime Detection
 let allKeys: string[] = [];
+let lastError = '';
 try {
     // Capture Environment - Aggressive detection for Astro/Cloudflare
     let runtimeEnv: Record<string, any> = { ...(import.meta.env || {}) };
@@ -54,17 +55,25 @@ try {
         // @ts-ignore
         const cf = await import('cloudflare:workers');
         if (cf?.env) runtimeEnv = { ...runtimeEnv, ...cf.env };
-      } catch (e) {}
-    } catch (e) { }
+      } catch (e: any) {
+        lastError = `CF Import Error: ${e.message}`;
+      }
+    } catch (e: any) { 
+        lastError = `Locals Access Error: ${e.message}`;
+    }
 
     // Inject into globalThis for modules like lib/supabase.ts to pick up
     if (typeof globalThis !== 'undefined' && runtimeEnv) {
       (globalThis as any).env = { ...((globalThis as any).env || {}), ...runtimeEnv };
       allKeys = Object.keys(runtimeEnv);
-      if (!supabaseUrl) supabaseUrl = runtimeEnv.PUBLIC_SUPABASE_URL || '';
-      if (!supabaseAnonKey) supabaseAnonKey = runtimeEnv.PUBLIC_SUPABASE_ANON_KEY || '';
+      
+      // Try with PUBLIC prefix first, then without
+      supabaseUrl = runtimeEnv.PUBLIC_SUPABASE_URL || runtimeEnv.SUPABASE_URL || supabaseUrl;
+      supabaseAnonKey = runtimeEnv.PUBLIC_SUPABASE_ANON_KEY || runtimeEnv.SUPABASE_ANON_KEY || supabaseAnonKey;
     }
-} catch (e) {}
+} catch (e: any) {
+    lastError = `Global Catch: ${e.message}`;
+}
 
 // Debug Mode
 const isDebug = Astro.url.searchParams.get('debug') === 'true';
@@ -75,7 +84,8 @@ const debugData = isDebug ? {
     urlMask: supabaseUrl ? `${supabaseUrl.substring(0, 10)}...` : 'MISSING',
     keyMask: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 10)}...` : 'MISSING',
     brandingLoaded: !!branding,
-    availableKeys: allKeys.join(', ') || 'NONE'
+    availableKeys: allKeys.join(', ') || 'NONE',
+    lastError
 } : null;
 ---
 
@@ -166,6 +176,7 @@ const debugData = isDebug ? {
                     <p>Branding: {debugData?.brandingLoaded ? '✅' : '❌'}</p>
                     <hr class="border-white/10 my-2" />
                     <p class="text-[8px] text-slate-400 break-all">Available Keys: {debugData?.availableKeys}</p>
+                    {debugData?.lastError && <p class="text-[8px] text-rose-400 break-all mt-1">Error: {debugData.lastError}</p>}
                 </div>
                 <button onclick="window.location.href='/login'" class="mt-4 w-full py-2 bg-white/10 rounded-xl hover:bg-white/20 transition-colors uppercase font-bold">Close Debug</button>
             </div>

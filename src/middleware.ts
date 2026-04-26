@@ -34,10 +34,19 @@ export const onRequest = defineMiddleware(async (context, next) => {
       } catch (e) {}
     } catch (e) { }
 
-    // Inject into globalThis for modules like lib/supabase.ts to pick up
-    if (typeof globalThis !== 'undefined' && runtimeEnv) {
-      (globalThis as any).env = { ...((globalThis as any).env || {}), ...runtimeEnv };
-    }
+      // Try with PUBLIC prefix first, then without
+      const supabaseUrl = runtimeEnv.PUBLIC_SUPABASE_URL || runtimeEnv.SUPABASE_URL;
+      const supabaseAnonKey = runtimeEnv.PUBLIC_SUPABASE_ANON_KEY || runtimeEnv.SUPABASE_ANON_KEY;
+
+      if (typeof globalThis !== 'undefined' && runtimeEnv) {
+        (globalThis as any).env = { 
+          ...((globalThis as any).env || {}), 
+          ...runtimeEnv,
+          // Ensure they are normalized for modules that expect PUBLIC_ prefix
+          PUBLIC_SUPABASE_URL: supabaseUrl,
+          PUBLIC_SUPABASE_ANON_KEY: supabaseAnonKey
+        };
+      }
 
     // Bypass Webhooks
     if (url.pathname.includes('/api/payments/duitku/webhook')) {
