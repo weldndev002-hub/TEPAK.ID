@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { getCookie } from 'hono/cookie';
+import { getCookie, setCookie } from 'hono/cookie';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import type { APIRoute } from 'astro';
@@ -321,6 +321,8 @@ app.delete('/settings/domain', async (c) => {
 });
 
 // Helper untuk mendapatkan Supabase Client & User (Robust Cloudflare Compatibility)
+// CRITICAL: parseCookieHeader returns {name, value}[] NOT a plain object.
+// We must filter undefined values and provide setAll() for session refresh.
 const getAuthContext = async (c: any) => {
   try {
     const url = getEnv('PUBLIC_SUPABASE_URL');
@@ -341,10 +343,44 @@ const getAuthContext = async (c: any) => {
       return { supabase: null as any, user: null };
     }
 
+    // Parse cookies and filter out entries with undefined values
+    // parseCookieHeader returns {name: string, value?: string}[]
+    // Supabase SSR requires {name: string, value: string}[]
+    const parsedCookies = parseCookieHeader(cookieHeader).filter(
+      (cookie): cookie is { name: string; value: string } => cookie.value !== undefined
+    );
+
     const supabase = createServerClient(url, key, {
       cookies: {
         getAll() {
-          return parseCookieHeader(cookieHeader);
+          return parsedCookies;
+        },
+        setAll(cookiesToSet) {
+          // CRITICAL: Supabase SSR needs setAll() to refresh session cookies.
+          // Without this, token refresh fails silently and the user appears logged out.
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              // Normalize sameSite: Supabase SSR may pass `true` but Hono expects string values
+              let sameSite: 'lax' | 'strict' | 'none' | 'Lax' | 'Strict' | 'None' | undefined;
+              if (typeof options?.sameSite === 'string') {
+                sameSite = options.sameSite as any;
+              } else if (options?.sameSite === true) {
+                sameSite = 'Lax';
+              } else {
+                sameSite = 'Lax';
+              }
+              setCookie(c, name, value, {
+                ...options,
+                path: options?.path || '/',
+                secure: options?.secure ?? true,
+                sameSite,
+                httpOnly: options?.httpOnly ?? true,
+                maxAge: options?.maxAge,
+              });
+            });
+          } catch (setErr: any) {
+            console.warn('[getAuthContext] Failed to set cookies:', setErr.message);
+          }
         },
       },
     });
@@ -358,10 +394,11 @@ const getAuthContext = async (c: any) => {
       }
 
       // Fallback: If getUser failed but we have cookies, try to extract the token manually
-      // Handle chunked cookies by looking for parts of the auth-token
-      const cookies = parseCookieHeader(cookieHeader);
-      const tokenKey = Object.keys(cookies).find(k => k.includes('auth-token'));
-      const token = tokenKey ? cookies[tokenKey] : (cookies.sb_access_token || cookies['sb-access-token']);
+      // parseCookieHeader returns an ARRAY of {name, value}, NOT a plain object
+      const authTokenCookie = parsedCookies.find(cookie => cookie.name.includes('auth-token'));
+      const token = authTokenCookie?.value
+        || parsedCookies.find(c => c.name === 'sb_access_token')?.value
+        || parsedCookies.find(c => c.name === 'sb-access-token')?.value;
 
       if (token) {
         console.log('[getAuthContext] Found token in cookies, attempting direct getUser(token)...');
@@ -2884,17 +2921,22 @@ app.post('/admin/users/ban', async (c) => {
   }
 });
 
-// 2. Public Platform Settings (Branding)
+// 2. Public Platform Settings (Branding) — with in-memory cache
+const publicSettingsCache = { data: null as any, timestamp: 0 };
+const PUBLIC_SETTINGS_CACHE_TTL = 60 * 1000; // 60 seconds
+
 app.get('/public/settings', async (c) => {
   try {
-    const url = getEnv('PUBLIC_SUPABASE_URL');
-    const key = getEnv('SUPABASE_SERVICE_ROLE_KEY') || getEnv('PUBLIC_SUPABASE_ANON_KEY');
+    // Return cached data if still fresh
+    const now = Date.now();
+    if (publicSettingsCache.data && (now - publicSettingsCache.timestamp) < PUBLIC_SETTINGS_CACHE_TTL) {
+      return c.json(publicSettingsCache.data);
+    }
 
-    if (!url || !key) throw new Error('Supabase URL/Key missing');
+    // Reuse the admin client instead of creating a new one per request
+    const supabase = getSupabaseAdmin();
 
-    const targetClient = createClient(url, key);
-
-    const { data, error } = await targetClient
+    const { data, error } = await supabase
       .from('platform_configs')
       .select('site_name, site_tagline, logo_url, favicon_url, primary_color, maintenance_mode, registration_enabled, payouts_enabled, support_email, whatsapp_number, office_address, seo_description')
       .eq('id', 1)
@@ -2902,7 +2944,13 @@ app.get('/public/settings', async (c) => {
 
     if (error && error.code !== 'PGRST116') throw error;
 
-    return c.json(data || { site_name: 'Tepak.ID' });
+    const responseData = data || { site_name: 'Tepak.ID' };
+
+    // Update cache
+    publicSettingsCache.data = responseData;
+    publicSettingsCache.timestamp = now;
+
+    return c.json(responseData);
   } catch (err: any) {
     console.error('[Public Settings API] Error:', err);
     return c.json({ error: err.message }, 500);

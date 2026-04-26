@@ -24,26 +24,26 @@ const getEnv = (key: string): string | undefined => {
     if (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env as any)[key]) {
       return clean((import.meta.env as any)[key], key.includes('URL'));
     }
-  } catch (e) {}
+  } catch (e) { }
 
   try {
     // 2. Runtime (Node.js)
     if (typeof process !== 'undefined' && process.env) {
       return clean(process.env[key], key.includes('URL'));
     }
-  } catch (e) {}
+  } catch (e) { }
 
   try {
     // 3. Cloudflare Workers (Fallback/Global)
     if (typeof globalThis !== 'undefined') {
       const val = (globalThis as any)[key];
       if (val) return clean(val, key.includes('URL'));
-      
+
       if ((globalThis as any).env && (globalThis as any).env[key]) {
         return clean((globalThis as any).env[key], key.includes('URL'));
       }
     }
-  } catch (e) {}
+  } catch (e) { }
 
   return undefined;
 };
@@ -86,10 +86,16 @@ export const getServerClient = (cookies: any, request: Request, runtimeEnv?: any
     return null as any;
   }
 
+  // parseCookieHeader returns {name: string, value?: string}[]
+  // Supabase SSR requires {name: string, value: string}[] — filter out undefined values
+  const parsedCookies = parseCookieHeader(request.headers.get('Cookie') ?? '').filter(
+    (cookie): cookie is { name: string; value: string } => cookie.value !== undefined
+  );
+
   return createServerClient(url, key, {
     cookies: {
       getAll() {
-        return parseCookieHeader(request.headers.get('Cookie') ?? '');
+        return parsedCookies;
       },
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value, options }) => {
@@ -102,23 +108,23 @@ export const getServerClient = (cookies: any, request: Request, runtimeEnv?: any
 
 export const getSupabaseAdmin = (runtimeEnv?: any) => {
   const url = runtimeEnv?.PUBLIC_SUPABASE_URL || getEnv('PUBLIC_SUPABASE_URL') || supabaseUrl;
-  
+
   // Try to find the service key in multiple places (SSR context, process.env, or import.meta)
-  const serviceKey = 
-    runtimeEnv?.SUPABASE_SERVICE_ROLE_KEY || 
+  const serviceKey =
+    runtimeEnv?.SUPABASE_SERVICE_ROLE_KEY ||
     getEnv('SUPABASE_SERVICE_ROLE_KEY');
 
   console.log(`[Supabase Admin Init] URL: ${url ? 'Found' : 'Missing'}, Key: ${serviceKey ? `Found (${serviceKey.length} chars)` : 'Missing'}`);
 
   if (!url || !serviceKey) {
-      console.error('❌ Supabase Admin: Missing Service Role Key.');
-      return null as any;
+    console.error('❌ Supabase Admin: Missing Service Role Key.');
+    return null as any;
   }
 
   return createClient(url, serviceKey, {
     auth: {
-        autoRefreshToken: false,
-        persistSession: false
+      autoRefreshToken: false,
+      persistSession: false
     }
   });
 };

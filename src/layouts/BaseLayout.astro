@@ -1,26 +1,26 @@
 ---
-import '../styles/globals.css';
-import { ImpersonationBanner } from '../components/admin/ImpersonationBanner';
-import { AnalyticsTracker } from '../components/AnalyticsTracker';
-import { AnalyticsDebugPanel } from '../components/AnalyticsDebugPanel';
-import { createClient } from '@supabase/supabase-js';
-import { BrandingProvider } from '../hooks/useBranding';
+import "../styles/globals.css";
+import { ImpersonationBanner } from "../components/admin/ImpersonationBanner";
+import { AnalyticsTracker } from "../components/AnalyticsTracker";
+import { AnalyticsDebugPanel } from "../components/AnalyticsDebugPanel";
+import { createClient } from "@supabase/supabase-js";
+import { BrandingProvider } from "../hooks/useBranding";
 
 // Fetch Branding Settings from locals (more resilient)
 const supabase = Astro.locals.supabase;
 
 let branding: any = null;
 if (supabase) {
-  try {
-    const { data } = await supabase
-      .from('platform_configs')
-      .select('*')
-      .eq('id', 1)
-      .single();
-    branding = data;
-  } catch (e) {
-    console.error('[BaseLayout] Branding fetch error:', e);
-  }
+	try {
+		const { data } = await supabase
+			.from("platform_configs")
+			.select("*")
+			.eq("id", 1)
+			.single();
+		branding = data;
+	} catch (e) {
+		console.error("[BaseLayout] Branding fetch error:", e);
+	}
 }
 
 interface Props {
@@ -28,11 +28,16 @@ interface Props {
 	description?: string;
 }
 
-const { title, description = branding?.seo_description || branding?.site_tagline || "Platform Jualan Produk Digital Tercepat & Termudah." } = Astro.props;
+const {
+	title,
+	description = branding?.seo_description ||
+		branding?.site_tagline ||
+		"Platform Jualan Produk Digital Tercepat & Termudah.",
+} = Astro.props;
 
-const siteName = branding?.site_name || 'Tepak.ID';
+const siteName = branding?.site_name || "Tepak.ID";
 const fullTitle = title === siteName ? title : `${title} | ${siteName}`;
-const faviconUrl = branding?.favicon_url || '/favicon.svg';
+const faviconUrl = branding?.favicon_url || "/favicon.svg";
 
 // Check Admin Status for Global Watcher
 const isAdmin = Astro.locals.isAdmin || false;
@@ -47,25 +52,53 @@ const isAdmin = Astro.locals.isAdmin || false;
 		<link rel="icon" href={faviconUrl} />
 		<meta name="generator" content={Astro.generator} />
 		<title>{fullTitle}</title>
-		
+
 		<!-- Google Fonts & Material Symbols -->
-		<link rel="preconnect" href="https://fonts.googleapis.com">
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-		<link href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300..800&display=swap" rel="stylesheet">
-		<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300..800&display=swap"
+			rel="stylesheet"
+		/>
+		<link
+			href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+			rel="stylesheet"
+		/>
 
 		<!-- Inject Dynamic Branding Colors -->
-		<style define:vars={{ primaryBase: branding?.primary_color || '#815500' }}>
+		<style
+			define:vars={{ primaryBase: branding?.primary_color || "#815500" }}
+		>
 			:root {
 				--color-primary: var(--primaryBase);
 				--color-on-primary: #ffffff;
-				--color-primary-container: color-mix(in srgb, var(--primaryBase), white 80%);
-				--color-on-primary-container: color-mix(in srgb, var(--primaryBase), black 60%);
-				--color-inverse-primary: color-mix(in srgb, var(--primaryBase), white 40%);
-				
+				--color-primary-container: color-mix(
+					in srgb,
+					var(--primaryBase),
+					white 80%
+				);
+				--color-on-primary-container: color-mix(
+					in srgb,
+					var(--primaryBase),
+					black 60%
+				);
+				--color-inverse-primary: color-mix(
+					in srgb,
+					var(--primaryBase),
+					white 40%
+				);
+
 				/* System Background Overrides (Subtle tint to match brand) */
-				--color-background: color-mix(in srgb, var(--primaryBase), #f8f9ff 96%);
-				--color-surface-container-low: color-mix(in srgb, var(--primaryBase), #eff4ff 94%);
+				--color-background: color-mix(
+					in srgb,
+					var(--primaryBase),
+					#f8f9ff 96%
+				);
+				--color-surface-container-low: color-mix(
+					in srgb,
+					var(--primaryBase),
+					#eff4ff 94%
+				);
 			}
 		</style>
 
@@ -73,7 +106,10 @@ const isAdmin = Astro.locals.isAdmin || false;
 			window.__PLATFORM_BRANDING__ = initialBranding;
 		</script>
 	</head>
-	<body class="min-h-screen font-sans antialiased" data-is-admin={isAdmin ? "true" : "false"}>
+	<body
+		class="min-h-screen font-sans antialiased"
+		data-is-admin={isAdmin ? "true" : "false"}
+	>
 		<BrandingProvider initialData={branding} client:load>
 			<ImpersonationBanner client:only="react" />
 			<AnalyticsDebugPanel client:only="react" />
@@ -82,30 +118,70 @@ const isAdmin = Astro.locals.isAdmin || false;
 
 		<script>
 			// Global Maintenance Mode Watcher
-			const POLLING_INTERVAL = 10000; // Check every 10 seconds
-			
+			// Uses Page Visibility API to pause polling when tab is hidden,
+			// and increases interval to reduce unnecessary API calls.
+			const POLLING_INTERVAL = 30000; // Check every 30 seconds (was 10s)
+			let maintenanceTimer = null;
+			let lastCheck = 0;
+
 			async function watchMaintenance() {
 				// Don't redirect if already on maintenance page or if it's an admin
-				if (window.location.pathname === '/maintenance') return;
-				if (document.body.getAttribute('data-is-admin') === 'true') return;
+				if (window.location.pathname === "/maintenance") return;
+				if (document.body.getAttribute("data-is-admin") === "true")
+					return;
+
+				// Throttle: don't check more often than POLLING_INTERVAL
+				const now = Date.now();
+				if (now - lastCheck < POLLING_INTERVAL) return;
+				lastCheck = now;
 
 				try {
-					const res = await fetch('/api/public/settings');
+					const res = await fetch("/api/public/settings");
 					if (res.ok) {
 						const data = await res.json();
 						if (data && data.maintenance_mode === true) {
 							// System just went into maintenance!
-							const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+							const returnUrl = encodeURIComponent(
+								window.location.pathname +
+									window.location.search,
+							);
 							window.location.href = `/maintenance?redirect_to=${returnUrl}`;
 						}
 					}
 				} catch (err) {
-					// Silicon failure or network issue, ignore polling errors
+					// Silent failure or network issue, ignore polling errors
 				}
 			}
 
-			// Start Watching
-			setInterval(watchMaintenance, POLLING_INTERVAL);
+			// Start Watching with Page Visibility API
+			function startPolling() {
+				if (maintenanceTimer) clearInterval(maintenanceTimer);
+				// Check immediately when becoming visible, then on interval
+				watchMaintenance();
+				maintenanceTimer = setInterval(
+					watchMaintenance,
+					POLLING_INTERVAL,
+				);
+			}
+
+			function stopPolling() {
+				if (maintenanceTimer) {
+					clearInterval(maintenanceTimer);
+					maintenanceTimer = null;
+				}
+			}
+
+			// Pause polling when tab is hidden, resume when visible
+			document.addEventListener("visibilitychange", () => {
+				if (document.hidden) {
+					stopPolling();
+				} else {
+					startPolling();
+				}
+			});
+
+			// Initial start
+			startPolling();
 		</script>
 	</body>
 </html>

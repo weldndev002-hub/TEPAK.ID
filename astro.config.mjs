@@ -26,6 +26,11 @@ export default defineConfig({
     },
     optimizeDeps: {
       include: ['@heroicons/react/24/outline', 'clsx', 'tailwind-merge']
+    },
+    server: {
+      warmup: {
+        clientFiles: ['./src/pages/**/*.{astro,tsx}']
+      }
     }
   },
 
