@@ -1723,6 +1723,32 @@ app.post('/subscription/cancel', async (c) => {
   }
 });
 
+// 1.4 Get Latest Invoice
+app.get('/subscription/invoice', async (c) => {
+  const { supabase, user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  try {
+    // Ambil transaksi terakhir yang berhasil untuk langganan
+    const { data: invoice, error } = await supabase
+      .from('orders')
+      .select('*, subscription_plans(name, price)')
+      .eq('user_id', user.id)
+      .in('status', ['success', 'paid'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error || !invoice) {
+      return c.json({ error: 'Invoice tidak ditemukan.' }, 404);
+    }
+
+    return c.json(invoice);
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
 // 1.1 Get Subscription History
 app.get('/subscription/history', async (c) => {
   const { supabase, user } = await getAuthContext(c);

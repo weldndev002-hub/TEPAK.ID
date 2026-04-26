@@ -13,6 +13,7 @@ import {
     BoltIcon,
     CheckCircleIcon
 } from '@heroicons/react/24/outline';
+import { InvoiceModal } from './InvoiceModal';
 import { SubscriptionProvider, useSubscription } from '../../context/SubscriptionContext';
 
 type BillingPeriod = 'monthly' | 'yearly';
@@ -37,7 +38,28 @@ const PlanInfoContent = () => {
     const { plan, expiryDate, autoRenewal, upgradeToPlan, cancelSubscription, isLoading } = useSubscription();
     const [countdown, setCountdown] = useState<string | null>(null);
     const [showCancelModal, setShowCancelModal] = useState(false);
+    const [isCancelling, setIsCancelling] = useState(false);
+    const [invoiceData, setInvoiceData] = useState<any>(null);
+    const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+    const [isFetchingInvoice, setIsFetchingInvoice] = useState(false);
     const [selectedMethod, setSelectedMethod] = useState<string>('SP'); // Default ShopeePay
+
+    const handleViewInvoice = async () => {
+        if (isFetchingInvoice) return; // Anti-spam
+        
+        setIsFetchingInvoice(true);
+        try {
+            const res = await fetch('/api/subscription/invoice');
+            const data = await res.json();
+            if (data.error) throw new Error(data.error);
+            setInvoiceData(data);
+            setShowInvoiceModal(true);
+        } catch (err) {
+            alert('Gagal mengambil data invoice. Silakan coba lagi nanti.');
+        } finally {
+            setIsFetchingInvoice(false);
+        }
+    };
     const [selectedBillingPeriod, setSelectedBillingPeriod] = useState<BillingPeriod>('monthly');
     const [selectedPlanId, setSelectedPlanId] = useState<string>('pro');
     const [allPlans, setAllPlans] = useState<any[]>([]);
@@ -292,6 +314,19 @@ const PlanInfoContent = () => {
                         >
                             Matikan Auto-Renew
                         </Button>
+                        <Button
+                            onClick={handleViewInvoice}
+                            disabled={isFetchingInvoice}
+                            variant="ghost"
+                            className="bg-white border-slate-100 text-slate-600 hover:text-primary px-6 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all shadow-sm flex items-center gap-2"
+                        >
+                            {isFetchingInvoice ? (
+                                <div className="w-3 h-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                            ) : (
+                                <DocumentTextIcon className="w-4 h-4" />
+                            )}
+                            Invoice
+                        </Button>
                     </div>
 
                     {/* Cancel Confirmation Modal */}
@@ -465,6 +500,13 @@ const PlanInfoContent = () => {
                     </Card>
                 )}
             </div>
+
+            {/* Invoice Detail Modal */}
+            <InvoiceModal 
+                isOpen={showInvoiceModal}
+                onClose={() => setShowInvoiceModal(false)}
+                invoiceData={invoiceData}
+            />
         </div>
     );
 };
