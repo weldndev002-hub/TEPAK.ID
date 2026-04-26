@@ -27,11 +27,22 @@ let supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
 let supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 
 try {
-    // Try to get from Cloudflare runtime if available
+    // 1. Try to get from Cloudflare runtime if available
     const runtime = (Astro.locals as any).runtime;
     if (runtime?.env) {
         if (!supabaseUrl) supabaseUrl = runtime.env.PUBLIC_SUPABASE_URL || '';
         if (!supabaseAnonKey) supabaseAnonKey = runtime.env.PUBLIC_SUPABASE_ANON_KEY || '';
+    } 
+    // 2. Try modern Cloudflare standard
+    else {
+        try {
+            // @ts-ignore
+            const cf = await import('cloudflare:workers');
+            if (cf?.env) {
+                if (!supabaseUrl) supabaseUrl = cf.env.PUBLIC_SUPABASE_URL || '';
+                if (!supabaseAnonKey) supabaseAnonKey = cf.env.PUBLIC_SUPABASE_ANON_KEY || '';
+            }
+        } catch (e) {}
     }
 } catch (e) {
     // runtime access might throw in Astro v6
