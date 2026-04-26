@@ -25,14 +25,26 @@ import {
     CheckCircleIcon as CheckCircleIconSolid,
     TrashIcon as TrashIconSolid
 } from '@heroicons/react/24/solid';
+import { useSubscription, SubscriptionProvider } from '../../context/SubscriptionContext';
 
 export const UnifiedSettings = ({ defaultTab = 'account' }: { defaultTab?: 'account' | 'bank' }) => {
+    return (
+        <SubscriptionProvider>
+            <UnifiedSettingsContent defaultTab={defaultTab} />
+        </SubscriptionProvider>
+    );
+};
+
+const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'account' | 'bank' }) => {
     const [activeTab, setActiveTab] = useState<'account' | 'bank'>(defaultTab);
+    const { plan } = useSubscription();
     
     // --- Account State ---
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const isPro = true; // Simulated
+    const [isTerminating, setIsTerminating] = useState(false);
+    const [terminateError, setTerminateError] = useState<string | null>(null);
+    const isPro = plan !== 'free';
 
     // --- Bank State ---
     const [bankData, setBankData] = useState({
@@ -64,6 +76,36 @@ export const UnifiedSettings = ({ defaultTab = 'account' }: { defaultTab?: 'acco
         });
         setBankLoading(false);
         showToast('Informasi bank berhasil diperbarui!');
+    };
+
+    const handleTerminate = async () => {
+        if (!password) {
+            setTerminateError('Konfirmasi password diperlukan untuk menghapus akun.');
+            return;
+        }
+
+        setIsTerminating(true);
+        setTerminateError(null);
+
+        try {
+            const res = await fetch('/api/profile', { 
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password }) // Optional: backend could verify password again if needed
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || 'Gagal menghapus akun');
+            }
+
+            // Success! Redirect to login
+            window.location.href = '/login?deleted=true'; 
+        } catch (err: any) {
+            setTerminateError(err.message);
+            setIsTerminating(false);
+        }
     };
 
     return (
@@ -148,11 +190,26 @@ export const UnifiedSettings = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                                     }
                                 />
                                 <button 
-                                    className="w-full h-14 bg-rose-600 text-white font-black uppercase text-[10px] tracking-[0.2em] rounded-xl shadow-lg shadow-rose-600/10 hover:opacity-90 transition-all"
-                                    onClick={() => setShowTerminateConfirm(true)}
+                                    className={cn(
+                                        "w-full h-14 bg-rose-600 text-white font-black uppercase text-[10px] tracking-[0.2em] rounded-xl shadow-lg shadow-rose-600/10 hover:opacity-90 transition-all flex items-center justify-center gap-2",
+                                        isTerminating && "opacity-50 cursor-not-allowed"
+                                    )}
+                                    disabled={isTerminating}
+                                    onClick={() => {
+                                        if (!password) {
+                                            setTerminateError('Masukkan password Anda untuk melanjutkan.');
+                                            return;
+                                        }
+                                        setShowTerminateConfirm(true);
+                                    }}
                                 >
-                                    Terminate Account
+                                    {isTerminating ? 'Processing...' : 'Terminate Account'}
                                 </button>
+                                {terminateError && (
+                                    <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest text-center animate-shake">
+                                        {terminateError}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </Card>
@@ -283,7 +340,17 @@ export const UnifiedSettings = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                         </div>
                         <div className="px-8 py-5 bg-rose-50 border-t border-rose-100 flex items-center justify-end gap-3">
                             <button className="px-5 py-2.5 rounded-xl font-black text-slate-600 hover:bg-white transition-all text-[10px] uppercase tracking-widest" onClick={() => setShowTerminateConfirm(false)}>Batal</button>
-                            <button className="px-6 py-2.5 rounded-xl font-black bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-600/20 transition-all text-[10px] uppercase tracking-widest" onClick={() => window.location.href='/logout'}>Ya, Hapus Akun</button>
+                            <button 
+                                className={cn(
+                                    "px-6 py-2.5 rounded-xl font-black bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-600/20 transition-all text-[10px] uppercase tracking-widest flex items-center gap-2",
+                                    isTerminating && "opacity-50"
+                                )} 
+                                disabled={isTerminating}
+                                onClick={handleTerminate}
+                            >
+                                {isTerminating && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
+                                Ya, Hapus Akun Permanen
+                            </button>
                         </div>
                     </div>
                 </div>

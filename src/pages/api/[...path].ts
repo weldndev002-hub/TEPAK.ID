@@ -820,6 +820,43 @@ app.get('/profile', async (c) => {
   }
 });
 
+// 1.3 Delete Account Permanently
+app.delete('/profile', async (c) => {
+  const { supabase, user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  try {
+    // 1. Validasi: Jangan izinkan hapus jika masih PRO
+    const { data: settings } = await supabase
+      .from('user_settings')
+      .select('plan_status')
+      .eq('user_id', user.id)
+      .single();
+
+    if (settings?.plan_status && settings.plan_status !== 'free') {
+      return c.json({ 
+        error: 'Berlangganan PRO harus dihentikan (Matikan Auto-Renew) terlebih dahulu sebelum menghapus akun.' 
+      }, 400);
+    }
+
+    // 2. Gunakan Admin Client untuk menghapus User dari auth.users
+    const { getSupabaseAdmin } = await import('../../lib/supabase');
+    const adminClient = getSupabaseAdmin(cfEnv);
+    
+    const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id);
+    
+    if (deleteError) throw deleteError;
+
+    // Supabase akan menghapus data di tabel lain secara otomatis jika cascade delete aktif,
+    // Jika tidak, RLS akan memastikan data tersebut tidak bisa diakses lagi.
+
+    return c.json({ success: true });
+  } catch (err: any) {
+    console.error('[Account Termination] Error:', err);
+    return c.json({ error: 'Gagal menghapus akun. Silakan hubungi dukungan teknis.' }, 500);
+  }
+});
+
 // Endpoints /subscription/upgrade dan /subscription/cancel lama telah dihapus
 // karena sudah digulirkan ke integrasi Duitku yang sesungguhnya di bagian bawah file ini.
 
@@ -1677,12 +1714,7 @@ app.post('/subscription/cancel', async (c) => {
     if (error) throw error;
     
     // Log the cancellation in history if needed
-    await supabase.from('notifications').insert({
-      user_id: user.id,
-      title: 'Auto-Renewal Dimatikan',
-      message: 'Perpanjangan otomatis langganan Anda telah dinonaktifkan. Anda masih dapat menikmati fitur premium hingga masa aktif berakhir.',
-      type: 'info'
-    });
+    console.log(`[Subscription] Cancelled for user ${user.id}`);
 
     return c.json({ success: true });
   } catch (err: any) {
