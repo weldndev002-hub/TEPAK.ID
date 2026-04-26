@@ -2934,7 +2934,7 @@ app.get('/public/settings', async (c) => {
     }
 
     // Reuse the admin client instead of creating a new one per request
-    const supabase = getSupabaseAdmin();
+    const supabase = getSupabaseAdmin(cfEnv);
 
     const { data, error } = await supabase
       .from('platform_configs')

@@ -15,20 +15,21 @@ const getEnv = (key: string): string | undefined => {
 
   try {
     // 1. Build-time (Vite/Astro) - Priority for Browser
-    if (key === 'PUBLIC_SUPABASE_URL' && import.meta.env.PUBLIC_SUPABASE_URL) return clean(import.meta.env.PUBLIC_SUPABASE_URL, true);
-    if (key === 'PUBLIC_SUPABASE_ANON_KEY' && import.meta.env.PUBLIC_SUPABASE_ANON_KEY) return clean(import.meta.env.PUBLIC_SUPABASE_ANON_KEY);
-    if (key === 'SUPABASE_SERVICE_ROLE_KEY' && import.meta.env.SUPABASE_SERVICE_ROLE_KEY) return clean(import.meta.env.SUPABASE_SERVICE_ROLE_KEY);
-    if (key === 'ADMIN_PASSCODE' && import.meta.env.ADMIN_PASSCODE) return clean(import.meta.env.ADMIN_PASSCODE);
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+      if (key === 'PUBLIC_SUPABASE_URL' && import.meta.env.PUBLIC_SUPABASE_URL) return clean(import.meta.env.PUBLIC_SUPABASE_URL, true);
+      if (key === 'PUBLIC_SUPABASE_ANON_KEY' && import.meta.env.PUBLIC_SUPABASE_ANON_KEY) return clean(import.meta.env.PUBLIC_SUPABASE_ANON_KEY);
+      if (key === 'SUPABASE_SERVICE_ROLE_KEY' && import.meta.env.SUPABASE_SERVICE_ROLE_KEY) return clean(import.meta.env.SUPABASE_SERVICE_ROLE_KEY);
+      if (key === 'ADMIN_PASSCODE' && import.meta.env.ADMIN_PASSCODE) return clean(import.meta.env.ADMIN_PASSCODE);
 
-    // Fallback for other keys
-    if (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env as any)[key]) {
-      return clean((import.meta.env as any)[key], key.includes('URL'));
+      if ((import.meta.env as any)[key]) {
+        return clean((import.meta.env as any)[key], key.includes('URL'));
+      }
     }
   } catch (e) { }
 
   try {
     // 2. Runtime (Node.js)
-    if (typeof process !== 'undefined' && process.env) {
+    if (typeof process !== 'undefined' && process.env && process.env[key]) {
       return clean(process.env[key], key.includes('URL'));
     }
   } catch (e) { }
@@ -36,11 +37,18 @@ const getEnv = (key: string): string | undefined => {
   try {
     // 3. Cloudflare Workers (Fallback/Global)
     if (typeof globalThis !== 'undefined') {
+      // Check direct global (for older Worker styles or polyfills)
       const val = (globalThis as any)[key];
-      if (val) return clean(val, key.includes('URL'));
+      if (val && typeof val === 'string') return clean(val, key.includes('URL'));
 
+      // Check globalThis.env (Our custom injection)
       if ((globalThis as any).env && (globalThis as any).env[key]) {
         return clean((globalThis as any).env[key], key.includes('URL'));
+      }
+
+      // Check Astro locals runtime if it was globally injected
+      if ((globalThis as any).runtime?.env?.[key]) {
+        return clean((globalThis as any).runtime.env[key], key.includes('URL'));
       }
     }
   } catch (e) { }
@@ -67,7 +75,17 @@ export const getSupabaseBrowserClient = (url?: string, key?: string) => {
   const finalUrl = url || getEnv('PUBLIC_SUPABASE_URL');
   const finalKey = key || getEnv('PUBLIC_SUPABASE_ANON_KEY');
 
-  if (!finalUrl || !finalKey) return null as any;
+  if (!finalUrl || !finalKey) {
+    if (isBrowser) {
+      console.warn('[Supabase Browser Client] Initialization failed: Missing URL or Key', {
+        hasUrl: !!finalUrl,
+        hasKey: !!finalKey,
+        metaEnvUrl: !!import.meta.env.PUBLIC_SUPABASE_URL,
+        metaEnvKey: !!import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+      });
+    }
+    return null as any;
+  }
 
   browserClient = createBrowserClient(finalUrl, finalKey);
   return browserClient;

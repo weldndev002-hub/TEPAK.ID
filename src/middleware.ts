@@ -6,8 +6,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
   try {
     const url = new URL(request.url);
     
-    // Capture Environment - Use import.meta.env for Astro v6
-    let runtimeEnv: Record<string, any> = import.meta.env || {};
+    // Capture Environment - Use import.meta.env for Astro v6 + locals.runtime fallback
+    // @ts-ignore - locals.runtime might be present in older adapter versions
+    let runtimeEnv: Record<string, any> = { ...(import.meta.env || {}), ...(context.locals?.runtime?.env || {}) };
+
+    // Inject into globalThis for modules like lib/supabase.ts to pick up
+    if (typeof globalThis !== 'undefined' && runtimeEnv) {
+      (globalThis as any).env = { ...((globalThis as any).env || {}), ...runtimeEnv };
+    }
 
     // Bypass Webhooks
     if (url.pathname.includes('/api/payments/duitku/webhook')) {
