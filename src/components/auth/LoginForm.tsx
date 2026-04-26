@@ -113,9 +113,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ supabaseUrl, supabaseAnonK
                 message: err.message,
                 stack: err.stack,
                 name: err.name,
-                fullError: err
+                fullError: err,
+                supabaseExists: !!supabase,
+                envUrl: !!supabaseUrl,
+                envKey: !!supabaseAnonKey
             });
-            setEmailError(`Kesalahan sistem: ${err.message || 'Unknown error'}. Cek console untuk detail.`);
+            setEmailError(`Kesalahan sistem: ${err.message || 'Unknown error'}. Cek console untuk detail diagnostik.`);
         } finally {
             setIsLoading(false);
         }
