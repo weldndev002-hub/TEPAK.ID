@@ -13,6 +13,7 @@ export interface WarningModalProps {
     confirmLabel?: string;
     cancelLabel?: string;
     variant?: WarningModalVariant;
+    isLoading?: boolean;
 }
 
 const variantStyles: Record<WarningModalVariant, {
@@ -50,6 +51,7 @@ export const WarningModal: React.FC<WarningModalProps> = ({
     confirmLabel = 'Konfirmasi',
     cancelLabel = 'Batal',
     variant = 'danger',
+    isLoading = false,
 }) => {
     if (!isOpen) return null;
 
@@ -89,12 +91,15 @@ export const WarningModal: React.FC<WarningModalProps> = ({
                         {cancelLabel}
                     </button>
                     <button
-                        onClick={() => { onConfirm(); onClose(); }}
+                        onClick={() => { onConfirm(); }}
+                        disabled={isLoading}
                         className={cn(
-                            "px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all active:scale-95",
-                            styles.confirmBtn
+                            "px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2",
+                            styles.confirmBtn,
+                            isLoading && "opacity-50 cursor-not-allowed scale-100"
                         )}
                     >
+                        {isLoading && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
                         {confirmLabel}
                     </button>
                 </div>

@@ -1660,6 +1660,37 @@ app.get('/subscription/status', async (c) => {
   return c.json(data || { plan_status: 'free', plan_expiry: null, auto_renewal: false });
 });
 
+// 1.2 Cancel Subscription (Turn off Auto-Renewal)
+app.post('/subscription/cancel', async (c) => {
+  const { supabase, user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  try {
+    const { error } = await supabase
+      .from('user_settings')
+      .update({ 
+        auto_renewal: false, 
+        updated_at: new Date().toISOString() 
+      })
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+    
+    // Log the cancellation in history if needed
+    await supabase.from('notifications').insert({
+      user_id: user.id,
+      title: 'Auto-Renewal Dimatikan',
+      message: 'Perpanjangan otomatis langganan Anda telah dinonaktifkan. Anda masih dapat menikmati fitur premium hingga masa aktif berakhir.',
+      type: 'info'
+    });
+
+    return c.json({ success: true });
+  } catch (err: any) {
+    console.error('[Subscription Cancel API] Error:', err);
+    return c.json({ error: err.message }, 500);
+  }
+});
+
 // 1.1 Get Subscription History
 app.get('/subscription/history', async (c) => {
   const { supabase, user } = await getAuthContext(c);

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
+import { WarningModal } from '../ui/WarningModal';
 import {
     TicketIcon,
     CalendarIcon,
@@ -35,6 +36,7 @@ const formatCountdown = (expiryDate: string | null) => {
 const PlanInfoContent = () => {
     const { plan, expiryDate, autoRenewal, upgradeToPlan, cancelSubscription, isLoading } = useSubscription();
     const [countdown, setCountdown] = useState<string | null>(null);
+    const [showCancelModal, setShowCancelModal] = useState(false);
     const [selectedMethod, setSelectedMethod] = useState<string>('SP'); // Default ShopeePay
     const [selectedBillingPeriod, setSelectedBillingPeriod] = useState<BillingPeriod>('monthly');
     const [selectedPlanId, setSelectedPlanId] = useState<string>('pro');
@@ -275,13 +277,15 @@ const PlanInfoContent = () => {
                         <div>
                             <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Manajemen Langganan</h4>
                             <p className="text-[11px] text-slate-500 font-medium mt-1">
-                                {autoRenewal ? 'Perpanjangan otomatis sedang aktif.' : 'Perpanjangan otomatis dinonaktifkan.'}
+                                {autoRenewal 
+                                    ? 'Perpanjangan otomatis sedang aktif.' 
+                                    : `Langganan akan berakhir pada ${formattedExpiry}.`}
                             </p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
                         <Button
-                            onClick={cancelSubscription}
+                            onClick={() => setShowCancelModal(true)}
                             disabled={!autoRenewal || isLoading}
                             variant="ghost"
                             className={`text-slate-400 hover:text-rose-500 px-6 py-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all ${!autoRenewal ? 'opacity-50 grayscale' : ''}`}
@@ -289,6 +293,22 @@ const PlanInfoContent = () => {
                             Matikan Auto-Renew
                         </Button>
                     </div>
+
+                    {/* Cancel Confirmation Modal */}
+                    <WarningModal
+                        isOpen={showCancelModal}
+                        onClose={() => setShowCancelModal(false)}
+                        onConfirm={async () => {
+                            await cancelSubscription();
+                            setShowCancelModal(false);
+                        }}
+                        isLoading={isLoading}
+                        title="Matikan Perpanjangan?"
+                        description={`Apakah Anda yakin ingin mematikan perpanjangan otomatis? Paket Anda tetap dapat digunakan hingga ${formattedExpiry}. Setelah itu, fitur premium akan dinonaktifkan.`}
+                        confirmLabel="Ya, Matikan"
+                        cancelLabel="Batal"
+                        variant="warning"
+                    />
                 </div>
             )}
 
@@ -382,14 +402,13 @@ const PlanInfoContent = () => {
                                                 ✓ Paket Anda Saat Ini
                                             </Button>
                                         ) : isFreePlan ? (
-                                            <a href="/signup" className="block mt-auto">
-                                                <Button
-                                                    variant="ghost"
-                                                    className="w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all bg-slate-50 text-slate-600 hover:bg-slate-100"
-                                                >
-                                                    Downgrade ke Gratis
-                                                </Button>
-                                            </a>
+                                            <Button
+                                                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                                                variant="ghost"
+                                                className="w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all bg-slate-50 text-slate-600 hover:bg-slate-100 mt-auto"
+                                            >
+                                                Matikan Auto-Renew di Atas
+                                            </Button>
                                         ) : (
                                             <div className="space-y-3 mt-auto">
                                                 {/* Billing Period Toggle */}
