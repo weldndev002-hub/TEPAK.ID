@@ -64,52 +64,53 @@ if (user) {
                         <span class="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2 block">Performance Overview</span>
                         <h3 class="text-3xl font-black text-slate-900 tracking-tight uppercase">Real-time Pulse</h3>
                     </div>
-                    <div class="flex gap-3">
-                        <Button variant="ghost" className="bg-slate-50 border-slate-100 flex items-center gap-2 font-black text-[11px] uppercase tracking-wider">
+                    <div class="flex gap-3 no-print">
+                        <Button id="export-pdf-btn" variant="ghost" className="bg-slate-50 border-slate-100 flex items-center gap-2 font-black text-[11px] uppercase tracking-wider">
                             <ArrowDownTrayIcon className="w-4 h-4" /> Export PDF
                         </Button>
-                        <Button variant="primary" className="bg-primary hover:bg-primary/90 flex items-center gap-2 font-black text-[11px] uppercase tracking-wider shadow-sm">
+                        <Button id="share-report-btn" variant="primary" className="bg-primary hover:bg-primary/90 flex items-center gap-2 font-black text-[11px] uppercase tracking-wider shadow-sm">
                             <ShareIcon className="w-4 h-4" /> Share Report
                         </Button>
                     </div>
                 </div>
 
                 {/* Top Row: Metrics (Real-time) */}
-                <IntegratedStatsGrid client:load />
+                <div id="dashboard-content">
+                    <IntegratedStatsGrid client:load />
 
-                <!-- Middle Section: Main Chart & Device Breakdown -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
-                    <div class="lg:col-span-2">
-                        <AnalyticsChart client:visible />
-                    </div>
-                    <div>
-                        <DeviceBreakdown client:visible />
-                    </div>
-                </div>
-
-                <!-- NEW: Advanced Analytics (PRO) Section -->
-                <div class="mb-12">
-                    <div class="flex items-center gap-3 mb-8">
-                        <div class="h-px flex-1 bg-slate-100"></div>
-                        <div class="px-6 py-2 bg-blue-50 rounded-full border border-blue-100">
-                            <span class="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em]">Pro Performance Insights</span>
+                    <!-- Middle Section: Main Chart & Device Breakdown -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+                        <div class="lg:col-span-2">
+                            <AnalyticsChart client:visible />
                         </div>
-                        <div class="h-px flex-1 bg-slate-100"></div>
+                        <div>
+                            <DeviceBreakdown client:visible />
+                        </div>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                        <TrafficSourceAnalytics client:visible />
-                        <ConversionFunnel client:visible />
-                    </div>
-                    <div class="grid grid-cols-1 gap-6">
-                        <GeoAnalytics client:visible />
-                    </div>
-                </div>
+                    <!-- NEW: Advanced Analytics (PRO) Section -->
+                    <div class="mb-12">
+                        <div class="flex items-center gap-3 mb-8">
+                            <div class="h-px flex-1 bg-slate-100"></div>
+                            <div class="px-6 py-2 bg-blue-50 rounded-full border border-blue-100">
+                                <span class="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em]">Pro Performance Insights</span>
+                            </div>
+                            <div class="h-px flex-1 bg-slate-100"></div>
+                        </div>
 
-                <!-- Bottom Section: Detailed Stats -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-32">
-                    <BrowserPerformance client:visible />
-                    <TopLinksTable client:visible />
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                            <TopLinksTable client:visible />
+                            <TrafficSourceAnalytics client:visible />
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <ConversionFunnel client:visible />
+                            <div class="grid grid-cols-1 gap-6">
+                                <BrowserPerformance client:visible />
+                                <GeoAnalytics client:visible />
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </main>
 
@@ -117,5 +118,61 @@ if (user) {
             <BottomNavbar activePage="dashboard" client:load />
         </div>
     </div>
-</BaseLayout>
 
+    <style is:global>
+        @media print {
+            .no-print, aside, nav, button, .bottom-navbar {
+                display: none !important;
+            }
+            body {
+                background: white !important;
+                padding: 0 !important;
+            }
+            main {
+                padding: 0 !important;
+                margin: 0 !important;
+                max-width: 100% !important;
+            }
+            #dashboard-content {
+                display: block !important;
+            }
+            .flex-1 {
+                padding-top: 0 !important;
+            }
+        }
+    </style>
+
+    <script>
+        // Handle Export PDF
+        const exportBtn = document.getElementById('export-pdf-btn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => {
+                window.print();
+            });
+        }
+
+        // Handle Share Report
+        const shareBtn = document.getElementById('share-report-btn');
+        if (shareBtn) {
+            shareBtn.addEventListener('click', async () => {
+                const shareData = {
+                    title: 'Laporan Performa Tepak.ID',
+                    text: 'Lihat ringkasan performa digital saya di Tepak.ID.',
+                    url: window.location.href
+                };
+
+                try {
+                    if (navigator.share) {
+                        await navigator.share(shareData);
+                    } else {
+                        // Fallback: Copy to clipboard
+                        await navigator.clipboard.writeText(window.location.href);
+                        alert('Link laporan berhasil disalin ke clipboard!');
+                    }
+                } catch (err) {
+                    console.error('Error sharing:', err);
+                }
+            });
+        }
+    </script>
+</BaseLayout>
