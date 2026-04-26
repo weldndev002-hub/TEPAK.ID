@@ -53,6 +53,15 @@ const getEnv = (key: string): string | undefined => {
     }
   } catch (e) { }
 
+  try {
+    // 4. Browser Globals (Injected via script tag)
+    if (typeof window !== 'undefined') {
+      if ((window as any).__SUPABASE_CONFIG__?.[key]) {
+        return clean((window as any).__SUPABASE_CONFIG__[key], key.includes('URL'));
+      }
+    }
+  } catch (e) {}
+
   return undefined;
 };
 

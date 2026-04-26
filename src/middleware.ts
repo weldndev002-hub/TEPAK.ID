@@ -6,24 +6,32 @@ export const onRequest = defineMiddleware(async (context, next) => {
   try {
     const url = new URL(request.url);
     
-    // Capture Environment - Safe detection for Astro/Cloudflare
+    // Capture Environment - Aggressive detection for Astro/Cloudflare
     let runtimeEnv: Record<string, any> = { ...(import.meta.env || {}) };
     try {
-      // 1. Try context.locals.runtime (Older/Standard Astro pattern)
       // @ts-ignore
-      if (context.locals?.runtime?.env) {
-        runtimeEnv = { ...runtimeEnv, ...context.locals.runtime.env };
-      } 
-      // 2. Try direct import (Modern Cloudflare standard)
-      else {
-        try {
-          // @ts-ignore
-          const cf = await import('cloudflare:workers');
-          if (cf?.env) {
-            runtimeEnv = { ...runtimeEnv, ...cf.env };
-          }
-        } catch (e) {}
+      const locals = context.locals || {};
+      // @ts-ignore
+      const cfRuntime = locals.runtime || context.runtime || {};
+      
+      const envSources = [
+        cfRuntime.env,
+        (globalThis as any).process?.env,
+        (globalThis as any).env
+      ];
+
+      for (const source of envSources) {
+        if (source && typeof source === 'object') {
+          runtimeEnv = { ...runtimeEnv, ...source };
+        }
       }
+
+      // Modern Cloudflare Standard (Internal import)
+      try {
+        // @ts-ignore
+        const cf = await import('cloudflare:workers');
+        if (cf?.env) runtimeEnv = { ...runtimeEnv, ...cf.env };
+      } catch (e) {}
     } catch (e) { }
 
     // Inject into globalThis for modules like lib/supabase.ts to pick up
