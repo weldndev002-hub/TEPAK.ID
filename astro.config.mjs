@@ -16,10 +16,7 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()],
     define: {
-      // Make env vars available at build time (must be set in environment)
-      'import.meta.env.PUBLIC_SUPABASE_URL': JSON.stringify(env.PUBLIC_SUPABASE_URL || ''),
-      'import.meta.env.PUBLIC_SUPABASE_ANON_KEY': JSON.stringify(env.PUBLIC_SUPABASE_ANON_KEY || ''),
-      'import.meta.env.PUBLIC_DUITKU_MERCHANT_CODE': JSON.stringify(env.PUBLIC_DUITKU_MERCHANT_CODE || ''),
+      // Avoid hardcoding empty strings at build time
     },
     ssr: {
       noExternal: ['@heroicons/react', 'lucide-react', '@supabase/supabase-js', '@supabase/ssr']
