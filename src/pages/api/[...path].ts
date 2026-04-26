@@ -1396,13 +1396,43 @@ app.get('/analytics/dashboard', async (c) => {
       .sort((a, b) => b.percentage - a.percentage)
       .slice(0, 3);
 
+    // --- DAILY TIME SERIES AGGREGATION ---
+    const dailyData: any = {};
+    const curr = new Date(startDate);
+    while (curr <= endDate) {
+      const dStr = curr.toISOString().split('T')[0];
+      dailyData[dStr] = { views: 0, clicks: 0, sales: 0 };
+      curr.setDate(curr.getDate() + 1);
+    }
+
+    ev.forEach(e => {
+      const dStr = new Date(e.created_at).toISOString().split('T')[0];
+      if (dailyData[dStr]) {
+        if (e.event_type === 'view' || e.event_type === 'page_view') dailyData[dStr].views++;
+        if (e.event_type === 'click') dailyData[dStr].clicks++;
+      }
+    });
+
+    ord.forEach(o => {
+      const dStr = new Date(o.created_at).toISOString().split('T')[0];
+      if (dailyData[dStr]) dailyData[dStr].sales += (o.net_amount || (o.amount * 0.95));
+    });
+
+    const labels = Object.keys(dailyData).map(d => {
+      const date = new Date(d);
+      return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+    });
+    const views = Object.values(dailyData).map((v: any) => v.views);
+    const clicks = Object.values(dailyData).map((v: any) => v.clicks);
+    const sales = Object.values(dailyData).map((v: any) => v.sales);
+
     return c.json({
       totalViews,
       totalClicks,
       sales: { total_revenue: totalRevenue, order_count: orderCount },
       devices,
       browsers: sortedBrowsers,
-      time_series: { labels: [], views: [], clicks: [], sales: [] }
+      time_series: { labels, views, clicks, sales }
     });
   } catch (err: any) {
     return c.json({ error: err.message }, 500);
