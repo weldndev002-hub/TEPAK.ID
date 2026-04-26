@@ -6,15 +6,33 @@ import { EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/
 import { getSupabaseBrowserClient } from '../../lib/supabase';
 
 interface LoginFormProps {
-    supabaseUrl?: string;
-    supabaseAnonKey?: string;
+    envUrl: string;
+    envKey: string;
 }
 
-export const LoginForm: React.FC<LoginFormProps> = ({ supabaseUrl, supabaseAnonKey }) => {
-    // Initialized client safely
-    const [supabase] = useState(() => {
-        return getSupabaseBrowserClient(supabaseUrl, supabaseAnonKey);
-    });
+export const LoginForm: React.FC<LoginFormProps> = ({ envUrl, envKey }) => {
+    // State-based client for better reactivity
+    const [supabase, setSupabase] = useState<any>(null);
+
+    // Pendekatan useEffect untuk Inisialisasi sesuai permintaan
+    useEffect(() => {
+        if (envUrl && envKey) {
+            try {
+                const client = getSupabaseBrowserClient(envUrl, envKey);
+                setSupabase(client);
+                if (!client) {
+                    console.error('[LoginForm] getSupabaseBrowserClient returned null even with props');
+                }
+            } catch (err) {
+                console.error('[LoginForm] Initialization Error:', err);
+            }
+        } else {
+            console.warn('[LoginForm] Waiting for props or missing credentials', { 
+                hasUrl: !!envUrl, 
+                hasKey: !!envKey 
+            });
+        }
+    }, [envUrl, envKey]);
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -29,6 +47,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ supabaseUrl, supabaseAnonK
         setEmailError('');
         setPasswordError('');
 
+        if (!supabase) {
+            console.error('[LoginForm] FATAL: Supabase client not initialized');
+            setEmailError('Kesalahan sistem: Koneksi ke database belum siap. Mohon muat ulang halaman.');
+            return;
+        }
+
         if (password.length < 6) {
             setPasswordError('Kata sandi minimal 6 karakter');
             return;
@@ -39,13 +63,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ supabaseUrl, supabaseAnonK
         try {
             console.log('[LoginForm] Auth attempt:', { email, hasPassword: !!password });
             
-            if (!supabase) {
-                const msg = 'Supabase client not initialized';
-                console.error('[LoginForm] FATAL:', msg);
-                throw new Error(msg);
-            }
-
-            console.log('[LoginForm] Calling signInWithPassword...');
             const { error } = await supabase.auth.signInWithPassword({
                 email,
                 password,

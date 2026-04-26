@@ -143,8 +143,8 @@ const debugData = isDebug ? {
                         {/* INTERACTIVE FORM COMPONENT */}
                         <LoginForm 
                             client:only="react" 
-                            supabaseUrl={supabaseUrl} 
-                            supabaseAnonKey={supabaseAnonKey} 
+                            envUrl={supabaseUrl} 
+                            envKey={supabaseAnonKey} 
                         />
 
                         <div class="mt-12 pt-8 border-t border-slate-50 text-center">
