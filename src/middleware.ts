@@ -6,9 +6,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
   try {
     const url = new URL(request.url);
     
-    // Capture Environment - Use import.meta.env for Astro v6 + locals.runtime fallback
-    // @ts-ignore - locals.runtime might be present in older adapter versions
-    let runtimeEnv: Record<string, any> = { ...(import.meta.env || {}), ...(context.locals?.runtime?.env || {}) };
+    // Capture Environment - Safe detection for Astro/Cloudflare
+    let runtimeEnv: Record<string, any> = { ...(import.meta.env || {}) };
+    try {
+      // @ts-ignore - Modern Astro/Cloudflare might use this
+      if (context.locals?.runtime?.env) {
+        runtimeEnv = { ...runtimeEnv, ...context.locals.runtime.env };
+      }
+    } catch (e) {
+      // In some Astro v6 setups, accessing runtime can throw
+    }
 
     // Inject into globalThis for modules like lib/supabase.ts to pick up
     if (typeof globalThis !== 'undefined' && runtimeEnv) {

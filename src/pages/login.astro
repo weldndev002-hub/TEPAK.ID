@@ -23,8 +23,19 @@ const siteName = branding?.site_name || 'Tepak.ID';
 const logoUrl = branding?.logo_url || '/logo-light.png';
 
 // Pass Env to Client Component - Priority: Build-time > Runtime > Injected
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || (Astro.locals as any).runtime?.env?.PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || (Astro.locals as any).runtime?.env?.PUBLIC_SUPABASE_ANON_KEY || '';
+let supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
+let supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
+
+try {
+    // Try to get from Cloudflare runtime if available
+    const runtime = (Astro.locals as any).runtime;
+    if (runtime?.env) {
+        if (!supabaseUrl) supabaseUrl = runtime.env.PUBLIC_SUPABASE_URL || '';
+        if (!supabaseAnonKey) supabaseAnonKey = runtime.env.PUBLIC_SUPABASE_ANON_KEY || '';
+    }
+} catch (e) {
+    // runtime access might throw in Astro v6
+}
 
 // Debug Mode
 const isDebug = Astro.url.searchParams.get('debug') === 'true';
