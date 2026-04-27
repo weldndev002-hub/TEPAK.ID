@@ -61,8 +61,31 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     };
 
     const hasFeature = (featureName: string): boolean => {
-        if (!planDetails || !planDetails.features) return false;
-        return planDetails.features.includes(featureName);
+        // If we have plan details with features, use that
+        if (planDetails?.features && Array.isArray(planDetails.features)) {
+            return planDetails.features.includes(featureName);
+        }
+
+        // Fallback: For paid plans, assume they have core paid features
+        // if planDetails is not available (e.g., network issues, caching)
+        const isPaidPlan = plan !== 'free' && !!plan;
+        if (isPaidPlan) {
+            // Core features that all paid plans should have
+            const corePaidFeatures = [
+                'Digital Product Sales',
+                'Custom Domain (CNAME)',
+                'Analytics',
+                'Customer Management',
+                'WhatsApp Notification',
+                'Facebook Pixel & GA4'
+            ];
+            if (corePaidFeatures.includes(featureName)) {
+                console.log(`[hasFeature] Fallback: Granting "${featureName}" for paid plan "${plan}" (planDetails not loaded)`);
+                return true;
+            }
+        }
+
+        return false;
     };
 
     useEffect(() => {

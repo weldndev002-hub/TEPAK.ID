@@ -70,7 +70,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ isOpen, onClose, inv
                                 </div>
                                 <div>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Paket Langganan</p>
-                                    <p className="text-sm font-bold text-slate-900">{invoiceData.subscription_plans?.name || 'Pro Plan'}</p>
+                                    <p className="text-sm font-bold text-slate-900">{invoiceData.subscription_plans?.name || invoiceData.plan_id?.toUpperCase() || 'Paket Langganan'}</p>
                                 </div>
                             </div>
                         </div>

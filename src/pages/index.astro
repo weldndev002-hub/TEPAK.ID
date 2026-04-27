@@ -109,16 +109,25 @@ try {
         }
 
         if (merchantData) {
-            const { data: productList } = await supabase
-                .from("products")
-                .select("*")
-                .eq(
-                    "merchant_id",
-                    merchantData.user_id || merchantData.profiles.id,
-                )
-                .eq("status", "published")
-                .order("created_at", { ascending: false });
-            products = productList || [];
+            // Only fetch products if merchant has a paid plan
+            const merchantPlanStatus = merchantData.plan_status || 'free';
+            const hasPaidPlan = merchantPlanStatus !== 'free';
+
+            if (hasPaidPlan) {
+                const { data: productList } = await supabase
+                    .from("products")
+                    .select("*")
+                    .eq(
+                        "merchant_id",
+                        merchantData.user_id || merchantData.profiles.id,
+                    )
+                    .eq("status", "published")
+                    .order("created_at", { ascending: false });
+                products = productList || [];
+            } else {
+                // Free users don't have products visible
+                products = [];
+            }
             blocks = merchantData.profiles?.blocks || [];
         }
     }

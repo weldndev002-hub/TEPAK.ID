@@ -2218,7 +2218,17 @@ app.post('/payments/duitku/webhook', async (c) => {
         .eq('invoice_id', merchantOrderId)
         .single();
 
-      const planIdFromHistory = histRecord?.plan_id || 'pro';
+      // Validate that we have the plan info from history - don't fallback to 'pro' as it causes wrong plan assignment
+      if (!histRecord?.plan_id) {
+        console.error(`[Webhook DuitKu] ❌ CRITICAL: No plan_id found in subscription_history for order ${merchantOrderId}`);
+        console.error(`[Webhook DuitKu] histRecord:`, histRecord);
+        return c.json({
+          error: 'Plan information not found in subscription history',
+          message: 'The subscription history record is missing plan_id. Please contact support.'
+        }, 500);
+      }
+
+      const planIdFromHistory = histRecord.plan_id;
       const billingPeriodFromHistory = histRecord?.billing_period || 'monthly';
 
       console.log('[Webhook DuitKu] Plan ID (from history):', planIdFromHistory);
@@ -2432,7 +2442,13 @@ app.post('/payments/duitku/webhook', async (c) => {
 
             if (result.success) {
               console.log(`[Webhook DuitKu] ✅ Digital delivery created successfully with token: ${result.token}`);
-              console.log(`[Webhook DuitKu] Email should have been sent to: ${customerEmail}`);
+              if (result.emailSent) {
+                console.log(`[Webhook DuitKu] ✅ Email sent successfully to: ${customerEmail}`);
+              } else if (result.emailError) {
+                console.error(`[Webhook DuitKu] ⚠️ Digital delivery created but email failed: ${result.emailError}`);
+                // Log this for admin monitoring - customer won't receive email
+                console.error(`[Webhook DuitKu] Order ${orderData.id} needs manual attention - email not sent to ${customerEmail}`);
+              }
             } else {
               console.error(`[Webhook DuitKu] ❌ Failed to create digital delivery: ${result.error}`);
               // Continue anyway - don't fail the webhook

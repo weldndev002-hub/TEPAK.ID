@@ -164,10 +164,25 @@ export async function createDigitalDelivery(
 
         // ALWAYS send the email regardless of DB status
         console.log('[Digital Delivery] Preparing to send email to:', customerEmail);
-        await sendDigitalDeliveryEmail(customerEmail, token, downloadUrl, siteBaseUrl);
-        console.log('[Digital Delivery] ✅ Email sending process completed');
+        let emailSent = false;
+        let emailError = null;
 
-        return { success: true, token };
+        try {
+            await sendDigitalDeliveryEmail(customerEmail, token, downloadUrl, siteBaseUrl);
+            emailSent = true;
+            console.log('[Digital Delivery] ✅ Email sent successfully');
+        } catch (emailErr: any) {
+            emailError = emailErr.message;
+            console.error('[Digital Delivery] ⚠️ Email sending failed:', emailErr.message);
+            // Don't fail the whole process - we still created the digital delivery record
+        }
+
+        return {
+            success: true,
+            token,
+            emailSent,
+            emailError: emailError || undefined
+        };
     } catch (error: any) {
         console.error('[Digital Delivery] ❌ Error in createDigitalDelivery:', error.message);
         console.error('[Digital Delivery] Error stack:', error.stack);
@@ -195,16 +210,25 @@ async function sendDigitalDeliveryEmail(
 
         // Get Resend API key from environment only
         const resendApiKey = getEnv('RESEND_API_KEY');
-        console.log(`[Digital Delivery Email] Resend API Key present: ${!!resendApiKey}`);
-        console.log(`[Digital Delivery Email] Resend API Key format: ${resendApiKey ? `${resendApiKey.substring(0, 10)}...` : 'MISSING'}`);
+        const isCloudflareWorker = typeof WebSocketPair !== 'undefined' || (typeof globalThis !== 'undefined' && (globalThis as any).WebSocketPair);
+
+        console.log(`[Digital Delivery Email] Environment check:`);
+        console.log(`  - Resend API Key present: ${!!resendApiKey}`);
+        console.log(`  - Running in Cloudflare Worker: ${isCloudflareWorker}`);
+        console.log(`  - Available env keys: ${Object.keys((globalThis as any).env || {}).filter(k => !k.includes('KEY') && !k.includes('SECRET')).join(', ') || 'N/A'}`);
 
         if (!resendApiKey) {
             console.error('[Digital Delivery Email] ❌ RESEND_API_KEY is required but not set in environment');
-            throw new Error('RESEND_API_KEY is not configured');
+            console.error('[Digital Delivery Email] Please set RESEND_API_KEY in your Cloudflare Workers environment variables or .env file');
+            throw new Error('RESEND_API_KEY is not configured. Email cannot be sent without API key.');
         }
 
         // Create a user-friendly download page URL
-        const siteUrl = siteBaseUrl || getEnv('PUBLIC_SITE_URL') || 'https://tepak.id';
+        const siteUrl = siteBaseUrl || getEnv('PUBLIC_SITE_URL');
+        if (!siteUrl) {
+            console.error('[Digital Delivery Email] ❌ PUBLIC_SITE_URL is not configured');
+            throw new Error('PUBLIC_SITE_URL environment variable is required');
+        }
         const downloadPageUrl = `${siteUrl}/digital-delivery/${token}?email=${encodeURIComponent(toEmail)}`;
         console.log(`[Digital Delivery Email] Download page URL: ${downloadPageUrl}`);
 
