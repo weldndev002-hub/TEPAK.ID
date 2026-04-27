@@ -78,15 +78,20 @@ let isImage = false;
 let buyerEmail = "";
 let orderId = "";
 let accessCount = 0;
+let delivery: any = null;
+let error: any = null;
 
 if (token && email && supabase && !needsVerification) {
     try {
         // Verify token access - use left join (remove !inner) to handle cases without order links
-        const { data: delivery, error } = await supabase
+        const { data, error: fetchError } = await supabase
             .from("digital_deliveries")
             .select("*, orders(id, customer_id, customers(email, name))")
             .eq("token", token)
             .single();
+            
+        delivery = data;
+        error = fetchError;
 
         if (error || !delivery) {
             errorMessage = "Token tidak valid atau telah kadaluarsa.";
