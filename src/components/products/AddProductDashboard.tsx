@@ -21,8 +21,18 @@ import {
 } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
+import { useSubscription } from '../../context/SubscriptionContext';
 
 export const AddProductDashboard = () => {
+    const { hasFeature, isLoading: subLoading } = useSubscription();
+
+    React.useEffect(() => {
+        // Block access if feature is disabled in Admin
+        if (!subLoading && !hasFeature('Digital Product Sales')) {
+            window.location.replace('/dashboard');
+        }
+    }, [hasFeature, subLoading]);
+
     const [status, setStatus] = useState(true);
     const [visibility, setVisibility] = useState(true);
     const [isDirty, setIsDirty] = useState(false);
@@ -31,6 +41,18 @@ export const AddProductDashboard = () => {
     const handleInputChange = () => {
         if (!isDirty) setIsDirty(true);
     };
+
+    if (subLoading) {
+        return (
+            <div className="flex-1 flex items-center justify-center bg-[#F8FAFC] min-h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
+    if (!hasFeature('Digital Product Sales')) {
+        return null; // Will redirect via useEffect
+    }
     const [limitDownload, setLimitDownload] = useState(false);
     const [price, setPrice] = useState<string>('');
     const [productFile, setProductFile] = useState<File | null>(null);

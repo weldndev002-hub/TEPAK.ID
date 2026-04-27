@@ -56,7 +56,10 @@ export const LightSidebar: React.FC<LightSidebarProps> = (props) => {
 const LightSidebarContent: React.FC<LightSidebarProps> = ({ activePage = 'dashboard' }) => {
   const [username, setUsername] = useState<string | null>(null);
   const { branding } = useBranding();
-  const { plan, isLoading: subLoading } = useSubscription();
+  const { plan, isLoading: subLoading, hasFeature } = useSubscription();
+  const isPaid = plan !== 'free' && !!plan;
+  const showAnalytics = hasFeature('Analytics');
+  const showCustomers = hasFeature('Customer Management');
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -75,10 +78,6 @@ const LightSidebarContent: React.FC<LightSidebarProps> = ({ activePage = 'dashbo
   }, []);
 
   const supportWA = branding?.whatsapp_number?.replace(/[^0-9]/g, '') || '628';
-  
-  // Logic to determine which features to show
-  const isPro = plan === 'pro' || plan === 'premium'; // Basic check
-  const isFree = plan === 'free' || !plan;
 
   return (
     <>
@@ -89,12 +88,11 @@ const LightSidebarContent: React.FC<LightSidebarProps> = ({ activePage = 'dashbo
         <nav className="flex-1 space-y-1 pt-16 md:pt-20">
           <NavItem icon={Squares2X2Icon} label="Dashboard" href="/dashboard" active={activePage === 'dashboard'} />
           
-          {/* Analytics & Customers only for non-free users */}
-          {!isFree && (
-            <>
-              <NavItem icon={ChartBarIcon} label="Analytics" href="/analytics" active={activePage === 'analytics'} />
-              <NavItem icon={UsersIcon} label="Customers" href="/customers" active={activePage === 'customers'} />
-            </>
+          {showAnalytics && (
+            <NavItem icon={ChartBarIcon} label="Analytics" href="/analytics" active={activePage === 'analytics'} />
+          )}
+          {showCustomers && (
+            <NavItem icon={UsersIcon} label="Customers" href="/customers" active={activePage === 'customers'} />
           )}
 
           <NavItem icon={WindowIcon} label="Editor" href="/editor" active={activePage === 'editor'} />

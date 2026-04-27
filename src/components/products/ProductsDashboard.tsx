@@ -16,16 +16,37 @@ import {
     PencilSquareIcon,
     TrashIcon,
     CheckCircleIcon,
-    ExclamationTriangleIcon,
     XMarkIcon
 } from '@heroicons/react/24/outline';
+import { useSubscription } from '../../context/SubscriptionContext';
 
 export const ProductsDashboard = () => {
+    const { hasFeature, isLoading: subLoading } = useSubscription();
+
+    React.useEffect(() => {
+        // Block access if feature is disabled in Admin
+        if (!subLoading && !hasFeature('Digital Product Sales')) {
+            window.location.replace('/dashboard');
+        }
+    }, [hasFeature, subLoading]);
+
     const [products, setProducts] = React.useState<any[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     const [deleteModal, setDeleteModal] = React.useState(false);
     const [selectedProduct, setSelectedProduct] = React.useState<any>(null);
     const [toast, setToast] = React.useState<string | null>(null);
+
+    if (subLoading) {
+        return (
+            <div className="flex-1 px-8 mt-24 pb-12 flex items-center justify-center min-h-screen bg-[#f8f9fb]">
+                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
+
+    if (!hasFeature('Digital Product Sales')) {
+        return null; // Will redirect via useEffect
+    }
 
     const showToast = (msg: string) => {
         setToast(msg);

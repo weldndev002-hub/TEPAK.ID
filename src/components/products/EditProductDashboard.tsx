@@ -16,11 +16,20 @@ import {
     QuestionMarkCircleIcon,
     ExclamationTriangleIcon,
     ExclamationCircleIcon,
-    CheckCircleIcon,
     XMarkIcon
 } from '@heroicons/react/24/outline';
+import { useSubscription } from '../../context/SubscriptionContext';
 
 export const EditProductDashboard = () => {
+    const { hasFeature, isLoading: subLoading } = useSubscription();
+
+    React.useEffect(() => {
+        // Block access if feature is disabled in Admin
+        if (!subLoading && !hasFeature('Digital Product Sales')) {
+            window.location.replace('/dashboard');
+        }
+    }, [hasFeature, subLoading]);
+
     // States for data
     const [id, setId] = useState<string | null>(null);
     const [title, setTitle] = useState('');
@@ -41,6 +50,21 @@ export const EditProductDashboard = () => {
     const [toast, setToast] = useState<string | null>(null);
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [showDiscardModal, setShowDiscardModal] = useState(false);
+
+    if (subLoading) {
+        return (
+            <div className="flex-1 flex items-center justify-center min-h-screen bg-[#F8FAFC]">
+                <div className="text-center group">
+                    <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-xs font-black text-primary uppercase tracking-widest">Validating Access...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!hasFeature('Digital Product Sales')) {
+        return null; // Will redirect via useEffect
+    }
     const [showFileDeleteModal, setShowFileDeleteModal] = useState(false);
     const [errors, setErrors] = useState<{ system?: string; price?: string }>({});
 

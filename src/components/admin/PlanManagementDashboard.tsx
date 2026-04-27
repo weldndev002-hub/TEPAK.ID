@@ -348,7 +348,7 @@ export const PlanManagementDashboard = () => {
     const allFeatureNames = React.useMemo(() => {
         const set = new Set<string>();
         // Default standard features
-        ['Landing Page Builder', 'Digital Product Sales', 'Custom Domain (CNAME)', 'WhatsApp Notification'].forEach(f => set.add(f));
+        ['Landing Page Builder', 'Digital Product Sales', 'Custom Domain (CNAME)', 'WhatsApp Notification', 'Analytics', 'Customer Management'].forEach(f => set.add(f));
         // Add features from current plans
         plans.forEach(p => (p.features || []).forEach((f: string) => set.add(f)));
         // Add new feature if being added

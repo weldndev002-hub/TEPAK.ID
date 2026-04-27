@@ -408,13 +408,19 @@ const getAuthContext = async (c: any) => {
         // SUPER FALLBACK: Try to decode JWT manually for session existence check
         // This is "Nuclear" mode: we trust the client has a valid cookie even if Supabase API is flaky
         try {
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          if (payload && payload.sub) {
-            console.log('[getAuthContext] Nuclear Success: Decoded user ID from JWT:', payload.sub);
-            return { supabase, user: { id: payload.sub, email: payload.email } as any };
+          const parts = token.split('.');
+          if (parts.length === 3) {
+            // Use a safer way to decode base64 if possible
+            const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+            const payload = JSON.parse(atob(base64));
+            if (payload && payload.sub) {
+              console.log('[getAuthContext] Nuclear Success: Decoded user ID from JWT:', payload.sub);
+              return { supabase, user: { id: payload.sub, email: payload.email } as any };
+            }
           }
         } catch (jwtErr) {
-          console.error('[getAuthContext] Nuclear Fallback failed:', jwtErr);
+          // Log only a concise warning instead of a full crash log
+          console.warn('[getAuthContext] Nuclear Fallback: Token is invalid or expired.');
         }
       }
     } catch (fErr: any) {
@@ -1812,14 +1818,33 @@ app.get('/subscription/status', async (c) => {
   const { supabase, user } = await getAuthContext(c);
   if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
-  const { data, error } = await supabase
-    .from('user_settings')
-    .select('plan_status, plan_expiry, auto_renewal')
-    .eq('user_id', user.id)
-    .single();
+  try {
+    const { data: settings, error: settingsError } = await supabase
+      .from('user_settings')
+      .select('plan_status, plan_expiry, auto_renewal')
+      .eq('user_id', user.id)
+      .single();
 
-  if (error && error.code !== 'PGRST116') return c.json({ error: error.message }, 500);
-  return c.json(data || { plan_status: 'free', plan_expiry: null, auto_renewal: false });
+    if (settingsError && settingsError.code !== 'PGRST116') throw settingsError;
+
+    const planId = settings?.plan_status || 'free';
+
+    // Fetch plan details (features, config, etc)
+    const { data: planDetails } = await supabase
+      .from('subscription_plans')
+      .select('id, name, features, config')
+      .eq('id', planId)
+      .single();
+
+    return c.json({
+      plan_status: planId,
+      plan_expiry: settings?.plan_expiry || null,
+      auto_renewal: settings?.auto_renewal || false,
+      plan_details: planDetails || { id: planId, name: planId.toUpperCase(), features: [], config: {} }
+    });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
 });
 
 // 1.2 Cancel Subscription (Turn off Auto-Renewal)
@@ -3377,7 +3402,7 @@ app.get('/admin/overview', async (c) => {
     ] = await Promise.all([
       supabase.from('profiles').select('*', { count: 'exact', head: true }),
       supabase.from('user_settings').select('*', { count: 'exact', head: true }).eq('plan_status', 'pro'),
-      supabase.from('orders').select('amount').eq('status', 'success'),
+      supabase.from('orders').select('amount').in('status', ['success', 'paid']),
       supabase.from('withdrawals').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
       supabase.from('profiles').select('full_name, username, created_at').order('created_at', { ascending: false }).limit(5),
       supabase.from('withdrawals').select('amount, status, requested_at, profiles(full_name, username)').order('requested_at', { ascending: false }).limit(5)

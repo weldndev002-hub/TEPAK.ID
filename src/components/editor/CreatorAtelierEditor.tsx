@@ -17,12 +17,22 @@ import { BlockSettingsForm } from './BlockSettingsForm';
 import { PhoneFrame } from './PhoneFrame';
 import { OnboardingForm } from '../onboarding/OnboardingForm';
 import { BrandingProvider, type BrandingData } from '../../hooks/useBranding';
+import { useSubscription } from '../../context/SubscriptionContext';
 
 interface CreatorAtelierEditorProps {
     initialBranding?: BrandingData | null;
 }
 
 export const CreatorAtelierEditor: React.FC<CreatorAtelierEditorProps> = ({ initialBranding }) => {
+    const { hasFeature, isLoading: subLoading } = useSubscription();
+
+    React.useEffect(() => {
+        // Block access if feature is disabled in Admin
+        if (!subLoading && !hasFeature('Landing Page Builder')) {
+            window.location.replace('/dashboard');
+        }
+    }, [hasFeature, subLoading]);
+
     // URL Search Params
     const queryParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
     const initialTheme = queryParams?.get('theme') || 'atelier-dark';
@@ -38,6 +48,18 @@ export const CreatorAtelierEditor: React.FC<CreatorAtelierEditorProps> = ({ init
     const [isLoadingProfile, setIsLoadingProfile] = useState(true);
     const [activeBlockType, setActiveBlockType] = useState<string | null>(null);
     const [blocks, setBlocks] = useState<any[]>([]);
+
+    if (subLoading) {
+        return (
+            <div className="w-full h-screen flex items-center justify-center bg-slate-50">
+                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
+
+    if (!hasFeature('Landing Page Builder')) {
+        return null; // Will redirect via useEffect
+    }
 
     // Fetch Profile Data
     React.useEffect(() => {

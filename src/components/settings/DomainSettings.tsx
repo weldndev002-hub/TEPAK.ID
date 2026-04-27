@@ -18,8 +18,18 @@ import {
 } from '@heroicons/react/24/outline';
 import { z } from 'zod';
 import { cn } from '../../lib/utils';
+import { useSubscription } from '../../context/SubscriptionContext';
 
 export const DomainSettingsDashboard = () => {
+    const { hasFeature, isLoading: subLoading } = useSubscription();
+
+    React.useEffect(() => {
+        // Block access if feature is disabled in Admin
+        if (!subLoading && !hasFeature('Custom Domain (CNAME)')) {
+            window.location.replace('/dashboard');
+        }
+    }, [hasFeature, subLoading]);
+
     const [domainInput, setDomainInput] = React.useState('');
     const [status, setStatus] = React.useState<'idle' | 'pending' | 'active'>('idle');
     const [isLoading, setIsLoading] = React.useState(true);
@@ -27,6 +37,21 @@ export const DomainSettingsDashboard = () => {
     const [error, setError] = React.useState('');
     const [toast, setToast] = React.useState<string | null>(null);
     const [deleteModal, setDeleteModal] = React.useState(false);
+
+    if (subLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-slate-50">
+                <div className="flex flex-col items-center gap-4">
+                    <ArrowPathIcon className="w-10 h-10 text-primary animate-spin" />
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Validating Plan...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!hasFeature('Custom Domain (CNAME)')) {
+        return null; // Will redirect via useEffect
+    }
 
     const showToast = (msg: string) => {
         setToast(msg);

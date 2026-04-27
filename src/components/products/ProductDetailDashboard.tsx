@@ -18,7 +18,18 @@ import {
     ChartBarIcon,
 } from '@heroicons/react/24/outline';
 
+import { useSubscription } from '../../context/SubscriptionContext';
+
 export const ProductDetailDashboard = () => {
+    const { hasFeature, isLoading: subLoading } = useSubscription();
+
+    useEffect(() => {
+        // Block access if feature is disabled in Admin
+        if (!subLoading && !hasFeature('Digital Product Sales')) {
+            window.location.replace('/dashboard');
+        }
+    }, [hasFeature, subLoading]);
+
     const [product, setProduct] = useState<any>(null);
     const [stats, setStats] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -53,6 +64,18 @@ export const ProductDetailDashboard = () => {
             setIsLoading(false);
         }
     };
+
+    if (subLoading) {
+        return (
+            <div className="flex-1 flex items-center justify-center bg-[#F8FAFC] min-h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
+    if (!hasFeature('Digital Product Sales')) {
+        return null; // Will redirect via useEffect
+    }
 
     if (isLoading) {
         return (

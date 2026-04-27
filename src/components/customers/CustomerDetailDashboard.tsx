@@ -18,7 +18,10 @@ import {
     ArrowPathIcon
 } from '@heroicons/react/24/outline';
 
+import { useSubscription } from '../../context/SubscriptionContext';
+
 export const CustomerDetailDashboard = () => {
+    const { hasFeature } = useSubscription();
     const [customer, setCustomer] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [toast, setToast] = useState<string | null>(null);
@@ -26,6 +29,8 @@ export const CustomerDetailDashboard = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [editData, setEditData] = useState({ name: '', email: '', phone: '', address_text: '' });
     const [notes, setNotes] = useState('');
+    
+    const showWhatsApp = hasFeature('WhatsApp Notification');
 
     const showToast = (msg: string) => {
         setToast(msg);
@@ -124,7 +129,7 @@ export const CustomerDetailDashboard = () => {
 
     const handleSendMessage = () => {
         if (!customer) return;
-        if (customer.phone) {
+        if (customer.phone && showWhatsApp) {
             const cleanPhone = customer.phone.replace(/\D/g, '');
             const waPhone = cleanPhone.startsWith('0') ? '62' + cleanPhone.substring(1) : cleanPhone;
             window.open(`https://wa.me/${waPhone}`, '_blank');
@@ -206,8 +211,12 @@ export const CustomerDetailDashboard = () => {
                         className="flex items-center gap-2 px-5 py-2.5 bg-[#465f89] hover:bg-[#344d77] rounded-xl font-bold text-sm text-white shadow-lg shadow-blue-900/20 active:scale-95 transition-all"
                         onClick={handleSendMessage}
                     >
-                        <ChatBubbleLeftEllipsisIcon className="w-4 h-4" />
-                        {customer.phone ? 'WhatsApp' : 'Send Email'}
+                        {(customer.phone && showWhatsApp) ? (
+                            <ChatBubbleLeftEllipsisIcon className="w-4 h-4" />
+                        ) : (
+                            <EnvelopeIcon className="w-4 h-4" />
+                        )}
+                        {(customer.phone && showWhatsApp) ? 'WhatsApp' : 'Send Email'}
                     </button>
                 </div>
             </header>

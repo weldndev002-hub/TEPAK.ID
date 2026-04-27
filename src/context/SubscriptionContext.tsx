@@ -6,6 +6,7 @@ type BillingPeriod = 'monthly' | 'yearly';
 
 interface SubscriptionContextType {
     plan: Plan;
+    planDetails: any | null;
     expiryDate: string | null;
     autoRenewal: boolean;
     isLoading: boolean;
@@ -15,12 +16,14 @@ interface SubscriptionContextType {
     refreshStatus: () => Promise<void>;
     transactions: any[];
     syncStatus: () => Promise<void>;
+    hasFeature: (featureName: string) => boolean;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
 
 export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [plan, setPlan] = useState<Plan>('free');
+    const [planDetails, setPlanDetails] = useState<any | null>(null);
     const [expiryDate, setExpiryDate] = useState<string | null>(null);
     const [autoRenewal, setAutoRenewal] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -47,6 +50,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
                     setPlan(data.plan_status as Plan);
                     setExpiryDate(data.plan_expiry);
                     setAutoRenewal(data.auto_renewal);
+                    setPlanDetails(data.plan_details || null);
                 }
             }
         } catch (err) {
@@ -54,6 +58,11 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const hasFeature = (featureName: string): boolean => {
+        if (!planDetails || !planDetails.features) return false;
+        return planDetails.features.includes(featureName);
     };
 
     useEffect(() => {
@@ -121,6 +130,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     return (
         <SubscriptionContext.Provider value={{
             plan,
+            planDetails,
             expiryDate,
             autoRenewal,
             isLoading,
@@ -129,7 +139,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
             cancelSubscription,
             refreshStatus,
             transactions,
-            syncStatus
+            syncStatus,
+            hasFeature
         }}>
             {children}
         </SubscriptionContext.Provider>

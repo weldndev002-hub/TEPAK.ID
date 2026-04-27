@@ -14,7 +14,7 @@ export const LightTopNavbar: React.FC = () => {
 };
 
 const LightTopNavbarContent: React.FC = () => {
-    const { plan, isLoading: planLoading } = useSubscription();
+    const { plan, planDetails, isLoading: planLoading } = useSubscription();
     const { branding } = useBranding();
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     const siteName = branding?.site_name || 'TEPAK.ID';
@@ -40,7 +40,8 @@ const LightTopNavbarContent: React.FC = () => {
         fetchProfile();
     }, []);
 
-    const displayPlan = planLoading ? '...' : (plan?.toUpperCase() || 'FREE');
+    const isFree = plan === 'free' || !plan;
+    const planName = planLoading ? '...' : (planDetails?.name || plan?.toUpperCase() || 'FREE');
 
     return (
         <nav 
@@ -60,11 +61,11 @@ const LightTopNavbarContent: React.FC = () => {
                 {/* Plan Badge */}
                 <div className={cn(
                     "px-2 md:px-3 py-1 rounded-full text-[7px] md:text-[10px] font-black uppercase tracking-widest border transition-all duration-300 shrink-0",
-                    displayPlan === 'PRO' 
+                    !isFree
                         ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.2)]" 
                         : "bg-slate-100 text-slate-400 border-slate-200"
                 )}>
-                    {displayPlan} <span className="hidden sm:inline">Account</span>
+                    {planName} <span className="hidden sm:inline">Account</span>
                 </div>
 
                 <div className="flex items-center gap-1">

@@ -13,6 +13,15 @@ import { Card } from '../ui/Card';
 import Button from '../ui/Button';
 
 export const AnalyticsDashboard = () => {
+    const { hasFeature, isLoading: subLoading } = useSubscription();
+
+    useEffect(() => {
+        // Block access if feature is disabled in Admin
+        if (!subLoading && !hasFeature('Analytics')) {
+            window.location.replace('/dashboard');
+        }
+    }, [hasFeature, subLoading]);
+
     const [range, setRange] = useState('7d');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -28,6 +37,18 @@ export const AnalyticsDashboard = () => {
             end: end.toISOString().split('T')[0]
         };
     });
+
+    if (subLoading) {
+        return (
+            <div className="w-full h-96 flex items-center justify-center">
+                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
+
+    if (!hasFeature('Analytics')) {
+        return null; // Will redirect via useEffect
+    }
 
     // Simulated Analytics Data
     const [data, setData] = useState({
