@@ -47,13 +47,18 @@ if (Astro.request.method === "POST") {
 // Initialize Supabase client
 let supabase: any = null;
 const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL');
-const supabaseKey = getEnv('SUPABASE_SERVICE_ROLE_KEY') || getEnv('PUBLIC_SUPABASE_ANON_KEY');
+const serviceKey = getEnv('SUPABASE_SERVICE_ROLE_KEY');
+const anonKey = getEnv('PUBLIC_SUPABASE_ANON_KEY');
+const supabaseKey = serviceKey || anonKey;
 
-console.log("[Digital Delivery] Init:", { 
+const keyType = serviceKey ? "SERVICE_ROLE" : (anonKey ? "ANON" : "MISSING");
+
+console.log("[Digital Delivery] Supabase Config:", { 
     hasToken: !!token, 
     hasEmail: !!email, 
     needsVerification,
-    hasUrl: !!supabaseUrl, 
+    url: supabaseUrl ? "OK" : "MISSING",
+    keyType,
     hasKey: !!supabaseKey 
 });
 
@@ -220,10 +225,11 @@ if (!isValid && !needsVerification) {
     const hasOrder = delivery?.orders ? "yes" : "no";
     const hasCust = delivery?.orders?.customers ? "yes" : "no";
     const accEmail = delivery?.accessed_email || "EMPTY";
+    const dbError = fetchError ? fetchError.message : "none";
 
-    const debugParam = `&debug_provided=${encodeURIComponent(email)}&debug_expected=${encodeURIComponent(buyerEmail)}&debug_has_del=${hasDelivery}&debug_has_ord=${hasOrder}&debug_has_cust=${hasCust}&debug_acc=${encodeURIComponent(accEmail)}`;
+    const debugParam = `&debug_provided=${encodeURIComponent(email)}&debug_expected=${encodeURIComponent(buyerEmail)}&debug_has_del=${hasDelivery}&debug_has_ord=${hasOrder}&debug_has_cust=${hasCust}&debug_acc=${encodeURIComponent(accEmail)}&debug_kt=${keyType}&debug_err=${encodeURIComponent(dbError)}`;
     
-    console.log(`[Digital Delivery] Redirecting. Reason: ${reason}`);
+    console.log(`[Digital Delivery] Redirecting. Reason: ${reason}, DB Error: ${dbError}`);
     return Astro.redirect(`/digital-delivery/error?reason=${reason}${debugParam}`);
 }
 ---

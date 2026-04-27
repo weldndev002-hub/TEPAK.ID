@@ -8,6 +8,8 @@ const debugHasDel = Astro.url.searchParams.get("debug_has_del");
 const debugHasOrd = Astro.url.searchParams.get("debug_has_ord");
 const debugHasCust = Astro.url.searchParams.get("debug_has_cust");
 const debugAcc = Astro.url.searchParams.get("debug_acc");
+const debugKT = Astro.url.searchParams.get("debug_kt");
+const debugErr = Astro.url.searchParams.get("debug_err");
 
 let title = "Akses Ditolak";
 let message = "Anda tidak bisa mengakses tautan. Silahkan hubungi kreator.";
@@ -86,6 +88,9 @@ if (reason === "email_mismatch") {
                                     <div class="break-all">Expected: {debugExpected || "N/A"}</div>
                                     <div class="mt-1 opacity-75">
                                         Status: Del({debugHasDel}) Ord({debugHasOrd}) Cust({debugHasCust}) Acc({debugAcc})
+                                    </div>
+                                    <div class="mt-1 opacity-75 break-all">
+                                        System: Key({debugKT}) Err({debugErr})
                                     </div>
                                 </li>
                             )}
