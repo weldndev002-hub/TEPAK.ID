@@ -4,27 +4,43 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import PDFViewer from "../../components/PDFViewer.tsx";
 import { type ClientDirective } from "astro";
 
-// Helper to safely get environment variables (compatible with Cloudflare Workers)
+import { env as cfEnv } from "cloudflare:workers";
+
+// Helper to safely get environment variables (compatible with Cloudflare Workers / Astro v6)
 const getEnv = (key: string) => {
     try {
-        // 1. Try passed runtime env (Cloudflare v6+)
-        if (typeof Astro !== 'undefined' && Astro.locals && Astro.locals.runtime && Astro.locals.runtime.env) {
-            const val = Astro.locals.runtime.env[key];
-            if (val) return val;
+        // 1. Try Cloudflare Workers env (Astro v6+)
+        // Note: cloudflare:workers env is only available in production/preview
+        try {
+            if (typeof cfEnv !== 'undefined' && cfEnv && (cfEnv as any)[key]) {
+                return (cfEnv as any)[key];
+            }
+        } catch (e) {
+            // Ignore module errors
         }
 
-        // 2. Vite / Astro Build-time (PUBLIC_ vars)
+        // 2. Try Astro.locals.runtime.env (Astro v5 fallback - safer check)
+        try {
+            const locals = (Astro as any).locals;
+            if (locals && locals.runtime && locals.runtime.env && locals.runtime.env[key]) {
+                return locals.runtime.env[key];
+            }
+        } catch (e) {
+            // Astro v6 throws if we even touch .env in some cases
+        }
+
+        // 3. Vite / Astro Build-time (PUBLIC_ vars)
         if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
             return import.meta.env[key];
         }
 
-        // 3. Global Fallback
+        // 4. Global Fallback
         if (typeof globalThis !== 'undefined') {
             if ((globalThis as any)[key]) return (globalThis as any)[key];
             if ((globalThis as any).env && (globalThis as any).env[key]) return (globalThis as any).env[key];
         }
     } catch (e) {
-        console.error(`[Digital Delivery] Error getting env ${key}:`, e);
+        // DO NOT log error here to prevent infinite loop or log spam
     }
 
     return null;
