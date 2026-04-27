@@ -46,8 +46,6 @@ console.log("[Digital Delivery] Init:", {
 
 // Initialize Supabase client
 let supabase: any = null;
-const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL');
-const supabaseKey = getEnv('SUPABASE_SERVICE_ROLE_KEY') || getEnv('PUBLIC_SUPABASE_ANON_KEY');
 
 try {
     if (supabaseUrl && supabaseKey) {
