@@ -4,13 +4,39 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import PDFViewer from "../../components/PDFViewer.tsx";
 import { type ClientDirective } from "astro";
 
+// Helper to safely get environment variables (compatible with Cloudflare Workers)
+const getEnv = (key: string) => {
+    // 1. Try passed runtime env (Cloudflare v6+)
+    const runtime = Astro.locals.runtime;
+    if (runtime && runtime.env && runtime.env[key]) return runtime.env[key];
+
+    // 2. Vite / Astro Build-time (PUBLIC_ vars)
+    if (import.meta.env[key]) return import.meta.env[key];
+
+    // 3. Global Fallback
+    if (typeof globalThis !== 'undefined') {
+        if ((globalThis as any)[key]) return (globalThis as any)[key];
+        if ((globalThis as any).env && (globalThis as any).env[key]) return (globalThis as any).env[key];
+    }
+
+    return null;
+};
+
 const { token } = Astro.params;
 const email = Astro.url.searchParams.get("email") || "";
 
 // Initialize Supabase client with service role for signed URL generation
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
-const supabaseKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL');
+const supabaseKey = getEnv('SUPABASE_SERVICE_ROLE_KEY') || getEnv('PUBLIC_SUPABASE_ANON_KEY');
+
+console.log("[Digital Delivery] Init:", { 
+    hasToken: !!token, 
+    hasEmail: !!email, 
+    hasUrl: !!supabaseUrl, 
+    hasKey: !!supabaseKey 
+});
+
+const supabase = createClient(supabaseUrl || '', supabaseKey || '');
 
 let isValid = false;
 let errorMessage = "";
@@ -35,7 +61,8 @@ if (token && email) {
 
         if (error || !delivery) {
             errorMessage = "Token tidak valid atau telah kadaluarsa.";
-            console.error("[Digital Delivery] Token verification error:", error);
+            console.error("[Digital Delivery] Token verification error:", error || "No delivery record found");
+            isValid = false;
         } else {
             // Check expiry
             const expiresAt = new Date(delivery.expires_at);
@@ -136,9 +163,14 @@ if (token && email) {
     console.warn("[Digital Delivery] Missing token or email");
 }
 
-// If invalid, redirect to error page
-if (!isValid && errorMessage && errorMessage !== "EMAIL_MISMATCH") {
-    return Astro.redirect("/digital-delivery/error?reason=invalid");
+// If invalid, redirect to error page with more specific reason if possible
+if (!isValid) {
+    let reason = "invalid";
+    if (errorMessage && errorMessage.includes("email")) reason = "email_mismatch";
+    if (errorMessage && errorMessage.includes("kadaluarsa")) reason = "expired";
+    
+    console.log(`[Digital Delivery] Redirecting to error page. Reason: ${reason}, Msg: ${errorMessage}`);
+    return Astro.redirect(`/digital-delivery/error?reason=${reason}`);
 }
 ---
 
