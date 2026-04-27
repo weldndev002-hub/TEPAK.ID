@@ -171,14 +171,24 @@ export const OrderDetailDashboard = () => {
                                 {/* Totals */}
                                 <div className="px-6 pt-2 pb-6 space-y-2 border-t border-slate-50">
                                     <div className="flex justify-between text-xs font-bold text-slate-500 py-1">
-                                        <span>Subtotal</span><span>{formatCurrency(order.amount)}</span>
+                                        <span>Total Produk (Bruto)</span><span>{formatCurrency(Number(order.amount))}</span>
                                     </div>
-                                    <div className="flex justify-between text-xs font-bold text-slate-500 py-1">
-                                        <span>Biaya Platform (0%)</span><span>IDR 0</span>
-                                    </div>
-                                    <div className="flex justify-between text-sm font-black text-slate-900 py-2 border-t border-slate-100 mt-1">
-                                        <span className="uppercase tracking-tight">Total</span>
-                                        <span className="text-primary">{formatCurrency(order.amount)}</span>
+                                    {Number(order.platform_fee) > 0 && (
+                                        <div className="flex justify-between text-xs font-bold text-rose-500 py-1">
+                                            <span>Biaya Platform</span><span>- {formatCurrency(Number(order.platform_fee))}</span>
+                                        </div>
+                                    )}
+                                    {Number(order.pg_fee) > 0 && (
+                                        <div className="flex justify-between text-xs font-bold text-rose-500 py-1">
+                                            <span>Biaya Pembayaran (PG)</span><span>- {formatCurrency(Number(order.pg_fee))}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between text-sm font-black text-slate-900 py-3 border-t border-slate-100 mt-2 bg-slate-50/50 -mx-6 px-6">
+                                        <div className="flex flex-col">
+                                            <span className="uppercase tracking-tight">Penghasilan Bersih</span>
+                                            <span className="text-[9px] text-slate-400 font-medium normal-case leading-none mt-1">Diterima di Wallet</span>
+                                        </div>
+                                        <span className="text-primary text-lg">{formatCurrency(Number(order.net_amount || order.amount))}</span>
                                     </div>
                                 </div>
                             </Card>

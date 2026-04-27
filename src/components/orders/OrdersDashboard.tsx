@@ -145,7 +145,8 @@ export const OrdersDashboard = () => {
                                 <TableHead className="font-black text-slate-400 uppercase tracking-[0.2em] text-[9px]">Produk</TableHead>
                                 <TableHead className="font-black text-slate-400 uppercase tracking-[0.2em] text-[9px]">Pembeli</TableHead>
                                 <TableHead className="font-black text-slate-400 uppercase tracking-[0.2em] text-[9px]">Metode</TableHead>
-                                <TableHead className="font-black text-slate-400 uppercase tracking-[0.2em] text-[9px] text-right">Total</TableHead>
+                                <TableHead className="font-black text-slate-400 uppercase tracking-[0.2em] text-[9px] text-right whitespace-nowrap">Total Bruto</TableHead>
+                                <TableHead className="font-black text-primary uppercase tracking-[0.2em] text-[9px] text-right whitespace-nowrap">Penghasilan Bersih</TableHead>
                                 <TableHead className="px-10 font-black text-slate-400 uppercase tracking-[0.2em] text-[9px] text-center">Status</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -192,7 +193,8 @@ export const OrdersDashboard = () => {
                                             <span className="text-[9px] font-black uppercase tracking-[0.2em]">{order.payment_method}</span>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="font-black text-slate-900 text-right text-xs">Rp {Number(order.amount).toLocaleString('id-ID')}</TableCell>
+                                    <TableCell className="font-black text-slate-400 text-right text-[10px] whitespace-nowrap">Rp {Number(order.amount).toLocaleString('id-ID')}</TableCell>
+                                    <TableCell className="font-black text-slate-900 text-right text-xs whitespace-nowrap">Rp {Number(order.net_amount || order.amount).toLocaleString('id-ID')}</TableCell>
                                     <TableCell className="px-10">
                                         <div className="flex justify-center">
                                             <Badge 

@@ -56,6 +56,7 @@ const CreatorAtelierEditorContent: React.FC<CreatorAtelierEditorProps> = ({ init
     const [isLoadingProfile, setIsLoadingProfile] = useState(true);
     const [activeBlockType, setActiveBlockType] = useState<string | null>(null);
     const [blocks, setBlocks] = useState<any[]>([]);
+    const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
     // Fetch Profile Data
     React.useEffect(() => {
@@ -129,8 +130,7 @@ const CreatorAtelierEditorContent: React.FC<CreatorAtelierEditorProps> = ({ init
         }
     };
 
-    // Delete confirm modal
-    const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+    // Delete confirm modal derived data
     const blockToDelete = blocks.find(b => b.id === deleteTarget);
 
     const handleSelectBlock = (type: string) => {

@@ -666,7 +666,7 @@ app.get('/orders/stats', async (c) => {
   try {
     const { data: orders, error } = await supabase
       .from('orders')
-      .select('amount, status')
+      .select('amount, status, net_amount')
       .eq('merchant_id', user.id);
 
     if (error) throw error;
@@ -677,7 +677,7 @@ app.get('/orders/stats', async (c) => {
       pending_orders: orders?.filter(o => o.status === 'pending').length || 0,
       total_revenue: orders
         ?.filter(o => o.status === 'success' || o.status === 'paid')
-        .reduce((sum, o) => sum + Number(o.amount), 0) || 0
+        .reduce((sum, o) => sum + Number(o.net_amount || o.amount), 0) || 0
     };
 
     console.log('[API] Order Stats - Success');

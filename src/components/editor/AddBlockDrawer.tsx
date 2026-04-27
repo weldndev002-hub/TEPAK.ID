@@ -37,7 +37,7 @@ export const AddBlockDrawer: React.FC<AddBlockDrawerProps> = ({
   return (
     <div 
         className={cn(
-            "fixed inset-y-0 right-0 w-96 bg-white border-l border-slate-100 shadow-[0_0_50px_-12px_rgba(0,0,0,0.15)] z-[60] flex flex-col transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) ",
+            "fixed inset-y-0 right-0 w-full sm:w-96 bg-white border-l border-slate-100 shadow-[0_0_50px_-12px_rgba(0,0,0,0.15)] z-[110] flex flex-col transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) ",
             isOpen ? "translate-x-0" : "translate-x-full",
             className
         )}

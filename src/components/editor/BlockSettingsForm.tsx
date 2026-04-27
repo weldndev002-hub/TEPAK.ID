@@ -6,6 +6,7 @@ import { Button } from '../ui/Button';
 import { Toggle } from '../ui/Toggle';
 import {
     XMarkIcon,
+    ArrowLeftIcon,
     Bars3CenterLeftIcon,
     LinkIcon,
     VideoCameraIcon,
@@ -612,12 +613,16 @@ export const BlockSettingsForm: React.FC<BlockSettingsFormProps> = ({ blockType,
     };
 
     return (
-        <div className="fixed inset-y-0 right-0 w-[420px] bg-white border-l border-slate-100 shadow-[0_0_60px_-15px_rgba(0,0,0,0.2)] z-[70] flex flex-col  animate-in slide-in-from-right duration-300">
+        <div className="fixed inset-y-0 right-0 w-full sm:w-[420px] bg-white border-l border-slate-100 shadow-[0_0_60px_-15px_rgba(0,0,0,0.2)] z-[120] flex flex-col  animate-in slide-in-from-right duration-300">
             <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-white">
                 <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-primary/5 text-primary flex items-center justify-center">
-                        {getIcon()}
-                    </div>
+                    <button
+                        onClick={onClose}
+                        className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-primary hover:bg-primary/5 flex items-center justify-center transition-all active:scale-95 group"
+                        title="Kembali ke pilih blok"
+                    >
+                        <ArrowLeftIcon className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
+                    </button>
                     <div>
                         <h3 className="text-xl font-black text-slate-900 tracking-tighter uppercase leading-none">{getTitle()}</h3>
                         <p className="text-[10px] text-slate-400 mt-2 font-black uppercase tracking-widest italic leading-none">Configure component</p>
@@ -625,7 +630,8 @@ export const BlockSettingsForm: React.FC<BlockSettingsFormProps> = ({ blockType,
                 </div>
                 <button
                     onClick={onClose}
-                    className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-900 flex items-center justify-center transition-all active:scale-95"
+                    className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:text-rose-500 hover:bg-rose-50 flex items-center justify-center transition-all active:scale-95"
+                    title="Tutup Panel"
                 >
                     <XMarkIcon className="w-6 h-6" />
                 </button>
