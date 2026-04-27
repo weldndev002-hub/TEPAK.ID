@@ -278,7 +278,7 @@ async function sendDigitalDeliveryEmail(
             console.error('[Digital Delivery Email] ❌ PUBLIC_SITE_URL is not configured');
             throw new Error('PUBLIC_SITE_URL environment variable is required');
         }
-        const downloadPageUrl = `${siteUrl}/digital-delivery/${token}?email=${encodeURIComponent(toEmail)}`;
+        const downloadPageUrl = `${siteUrl}/digital-delivery/${token}`;
         console.log(`[Digital Delivery Email] Download page URL: ${downloadPageUrl}`);
 
         // Use configured sender email or fallback
