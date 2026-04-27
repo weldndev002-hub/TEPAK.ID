@@ -4,6 +4,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 const reason = Astro.url.searchParams.get("reason") || "invalid";
 const debugProvided = Astro.url.searchParams.get("debug_provided");
 const debugExpected = Astro.url.searchParams.get("debug_expected");
+const debugData = Astro.url.searchParams.get("debug_data");
 
 let title = "Akses Ditolak";
 let message = "Anda tidak bisa mengakses tautan. Silahkan hubungi kreator.";
@@ -75,11 +76,12 @@ if (reason === "email_mismatch") {
                                 </li>
                             )}
                             
-                            {(debugProvided || debugExpected) && (
+                            {(debugProvided || debugExpected || debugData) && (
                                 <li class="pt-3 border-t border-gray-200 mt-3 text-xs font-mono text-gray-500">
                                     <div class="font-bold mb-1">Debug Info:</div>
                                     <div class="break-all">Provided: {debugProvided || "N/A"}</div>
                                     <div class="break-all">Expected: {debugExpected || "N/A"}</div>
+                                    {debugData && <div class="break-all mt-1 opacity-75">Data: {debugData}</div>}
                                 </li>
                             )}
 

@@ -200,7 +200,16 @@ if (!isValid) {
     if (errorMessage && errorMessage.includes("email")) reason = "email_mismatch";
     if (errorMessage && errorMessage.includes("kadaluarsa")) reason = "expired";
     
-    const debugParam = `&debug_provided=${encodeURIComponent(email)}&debug_expected=${encodeURIComponent(buyerEmail)}`;
+    // Create a sanitized delivery object for debugging
+    const deliveryDebug = delivery ? {
+        id: delivery.id,
+        has_order: !!delivery.orders,
+        has_customer: !!delivery.orders?.customers,
+        accessed_email: delivery.accessed_email ? "PRESENT" : "MISSING",
+        accessed_email_val: delivery.accessed_email || "N/A"
+    } : "NULL";
+
+    const debugParam = `&debug_provided=${encodeURIComponent(email)}&debug_expected=${encodeURIComponent(buyerEmail)}&debug_data=${encodeURIComponent(JSON.stringify(deliveryDebug))}`;
     console.log(`[Digital Delivery] Redirecting. Reason: ${reason}, Msg: ${errorMessage}`);
     return Astro.redirect(`/digital-delivery/error?reason=${reason}${debugParam}`);
 }
