@@ -16,11 +16,20 @@ import {
     PencilSquareIcon,
     TrashIcon,
     CheckCircleIcon,
-    XMarkIcon
+    XMarkIcon,
+    ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
-import { useSubscription } from '../../context/SubscriptionContext';
+import { useSubscription, SubscriptionProvider } from '../../context/SubscriptionContext';
 
 export const ProductsDashboard = () => {
+    return (
+        <SubscriptionProvider>
+            <ProductsDashboardContent />
+        </SubscriptionProvider>
+    );
+};
+
+const ProductsDashboardContent = () => {
     const { hasFeature, isLoading: subLoading } = useSubscription();
 
     React.useEffect(() => {
@@ -35,23 +44,7 @@ export const ProductsDashboard = () => {
     const [deleteModal, setDeleteModal] = React.useState(false);
     const [selectedProduct, setSelectedProduct] = React.useState<any>(null);
     const [toast, setToast] = React.useState<string | null>(null);
-
-    if (subLoading) {
-        return (
-            <div className="flex-1 px-8 mt-24 pb-12 flex items-center justify-center min-h-screen bg-[#f8f9fb]">
-                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-            </div>
-        );
-    }
-
-    if (!hasFeature('Digital Product Sales')) {
-        return null; // Will redirect via useEffect
-    }
-
-    const showToast = (msg: string) => {
-        setToast(msg);
-        setTimeout(() => setToast(null), 4000);
-    };
+    const [stats, setStats] = React.useState({ totalSold: 0, totalCustomers: 0 });
 
     const fetchProducts = async () => {
         setIsLoading(true);
@@ -67,8 +60,6 @@ export const ProductsDashboard = () => {
             setIsLoading(false);
         }
     };
-
-    const [stats, setStats] = React.useState({ totalSold: 0, totalCustomers: 0 });
 
     const fetchStats = async () => {
         try {
@@ -98,6 +89,23 @@ export const ProductsDashboard = () => {
         fetchProducts();
         fetchStats();
     }, []);
+
+    if (subLoading) {
+        return (
+            <div className="flex-1 px-8 mt-24 pb-12 flex items-center justify-center min-h-screen bg-[#f8f9fb]">
+                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
+
+    if (!hasFeature('Digital Product Sales')) {
+        return null; // Will redirect via useEffect
+    }
+
+    const showToast = (msg: string) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 4000);
+    };
 
     const formatCurrency = (val: number) => {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);

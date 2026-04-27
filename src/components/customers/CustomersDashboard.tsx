@@ -16,9 +16,17 @@ import {
     CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import { Input } from '../ui/Input';
-import { useSubscription } from '../../context/SubscriptionContext';
+import { useSubscription, SubscriptionProvider } from '../../context/SubscriptionContext';
 
 export const CustomersDashboard = () => {
+    return (
+        <SubscriptionProvider>
+            <CustomersDashboardContent />
+        </SubscriptionProvider>
+    );
+};
+
+const CustomersDashboardContent = () => {
     const { hasFeature, isLoading: subLoading } = useSubscription();
 
     useEffect(() => {
@@ -35,28 +43,6 @@ export const CustomersDashboard = () => {
     const [toast, setToast] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState('all');
-
-    if (subLoading) {
-        return (
-            <div className="flex-1 px-8 pt-24 pb-12 min-h-screen bg-slate-50 flex items-center justify-center">
-                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-            </div>
-        );
-    }
-
-    if (!hasFeature('Customer Management')) {
-        return null; // Will redirect via useEffect
-    }
-
-    const showToast = (msg: string) => {
-        setToast(msg);
-        setTimeout(() => setToast(null), 4000);
-    };
-
-    useEffect(() => {
-        fetchCustomers(activeTab);
-        fetchStats();
-    }, [activeTab]);
 
     const fetchStats = async () => {
         try {
@@ -83,6 +69,28 @@ export const CustomersDashboard = () => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    useEffect(() => {
+        fetchCustomers(activeTab);
+        fetchStats();
+    }, [activeTab]);
+
+    if (subLoading) {
+        return (
+            <div className="flex-1 px-8 pt-24 pb-12 min-h-screen bg-slate-50 flex items-center justify-center">
+                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
+
+    if (!hasFeature('Customer Management')) {
+        return null; // Will redirect via useEffect
+    }
+
+    const showToast = (msg: string) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 4000);
     };
 
     const formatCurrency = (val: number) => {

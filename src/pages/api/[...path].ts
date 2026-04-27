@@ -1321,129 +1321,7 @@ app.get('/products/:id/stats', async (c) => {
 });
 
 // 4.2 Global Analytics Dashboard (Real Aggregation)
-app.get('/analytics/dashboard', async (c) => {
-  const { supabase, user } = await getAuthContext(c);
-  if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
-  const range = c.req.query('range') || '7d';
-  const start = c.req.query('start');
-  const end = c.req.query('end');
-
-  // Calculate time filter
-  let startDate = new Date();
-  if (start) {
-    startDate = new Date(start);
-  } else {
-    if (range === '24h') startDate.setHours(startDate.getHours() - 24);
-    else if (range === '7d') startDate.setDate(startDate.getDate() - 7);
-    else if (range === '30d') startDate.setDate(startDate.getDate() - 30);
-    else if (range === '90d') startDate.setDate(startDate.getDate() - 90);
-  }
-  
-  const endDate = end ? new Date(end) : new Date();
-
-  try {
-    const [{ data: events }, { data: orders }] = await Promise.all([
-      supabase
-        .from('analytics_events')
-        .select('*')
-        .eq('merchant_id', user.id)
-        .gte('created_at', startDate.toISOString())
-        .lte('created_at', endDate.toISOString()),
-      supabase
-        .from('orders')
-        .select('amount, status, net_amount, created_at')
-        .eq('merchant_id', user.id)
-        .in('status', ['success', 'paid'])
-        .gte('created_at', startDate.toISOString())
-        .lte('created_at', endDate.toISOString())
-    ]);
-
-    const ev = events || [];
-    const ord = orders || [];
-
-    const totalViews = ev.filter(e => e.event_type === 'view' || e.event_type === 'page_view').length;
-    const totalClicks = ev.filter(e => e.event_type === 'click').length;
-    const totalRevenue = ord.reduce((sum, o) => sum + (o.net_amount || (o.amount * 0.95)), 0);
-    const orderCount = ord.length;
-
-    // Device Detection
-    const deviceCounts = ev.reduce((acc: any, e: any) => {
-      const ua = (e.user_agent || '').toLowerCase();
-      const type = /mobile|android|iphone|ipad|phone/i.test(ua) ? 'Mobile' : 'Desktop';
-      acc[type] = (acc[type] || 0) + 1;
-      return acc;
-    }, {});
-
-    const totalDevices = (deviceCounts.Mobile || 0) + (deviceCounts.Desktop || 0) || 1;
-    const devices = [
-      { type: 'Mobile', percentage: Math.round(((deviceCounts.Mobile || 0) / totalDevices) * 100) },
-      { type: 'Desktop', percentage: Math.round(((deviceCounts.Desktop || 0) / totalDevices) * 100) }
-    ];
-
-    // Browser Detection
-    const browserCounts = ev.reduce((acc: any, e: any) => {
-      const ua = (e.user_agent || '').toLowerCase();
-      let name = 'Other';
-      if (ua.includes('chrome')) name = 'Chrome';
-      else if (ua.includes('safari') && !ua.includes('chrome')) name = 'Safari';
-      else if (ua.includes('firefox')) name = 'Firefox';
-      else if (ua.includes('edg')) name = 'Edge';
-      acc[name] = (acc[name] || 0) + 1;
-      return acc;
-    }, {});
-
-    const sortedBrowsers = Object.entries(browserCounts)
-      .map(([name, count]: [string, any]) => ({
-        name,
-        percentage: Math.round((count / (ev.length || 1)) * 100),
-        icon: name === 'Chrome' ? '🌐' : name === 'Safari' ? '🍎' : name === 'Firefox' ? '🦊' : '💻'
-      }))
-      .sort((a, b) => b.percentage - a.percentage)
-      .slice(0, 3);
-
-    // --- DAILY TIME SERIES AGGREGATION ---
-    const dailyData: any = {};
-    const curr = new Date(startDate);
-    while (curr <= endDate) {
-      const dStr = curr.toISOString().split('T')[0];
-      dailyData[dStr] = { views: 0, clicks: 0, sales: 0 };
-      curr.setDate(curr.getDate() + 1);
-    }
-
-    ev.forEach(e => {
-      const dStr = new Date(e.created_at).toISOString().split('T')[0];
-      if (dailyData[dStr]) {
-        if (e.event_type === 'view' || e.event_type === 'page_view') dailyData[dStr].views++;
-        if (e.event_type === 'click') dailyData[dStr].clicks++;
-      }
-    });
-
-    ord.forEach(o => {
-      const dStr = new Date(o.created_at).toISOString().split('T')[0];
-      if (dailyData[dStr]) dailyData[dStr].sales += (o.net_amount || (o.amount * 0.95));
-    });
-
-    const labels = Object.keys(dailyData).map(d => {
-      const date = new Date(d);
-      return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-    });
-    const views = Object.values(dailyData).map((v: any) => v.views);
-    const clicks = Object.values(dailyData).map((v: any) => v.clicks);
-    const sales = Object.values(dailyData).map((v: any) => v.sales);
-
-    return c.json({
-      totalViews,
-      totalClicks,
-      sales: { total_revenue: totalRevenue, order_count: orderCount },
-      devices,
-      browsers: sortedBrowsers,
-      time_series: { labels, views, clicks, sales }
-    });
-  } catch (err: any) {
-    return c.json({ error: err.message }, 500);
-  }
-});
 
 // 5. Delete Product
 app.delete('/products/:id', async (c) => {
@@ -2429,9 +2307,14 @@ app.post('/payments/duitku/webhook', async (c) => {
             // Import and use digital delivery service
             const { createDigitalDelivery } = await import('../../lib/digital-delivery');
 
-            // Get request origin for email links
-            const requestOrigin = c.req.header('Origin') || c.req.header('Referer') || 'https://tepak.id';
+            // Get site URL for email links
+            // For webhooks, Origin/Referer headers are usually empty
+            // Use PUBLIC_SITE_URL env var first, then fallback to request URL
+            const requestUrl = new URL(c.req.url);
+            const requestOrigin = getEnv('PUBLIC_SITE_URL') || `${requestUrl.protocol}//${requestUrl.host}`;
             const siteBaseUrl = requestOrigin.replace(/\/$/, '');
+
+            console.log(`[Webhook DuitKu] Site base URL for email: ${siteBaseUrl}`);
 
             const result = await createDigitalDelivery(
               orderData.id,
@@ -2471,6 +2354,58 @@ app.post('/payments/duitku/webhook', async (c) => {
   } catch (error: any) {
     console.error('Kesalahan webhook DuitKu:', error);
     return c.json({ error: error.message }, 500);
+  }
+});
+
+// DEBUG: Manual trigger digital delivery for testing
+app.post('/test/digital-delivery', async (c) => {
+  const { supabase, user } = await getAuthContext(c);
+  
+  // Require admin access
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+  
+  try {
+    const body = await c.req.json();
+    const { orderId, email, fileUrl } = body;
+    
+    if (!orderId || !email || !fileUrl) {
+      return c.json({ 
+        error: 'Missing required fields', 
+        required: ['orderId', 'email', 'fileUrl'],
+        received: { orderId, email, fileUrl }
+      }, 400);
+    }
+    
+    console.log(`[Test Digital Delivery] Manually triggering for order: ${orderId}`);
+    console.log(`[Test Digital Delivery] Email: ${email}`);
+    console.log(`[Test Digital Delivery] File URL: ${fileUrl}`);
+    
+    const { createDigitalDelivery } = await import('../../lib/digital-delivery');
+    
+    const siteBaseUrl = getEnv('PUBLIC_SITE_URL') || 'https://tepak.id';
+    
+    console.log(`[Test Digital Delivery] Using site URL: ${siteBaseUrl}`);
+    
+    const result = await createDigitalDelivery(
+      orderId,
+      email,
+      fileUrl,
+      siteBaseUrl
+    );
+    
+    console.log(`[Test Digital Delivery] Result:`, result);
+    
+    return c.json({
+      success: result.success,
+      token: result.token,
+      emailSent: result.emailSent,
+      emailError: result.emailError,
+      testUrl: result.token ? `${siteBaseUrl}/digital-delivery/${result.token}?email=${encodeURIComponent(email)}` : null
+    });
+    
+  } catch (err: any) {
+    console.error('[Test Digital Delivery] Error:', err);
+    return c.json({ error: err.message }, 500);
   }
 });
 
@@ -2765,21 +2700,36 @@ app.get('/analytics/dashboard', async (c) => {
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
     const range = c.req.query('range') || '7d';
-    let days = 7;
-    if (range === '24h') days = 1;
-    else if (range === '30d') days = 30;
-    else if (range === '90d') days = 90;
+    const start = c.req.query('start');
+    const end = c.req.query('end');
 
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+    // Calculate time filter - Start from beginning of the day (00:00:00)
+    let startDate = new Date();
+    if (start) {
+      startDate = new Date(start);
+      startDate.setHours(0, 0, 0, 0);
+    } else {
+      if (range === '24h') startDate.setHours(startDate.getHours() - 24);
+      else if (range === '7d') startDate.setDate(startDate.getDate() - 7);
+      else if (range === '30d') startDate.setDate(startDate.getDate() - 30);
+      else if (range === '90d') startDate.setDate(startDate.getDate() - 90);
+      startDate.setHours(0, 0, 0, 0);
+    }
     const startDateStr = startDate.toISOString();
+    
+    const endDate = end ? new Date(end) : new Date();
+    endDate.setHours(23, 59, 59, 999);
+    const endDateStr = endDate.toISOString();
+
+    const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) || 7;
 
     // 1. Fetch total events
     const { data: events, error: eventError } = await supabase
       .from('analytics_events')
       .select('*')
       .eq('merchant_id', user.id)
-      .gte('created_at', startDateStr);
+      .gte('created_at', startDateStr)
+      .lte('created_at', endDateStr);
 
     if (eventError) {
       console.error('[Analytics API] Event fetch error:', eventError);
@@ -2793,9 +2743,10 @@ app.get('/analytics/dashboard', async (c) => {
     // 2. Fetch sales from orders
     const { data: orders, error: orderError } = await supabase
       .from('orders')
-      .select('amount, status, created_at')
+      .select('amount, status, net_amount, created_at')
       .eq('merchant_id', user.id)
-      .gte('created_at', startDateStr);
+      .gte('created_at', startDateStr)
+      .lte('created_at', endDateStr);
 
     if (orderError) {
       console.error('[Analytics API] Order fetch error:', orderError);
@@ -2916,7 +2867,7 @@ app.get('/analytics/dashboard', async (c) => {
         { name: 'N/A', percentage: 0, icon: '❓' }
       ],
       sales: {
-        total_revenue: orderList.filter(o => isSuccessOrder(o.status)).reduce((sum, o) => sum + Number(o.amount), 0),
+        total_revenue: orderList.filter(o => isSuccessOrder(o.status)).reduce((sum, o) => sum + (Number(o.net_amount) || Number(o.amount)), 0),
         order_count: orderList.filter(o => isSuccessOrder(o.status)).length
       },
       time_series,

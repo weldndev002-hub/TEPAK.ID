@@ -18,9 +18,17 @@ import {
     ArrowPathIcon
 } from '@heroicons/react/24/outline';
 
-import { useSubscription } from '../../context/SubscriptionContext';
+import { useSubscription, SubscriptionProvider } from '../../context/SubscriptionContext';
 
 export const CustomerDetailDashboard = () => {
+    return (
+        <SubscriptionProvider>
+            <CustomerDetailDashboardContent />
+        </SubscriptionProvider>
+    );
+};
+
+const CustomerDetailDashboardContent = () => {
     const { hasFeature } = useSubscription();
     const [customer, setCustomer] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);

@@ -17,13 +17,21 @@ import { BlockSettingsForm } from './BlockSettingsForm';
 import { PhoneFrame } from './PhoneFrame';
 import { OnboardingForm } from '../onboarding/OnboardingForm';
 import { BrandingProvider, type BrandingData } from '../../hooks/useBranding';
-import { useSubscription } from '../../context/SubscriptionContext';
+import { useSubscription, SubscriptionProvider } from '../../context/SubscriptionContext';
 
 interface CreatorAtelierEditorProps {
     initialBranding?: BrandingData | null;
 }
 
-export const CreatorAtelierEditor: React.FC<CreatorAtelierEditorProps> = ({ initialBranding }) => {
+export const CreatorAtelierEditor: React.FC<CreatorAtelierEditorProps> = (props) => {
+    return (
+        <SubscriptionProvider>
+            <CreatorAtelierEditorContent {...props} />
+        </SubscriptionProvider>
+    );
+};
+
+const CreatorAtelierEditorContent: React.FC<CreatorAtelierEditorProps> = ({ initialBranding }) => {
     const { hasFeature, isLoading: subLoading } = useSubscription();
 
     React.useEffect(() => {
@@ -48,18 +56,6 @@ export const CreatorAtelierEditor: React.FC<CreatorAtelierEditorProps> = ({ init
     const [isLoadingProfile, setIsLoadingProfile] = useState(true);
     const [activeBlockType, setActiveBlockType] = useState<string | null>(null);
     const [blocks, setBlocks] = useState<any[]>([]);
-
-    if (subLoading) {
-        return (
-            <div className="w-full h-screen flex items-center justify-center bg-slate-50">
-                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-            </div>
-        );
-    }
-
-    if (!hasFeature('Landing Page Builder')) {
-        return null; // Will redirect via useEffect
-    }
 
     // Fetch Profile Data
     React.useEffect(() => {
@@ -92,6 +88,18 @@ export const CreatorAtelierEditor: React.FC<CreatorAtelierEditorProps> = ({ init
         };
         fetchProfile();
     }, []);
+
+    if (subLoading) {
+        return (
+            <div className="w-full h-screen flex items-center justify-center bg-slate-50">
+                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
+
+    if (!hasFeature('Landing Page Builder')) {
+        return null; // Will redirect via useEffect
+    }
 
     const handleSaveProfile = async () => {
         setIsLoading(true);

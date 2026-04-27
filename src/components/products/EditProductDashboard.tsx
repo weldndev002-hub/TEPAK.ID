@@ -16,11 +16,20 @@ import {
     QuestionMarkCircleIcon,
     ExclamationTriangleIcon,
     ExclamationCircleIcon,
-    XMarkIcon
+    XMarkIcon,
+    CheckCircleIcon
 } from '@heroicons/react/24/outline';
-import { useSubscription } from '../../context/SubscriptionContext';
+import { useSubscription, SubscriptionProvider } from '../../context/SubscriptionContext';
 
 export const EditProductDashboard = () => {
+    return (
+        <SubscriptionProvider>
+            <EditProductDashboardContent />
+        </SubscriptionProvider>
+    );
+};
+
+const EditProductDashboardContent = () => {
     const { hasFeature, isLoading: subLoading } = useSubscription();
 
     React.useEffect(() => {
@@ -50,38 +59,8 @@ export const EditProductDashboard = () => {
     const [toast, setToast] = useState<string | null>(null);
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [showDiscardModal, setShowDiscardModal] = useState(false);
-
-    if (subLoading) {
-        return (
-            <div className="flex-1 flex items-center justify-center min-h-screen bg-[#F8FAFC]">
-                <div className="text-center group">
-                    <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-xs font-black text-primary uppercase tracking-widest">Validating Access...</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (!hasFeature('Digital Product Sales')) {
-        return null; // Will redirect via useEffect
-    }
     const [showFileDeleteModal, setShowFileDeleteModal] = useState(false);
     const [errors, setErrors] = useState<{ system?: string; price?: string }>({});
-
-    const showToast = (msg: string) => {
-        setToast(msg);
-        setTimeout(() => setToast(null), 4000);
-    };
-
-    // Load Data
-    React.useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const productId = urlParams.get('id');
-        if (productId) {
-            setId(productId);
-            fetchProduct(productId);
-        }
-    }, []);
 
     const fetchProduct = async (productId: string) => {
         setIsLoading(true);
@@ -118,14 +97,54 @@ export const EditProductDashboard = () => {
         }
     };
 
-    const uploadFile = async (file: File, path: string, bucket: string = 'media-produk') => {
+    // Load Data
+    React.useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id');
+        if (productId) {
+            setId(productId);
+            fetchProduct(productId);
+        }
+    }, []);
+
+    const showToast = (msg: string) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 4000);
+    };
+
+    if (subLoading) {
+        return (
+            <div className="flex-1 flex items-center justify-center min-h-screen bg-[#F8FAFC]">
+                <div className="text-center group">
+                    <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-xs font-black text-primary uppercase tracking-widest">Validating Access...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!hasFeature('Digital Product Sales')) {
+        return null; // Will redirect via useEffect
+    }
+
+    const uploadFile = async (file: File, path: string, bucket: string = 'product') => {
         const { data, error } = await supabase.storage
             .from(bucket)
             .upload(path, file, { upsert: true });
 
         if (error) throw error;
 
+        // For product bucket, return public URL since it's configured as public
+        if (bucket === 'product') {
+            const { data: { publicUrl } } = supabase.storage
+                .from(bucket)
+                .getPublicUrl(data.path);
+            return publicUrl;
+        }
+
+        // Legacy support for old buckets
         if (bucket === 'media-produk-private') {
+            // Return internal path for private bucket items
             return data.path;
         }
 
@@ -158,12 +177,20 @@ export const EditProductDashboard = () => {
             let final_cover_url = coverUrl;
             let final_file_url = fileUrl;
 
+            // Get user ID for folder structure
+            const { data: { user } } = await supabase.auth.getUser();
+            const userId = user?.id;
+            if (!userId) {
+                throw new Error('User not authenticated');
+            }
+
             // 1. Check if new thumbnail uploaded
             const thumbInput = document.getElementById('thumbnail-file') as HTMLInputElement;
             if (thumbInput?.files?.[0]) {
                 const thumbFile = thumbInput.files[0];
                 const ext = thumbFile.name.split('.').pop();
-                final_cover_url = await uploadFile(thumbFile, `thumbnails/${timestamp}.${ext}`);
+                const thumbPath = `${userId}/${id}/thumbnail.${ext}`;
+                final_cover_url = await uploadFile(thumbFile, thumbPath);
             }
 
             // 2. Check if new asset file uploaded
@@ -171,7 +198,8 @@ export const EditProductDashboard = () => {
             if (fileInput?.files?.[0]) {
                 const productFile = fileInput.files[0];
                 const ext = productFile.name.split('.').pop();
-                final_file_url = await uploadFile(productFile, `assets/${timestamp}.${ext}`, 'media-produk-private');
+                const productPath = `${userId}/${id}/product.${ext}`;
+                final_file_url = await uploadFile(productFile, productPath);
             }
 
             // 3. Process Preview Images
@@ -180,7 +208,8 @@ export const EditProductDashboard = () => {
                     if (img.file) {
                         // It's a new file, upload it
                         const ext = img.file.name.split('.').pop();
-                        return await uploadFile(img.file, `previews/${timestamp}_${idx}.${ext}`);
+                        const previewPath = `${userId}/${id}/preview_${idx}.${ext}`;
+                        return await uploadFile(img.file, previewPath);
                     }
                     return img.url; // It's an existing URL
                 })

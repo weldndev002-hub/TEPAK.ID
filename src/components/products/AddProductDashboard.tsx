@@ -21,9 +21,17 @@ import {
 } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase';
 import { cn } from '../../lib/utils';
-import { useSubscription } from '../../context/SubscriptionContext';
+import { useSubscription, SubscriptionProvider } from '../../context/SubscriptionContext';
 
 export const AddProductDashboard = () => {
+    return (
+        <SubscriptionProvider>
+            <AddProductDashboardContent />
+        </SubscriptionProvider>
+    );
+};
+
+const AddProductDashboardContent = () => {
     const { hasFeature, isLoading: subLoading } = useSubscription();
 
     React.useEffect(() => {
@@ -42,17 +50,6 @@ export const AddProductDashboard = () => {
         if (!isDirty) setIsDirty(true);
     };
 
-    if (subLoading) {
-        return (
-            <div className="flex-1 flex items-center justify-center bg-[#F8FAFC] min-h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-            </div>
-        );
-    }
-
-    if (!hasFeature('Digital Product Sales')) {
-        return null; // Will redirect via useEffect
-    }
     const [limitDownload, setLimitDownload] = useState(false);
     const [price, setPrice] = useState<string>('');
     const [productFile, setProductFile] = useState<File | null>(null);
@@ -64,6 +61,18 @@ export const AddProductDashboard = () => {
     const [isPublishing, setIsPublishing] = useState(false);
     const [publishConfirm, setPublishConfirm] = useState(false);
     const [previewImages, setPreviewImages] = useState<{ id: string; file: File; url: string }[]>([]);
+
+    if (subLoading) {
+        return (
+            <div className="flex-1 flex items-center justify-center bg-[#F8FAFC] min-h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
+    if (!hasFeature('Digital Product Sales')) {
+        return null; // Will redirect via useEffect
+    }
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -130,22 +139,31 @@ export const AddProductDashboard = () => {
         setPublishConfirm(true);
     };
 
-    const uploadFile = async (file: File, path: string, bucket: string = 'media-produk') => {
+    const uploadFile = async (file: File, path: string, bucket: string = 'product') => {
         const { data, error } = await supabase.storage
             .from(bucket)
             .upload(path, file, { upsert: true });
-        
+
         if (error) throw error;
-        
+
+        // For product bucket, return public URL since it's configured as public
+        if (bucket === 'product') {
+            const { data: { publicUrl } } = supabase.storage
+                .from(bucket)
+                .getPublicUrl(data.path);
+            return publicUrl;
+        }
+
+        // Legacy support for old buckets
         if (bucket === 'media-produk-private') {
-            // Return internal path for private bucket items instead of a strictly unauthorized public url
+            // Return internal path for private bucket items
             return data.path;
         }
 
         const { data: { publicUrl } } = supabase.storage
             .from(bucket)
             .getPublicUrl(data.path);
-            
+
         return publicUrl;
     };
 
@@ -158,26 +176,39 @@ export const AddProductDashboard = () => {
             let cover_url = '';
             let file_url = '';
 
+            // Get user ID for folder structure
+            const { data: { user } } = await supabase.auth.getUser();
+            const userId = user?.id;
+            if (!userId) {
+                throw new Error('User not authenticated');
+            }
+
+            // Generate a temporary product ID for folder structure (will be replaced with actual ID after DB insert)
+            const tempProductId = crypto.randomUUID();
+
             // 1. Upload Thumbnail jika ada
             const thumbInput = document.getElementById('thumbnail-file') as HTMLInputElement;
             if (thumbInput?.files?.[0]) {
                 const thumbFile = thumbInput.files[0];
                 const ext = thumbFile.name.split('.').pop();
-                cover_url = await uploadFile(thumbFile, `thumbnails/${timestamp}.${ext}`);
+                const thumbPath = `${userId}/${tempProductId}/thumbnail.${ext}`;
+                cover_url = await uploadFile(thumbFile, thumbPath);
             }
 
             // 2. Upload Preview Images (Gallery)
             const previewUrls = await Promise.all(
                 previewImages.map(async (img, idx) => {
                     const ext = img.file.name.split('.').pop();
-                    return await uploadFile(img.file, `previews/${timestamp}_${idx}.${ext}`);
+                    const previewPath = `${userId}/${tempProductId}/preview_${idx}.${ext}`;
+                    return await uploadFile(img.file, previewPath);
                 })
             );
 
-            // 3. Upload Product File to PRIVATE BUCKET
+            // 3. Upload Product File to product bucket with proper folder structure
             if (productFile) {
                 const ext = productFile.name.split('.').pop();
-                file_url = await uploadFile(productFile, `assets/${timestamp}.${ext}`, 'media-produk-private');
+                const productPath = `${userId}/${tempProductId}/product.${ext}`;
+                file_url = await uploadFile(productFile, productPath);
             }
 
             // 4. Save to Database via API

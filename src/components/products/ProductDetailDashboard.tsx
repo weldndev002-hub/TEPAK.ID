@@ -18,9 +18,17 @@ import {
     ChartBarIcon,
 } from '@heroicons/react/24/outline';
 
-import { useSubscription } from '../../context/SubscriptionContext';
+import { useSubscription, SubscriptionProvider } from '../../context/SubscriptionContext';
 
 export const ProductDetailDashboard = () => {
+    return (
+        <SubscriptionProvider>
+            <ProductDetailDashboardContent />
+        </SubscriptionProvider>
+    );
+};
+
+const ProductDetailDashboardContent = () => {
     const { hasFeature, isLoading: subLoading } = useSubscription();
 
     useEffect(() => {

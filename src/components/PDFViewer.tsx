@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 
 // Set worker path for PDF.js
+// Set worker path for PDF.js
 if (typeof window !== "undefined") {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+    // Use unpkg as it's generally more reliable and has better version matching
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 }
 
 interface PDFViewerProps {
@@ -72,8 +74,24 @@ export default function PDFViewer({ pdfUrl, fileName }: PDFViewerProps) {
 
     if (error) {
         return (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-                <p className="text-red-700 font-medium">{error}</p>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-8 text-center">
+                <div className="mb-4 text-red-500">
+                    <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <p className="text-red-700 font-bold mb-2">{error}</p>
+                <p className="text-red-600/70 text-sm mb-6">
+                    Hal ini biasanya terjadi karena pembatasan keamanan (CORS) pada server penyedia file.
+                </p>
+                <a 
+                    href={pdfUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center px-6 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-200"
+                >
+                    Buka PDF di Tab Baru
+                </a>
             </div>
         );
     }

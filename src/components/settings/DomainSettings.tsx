@@ -18,9 +18,17 @@ import {
 } from '@heroicons/react/24/outline';
 import { z } from 'zod';
 import { cn } from '../../lib/utils';
-import { useSubscription } from '../../context/SubscriptionContext';
+import { useSubscription, SubscriptionProvider } from '../../context/SubscriptionContext';
 
 export const DomainSettingsDashboard = () => {
+    return (
+        <SubscriptionProvider>
+            <DomainSettingsDashboardContent />
+        </SubscriptionProvider>
+    );
+};
+
+const DomainSettingsDashboardContent = () => {
     const { hasFeature, isLoading: subLoading } = useSubscription();
 
     React.useEffect(() => {
@@ -37,6 +45,30 @@ export const DomainSettingsDashboard = () => {
     const [error, setError] = React.useState('');
     const [toast, setToast] = React.useState<string | null>(null);
     const [deleteModal, setDeleteModal] = React.useState(false);
+
+    const fetchDomain = async () => {
+        setIsLoading(true);
+        try {
+            const res = await fetch('/api/settings/domain');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.domain_name) {
+                    setDomainInput(data.domain_name);
+                    setStatus(data.domain_verified ? 'active' : 'pending');
+                } else {
+                    setStatus('idle');
+                }
+            }
+        } catch (err) {
+            console.error('Fetch domain error:', err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        fetchDomain();
+    }, []);
 
     if (subLoading) {
         return (
@@ -61,30 +93,6 @@ export const DomainSettingsDashboard = () => {
     const domainSchema = z.string()
         .regex(/^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/, "Format domain tidak valid, gunakan format: domainku.com")
         .refine(val => !val.startsWith('http'), "Gunakan format domain yang benar, tanpa http/https");
-
-    React.useEffect(() => {
-        fetchDomain();
-    }, []);
-
-    const fetchDomain = async () => {
-        setIsLoading(true);
-        try {
-            const res = await fetch('/api/settings/domain');
-            if (res.ok) {
-                const data = await res.json();
-                if (data.domain_name) {
-                    setDomainInput(data.domain_name);
-                    setStatus(data.domain_verified ? 'active' : 'pending');
-                } else {
-                    setStatus('idle');
-                }
-            }
-        } catch (err) {
-            console.error('Fetch domain error:', err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     const handleSaveDomain = async () => {
         const result = domainSchema.safeParse(domainInput);

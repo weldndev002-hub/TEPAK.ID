@@ -11,8 +11,17 @@ import {
 } from '@heroicons/react/24/outline';
 import { Card } from '../ui/Card';
 import Button from '../ui/Button';
+import { useSubscription, SubscriptionProvider } from '../../context/SubscriptionContext';
 
 export const AnalyticsDashboard = () => {
+    return (
+        <SubscriptionProvider>
+            <AnalyticsDashboardContent />
+        </SubscriptionProvider>
+    );
+};
+
+const AnalyticsDashboardContent = () => {
     const { hasFeature, isLoading: subLoading } = useSubscription();
 
     useEffect(() => {
@@ -27,6 +36,11 @@ export const AnalyticsDashboard = () => {
     const [error, setError] = useState<string | null>(null);
     const [dateError, setDateError] = useState<string | null>(null);
     
+    // Fetch data on mount and range change
+    useEffect(() => {
+        handleRefresh();
+    }, [range, dateRange]);
+
     // Set default range to last 7 days from today
     const [dateRange, setDateRange] = useState(() => {
         const end = new Date();
@@ -37,18 +51,6 @@ export const AnalyticsDashboard = () => {
             end: end.toISOString().split('T')[0]
         };
     });
-
-    if (subLoading) {
-        return (
-            <div className="w-full h-96 flex items-center justify-center">
-                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-            </div>
-        );
-    }
-
-    if (!hasFeature('Analytics')) {
-        return null; // Will redirect via useEffect
-    }
 
     // Simulated Analytics Data
     const [data, setData] = useState({
@@ -130,6 +132,18 @@ export const AnalyticsDashboard = () => {
             setIsLoading(false);
         }
     };
+
+    if (subLoading) {
+        return (
+            <div className="w-full h-96 flex items-center justify-center">
+                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
+
+    if (!hasFeature('Analytics')) {
+        return null; // Will redirect via useEffect
+    }
 
     const showDateError = (msg: string) => {
         setDateError(msg);

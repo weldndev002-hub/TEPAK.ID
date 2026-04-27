@@ -45,6 +45,7 @@ function generateToken(): string {
 /**
  * Generate a signed URL for a file in Supabase Storage
  * Note: This requires the file to be in a private bucket
+ * For public buckets (like 'product'), returns the original URL
  */
 async function generateSignedUrl(filePath: string, expiresInSeconds = 7 * 24 * 60 * 60): Promise<string | null> {
     try {
@@ -60,12 +61,33 @@ async function generateSignedUrl(filePath: string, expiresInSeconds = 7 * 24 * 6
 
         // Extract bucket and path from file_url
         // Assuming format: https://[project].supabase.co/storage/v1/object/public/bucket/path/to/file.pdf
-        // For private bucket, we need to use signed URLs
         const url = new URL(filePath);
         const pathParts = url.pathname.split('/');
-        const bucket = pathParts[4]; // after /storage/v1/object/public/
-        const fileKey = pathParts.slice(5).join('/');
 
+        // Check if this is a Supabase Storage URL
+        if (pathParts.length < 5 || !pathParts.includes('storage')) {
+            console.warn('[Digital Delivery] Not a Supabase Storage URL, returning original:', filePath);
+            return filePath;
+        }
+
+        const bucketIndex = pathParts.indexOf('object') + 1;
+        if (bucketIndex >= pathParts.length) {
+            console.warn('[Digital Delivery] Invalid storage URL format:', filePath);
+            return filePath;
+        }
+
+        const bucket = pathParts[bucketIndex];
+        const fileKey = pathParts.slice(bucketIndex + 1).join('/');
+
+        console.log('[Digital Delivery] Extracted bucket:', bucket, 'fileKey:', fileKey);
+
+        // For public buckets like 'product', return original URL (no signed URL needed)
+        if (bucket === 'product') {
+            console.log('[Digital Delivery] Public bucket detected, using original URL');
+            return filePath;
+        }
+
+        // For private buckets, generate signed URL
         const { data, error } = await supabase.storage
             .from(bucket)
             .createSignedUrl(fileKey, expiresInSeconds);
@@ -78,7 +100,9 @@ async function generateSignedUrl(filePath: string, expiresInSeconds = 7 * 24 * 6
         return data.signedUrl;
     } catch (error) {
         console.error('Exception in generateSignedUrl:', error);
-        return null;
+        // Return original URL if signed URL generation fails
+        console.warn('[Digital Delivery] Falling back to original URL due to error');
+        return filePath;
     }
 }
 
@@ -97,6 +121,28 @@ export async function createDigitalDelivery(
         fileUrl: fileUrl ? `${fileUrl.substring(0, 50)}...` : 'MISSING',
         siteBaseUrl
     });
+
+    // Validate file URL
+    if (!fileUrl || typeof fileUrl !== 'string') {
+        console.error('[Digital Delivery] ❌ Invalid file URL:', fileUrl);
+        return { success: false, error: 'File URL is required and must be a valid string' };
+    }
+
+    // Check if file URL is absolute or relative
+    let finalFileUrl = fileUrl;
+    const isAbsoluteUrl = fileUrl.startsWith('http://') || fileUrl.startsWith('https://');
+    if (!isAbsoluteUrl) {
+        console.warn('[Digital Delivery] ⚠️ File URL is relative, not absolute:', fileUrl);
+        console.warn('[Digital Delivery] Relative URLs may not work for digital delivery');
+        // Try to construct absolute URL if siteBaseUrl is provided
+        if (siteBaseUrl) {
+            finalFileUrl = fileUrl.startsWith('/') ? `${siteBaseUrl}${fileUrl}` : `${siteBaseUrl}/${fileUrl}`;
+            console.log('[Digital Delivery] Constructed absolute URL:', finalFileUrl);
+        } else {
+            console.error('[Digital Delivery] ❌ Cannot construct absolute URL - siteBaseUrl not provided');
+            return { success: false, error: 'File URL is relative but siteBaseUrl not provided' };
+        }
+    }
 
     try {
         const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL') || '';
@@ -119,14 +165,14 @@ export async function createDigitalDelivery(
         // (This handles both private buckets and public file URLs)
         let signedUrl: string | null = null;
         try {
-            console.log('[Digital Delivery] Attempting to generate signed URL for:', fileUrl);
-            signedUrl = await generateSignedUrl(fileUrl);
+            console.log('[Digital Delivery] Attempting to generate signed URL for:', finalFileUrl);
+            signedUrl = await generateSignedUrl(finalFileUrl);
             console.log('[Digital Delivery] Signed URL generated:', signedUrl ? 'Yes' : 'No');
         } catch (e: any) {
             console.warn('[Digital Delivery] Could not generate signed URL, using original file URL:', e.message);
         }
         // For public buckets/URLs, just use the original file URL directly
-        const downloadUrl = signedUrl || fileUrl;
+        const downloadUrl = signedUrl || finalFileUrl;
         console.log('[Digital Delivery] Final download URL:', downloadUrl);
 
         // Try to insert into digital_deliveries table (optional - email still sent if this fails)
@@ -139,7 +185,7 @@ export async function createDigitalDelivery(
                     .insert({
                         order_id: orderId,
                         token,
-                        file_url: fileUrl,
+                        file_url: finalFileUrl,
                         signed_url: downloadUrl,
                         expires_at: expiresAt.toISOString(),
                         accessed_email: customerEmail,
@@ -236,78 +282,78 @@ async function sendDigitalDeliveryEmail(
         const senderEmailFromEnv = getEnv('RESEND_SENDER_EMAIL');
         const senderNameFromEnv = getEnv('RESEND_SENDER_NAME') || 'Tepak.ID';
 
-        let senderEmail;
-        if (senderEmailFromEnv) {
-            // Use format: "Name <email>" if name is available
-            senderEmail = senderNameFromEnv ? `${senderNameFromEnv} <${senderEmailFromEnv}>` : senderEmailFromEnv;
-        } else {
-            // Fallback to Resend's verified domain
-            senderEmail = 'onboarding@resend.dev';
+        // Validate email format (must contain @ and domain)
+        const isValidEmail = (email: string): boolean => {
+            if (typeof email !== 'string') return false;
+            // Basic validation: must contain @ and at least one . after @
+            const atIndex = email.indexOf('@');
+            if (atIndex === -1) return false;
+            const domainPart = email.substring(atIndex + 1);
+            return domainPart.includes('.') && domainPart.length > 2;
+        };
+
+        let finalSenderEmail = senderEmailFromEnv;
+
+        // If sender email from env is not valid, use fallback to Resend's verified domain
+        if (!finalSenderEmail || !isValidEmail(finalSenderEmail)) {
+            console.warn(`[Digital Delivery Email] ⚠️ RESEND_SENDER_EMAIL is invalid (${senderEmailFromEnv}) or not set, using Resend verified domain`);
+            finalSenderEmail = 'onboarding@resend.dev';
         }
 
+        // Check if using custom domain (not Resend's verified domain)
+        // Custom domains need to be verified in Resend dashboard before use
+        const isCustomDomain = !finalSenderEmail.includes('@resend.dev');
+        if (isCustomDomain) {
+            console.warn('[Digital Delivery Email] ⚠️ Using custom domain email: ' + finalSenderEmail);
+            console.warn('[Digital Delivery Email] If email fails with 422 error, the domain is not verified in Resend dashboard');
+            console.warn('[Digital Delivery Email] Verify domain at: https://resend.com/domains');
+        }
+
+        // Validate fallback is also correct
+        if (!isValidEmail(finalSenderEmail)) {
+            console.error('[Digital Delivery Email] ❌ Fallback email is also invalid, using last resort default');
+            finalSenderEmail = 'noreply@resend.dev';
+        }
+
+        // Construct final sender format: "Name" <email@domain.com>
+        // Quotes are important if the name contains dots or special characters (like "Tepak.ID")
+        const senderEmail = `"${senderNameFromEnv.replace(/"/g, '')}" <${finalSenderEmail}>`;
+
         console.log(`[Digital Delivery Email] Using sender: ${senderEmail}`);
+        console.log(`[Digital Delivery Email] Final sender email validated: ${finalSenderEmail}`);
 
         const emailData = {
             from: senderEmail,
             to: toEmail,
-            subject: 'Tautan Unduhan Produk Digital Anda - Tepak.ID',
+            subject: '📦 Tautan Unduhan Produk - Tepak.ID',
             html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Unduhan Produk Digital</title>
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; }
-            .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666; text-align: center; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>🎉 Pembayaran Berhasil!</h1>
-              <p>Produk digital Anda siap diunduh</p>
-            </div>
-            <div class="content">
-              <h2>Halo Pembeli,</h2>
-              <p>Terima kasih telah melakukan pembelian di Tepak.ID. Produk digital yang Anda beli telah siap untuk diunduh.</p>
-              
-              <p style="margin: 25px 0; text-align: center;">
-                <a href="${downloadPageUrl}" class="button">📥 Unduh Produk Sekarang</a>
-              </p>
-              
-              <p><strong>Detail Pengunduhan:</strong></p>
-              <ul>
-                <li>Tautan unduhan hanya berlaku selama 7 hari</li>
-                <li>Tautan hanya dapat diakses dengan email ini: <strong>${toEmail}</strong></li>
-                <li>Jika tautan tidak berfungsi, salin dan tempel URL berikut di browser:<br>
-                  <code style="background: #eee; padding: 5px; border-radius: 3px; word-break: break-all;">${downloadPageUrl}</code>
-                </li>
-              </ul>
-              
-              <p>Jika Anda mengalami masalah dengan pengunduhan, silakan hubungi kreator produk atau tim support kami.</p>
-              
-              <div class="footer">
-                <p>&copy; ${new Date().getFullYear()} Tepak.ID. Semua hak dilindungi undang-undang.</p>
-                <p>Email ini dikirim secara otomatis, mohon tidak membalas email ini.</p>
-              </div>
-            </div>
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+          <h2 style="color: #667eea;">Terima kasih atas pesanan Anda!</h2>
+          <p>Produk digital Anda kini sudah siap untuk diunduh.</p>
+          
+          <div style="margin: 30px 0;">
+            <a href="${downloadPageUrl}" style="background-color: #667eea; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+              📥 Ambil Produk Di Sini
+            </a>
           </div>
-        </body>
-        </html>
+          
+          <p style="font-size: 14px; color: #666;">
+            <strong>Catatan:</strong><br>
+            - Gunakan email <b>${toEmail}</b> untuk mengakses tautan ini.<br>
+            - Tautan berlaku selama 7 hari.
+          </p>
+          
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+          <p style="font-size: 12px; color: #999; text-align: center;">&copy; Tepak.ID</p>
+        </div>
       `,
-            text: `Pembayaran berhasil! Produk digital Anda siap diunduh. Klik tautan berikut untuk mengunduh: ${downloadPageUrl}\n\nTautan hanya berlaku 7 hari dan hanya dapat diakses dengan email: ${toEmail}\n\nJika mengalami masalah, hubungi support@tepak.id`
+            text: `Terima kasih atas pesanan Anda! Produk digital Anda siap diunduh di sini: ${downloadPageUrl}`
         };
 
         console.log('[Digital Delivery Email] Sending request to Resend API...');
 
         // Send email using Resend API directly
-        const response = await fetch('https://api.resend.com/emails', {
+        let response = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${resendApiKey}`,
@@ -317,6 +363,29 @@ async function sendDigitalDeliveryEmail(
         });
 
         console.log(`[Digital Delivery Email] Resend API response status: ${response.status}`);
+
+        // RETRY LOGIC: If custom domain fails with 422 (Verification Error), fallback to Resend domain
+        if (!response.ok && response.status === 422 && isCustomDomain) {
+            console.warn('[Digital Delivery Email] ⚠️ Custom domain sending failed (likely verification issue). Retrying with Resend verified domain...');
+            
+            const fallbackEmailData = {
+                ...emailData,
+                from: `"${senderNameFromEnv.replace(/"/g, '')}" <onboarding@resend.dev>`
+            };
+            
+            console.log(`[Digital Delivery Email] Retry sender: ${fallbackEmailData.from}`);
+            
+            response = await fetch('https://api.resend.com/emails', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${resendApiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(fallbackEmailData),
+            });
+            
+            console.log(`[Digital Delivery Email] Retry response status: ${response.status}`);
+        }
 
         if (!response.ok) {
             const errorText = await response.text();
