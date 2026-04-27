@@ -83,11 +83,23 @@ if (token && email && supabase) {
             console.error("[Digital Delivery] Token verification error:", error || "No delivery record found");
             isValid = false;
         } else {
+            // Get buyer email from multiple possible sources
+            const orderCustomerEmail = delivery.orders?.customers?.email;
+            const accessedEmail = delivery.accessed_email;
+            
+            buyerEmail = orderCustomerEmail || accessedEmail || "";
+            
+            console.log("[Digital Delivery] Email Check:", {
+                provided: email,
+                expected_from_order: orderCustomerEmail,
+                expected_from_record: accessedEmail,
+                final_expected: buyerEmail
+            });
+
             // Check expiry
             const expiresAt = new Date(delivery.expires_at);
             const now = new Date();
-            // Fallback to accessed_email if order/customer join is missing
-            buyerEmail = delivery.orders?.customers?.email || delivery.accessed_email || "";
+            
             orderId = delivery.orders?.id || "MANUAL";
             accessCount = delivery.access_count || 0;
 
@@ -182,14 +194,15 @@ if (token && email && supabase) {
     console.warn("[Digital Delivery] Missing token or email");
 }
 
-// If invalid, redirect to error page with more specific reason if possible
+// If invalid, redirect to error page with more specific reason
 if (!isValid) {
     let reason = "invalid";
     if (errorMessage && errorMessage.includes("email")) reason = "email_mismatch";
     if (errorMessage && errorMessage.includes("kadaluarsa")) reason = "expired";
     
-    console.log(`[Digital Delivery] Redirecting to error page. Reason: ${reason}, Msg: ${errorMessage}`);
-    return Astro.redirect(`/digital-delivery/error?reason=${reason}`);
+    const debugParam = `&debug_provided=${encodeURIComponent(email)}&debug_expected=${encodeURIComponent(buyerEmail)}`;
+    console.log(`[Digital Delivery] Redirecting. Reason: ${reason}, Msg: ${errorMessage}`);
+    return Astro.redirect(`/digital-delivery/error?reason=${reason}${debugParam}`);
 }
 ---
 
