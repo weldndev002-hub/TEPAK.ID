@@ -2320,7 +2320,8 @@ app.post('/payments/duitku/webhook', async (c) => {
               orderData.id,
               customerEmail,
               fileUrl,
-              siteBaseUrl
+              siteBaseUrl,
+              c.env // Pass Hono environment to library
             );
 
             if (result.success) {
@@ -2390,7 +2391,8 @@ app.post('/test/digital-delivery', async (c) => {
       orderId,
       email,
       fileUrl,
-      siteBaseUrl
+      siteBaseUrl,
+      c.env // Pass Hono environment
     );
     
     console.log(`[Test Digital Delivery] Result:`, result);

@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Helper to get env vars (copied from API pattern)
-const getEnv = (key: string) => {
+const getEnv = (key: string, env?: any) => {
     const clean = (v: any, isUrl = false) => {
         if (typeof v !== 'string') return v;
         let cleaned = v.trim().replace(/^["']|["']$/g, '');
@@ -10,6 +10,7 @@ const getEnv = (key: string) => {
     };
 
     // 1. Try passed runtime env (Cloudflare v6+)
+    if (env && env[key]) return clean(env[key], key.includes('URL'));
     if (typeof cfEnv !== 'undefined' && cfEnv && cfEnv[key]) return clean(cfEnv[key], key.includes('URL'));
 
     // 2. Vite / Astro Build-time (PUBLIC_ vars)
@@ -47,10 +48,10 @@ function generateToken(): string {
  * Note: This requires the file to be in a private bucket
  * For public buckets (like 'product'), returns the original URL
  */
-async function generateSignedUrl(filePath: string, expiresInSeconds = 7 * 24 * 60 * 60): Promise<string | null> {
+async function generateSignedUrl(filePath: string, env?: any, expiresInSeconds = 7 * 24 * 60 * 60): Promise<string | null> {
     try {
-        const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL') || '';
-        const supabaseKey = getEnv('SUPABASE_SERVICE_ROLE_KEY') || getEnv('PUBLIC_SUPABASE_ANON_KEY') || '';
+        const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL', env) || '';
+        const supabaseKey = getEnv('SUPABASE_SERVICE_ROLE_KEY', env) || getEnv('PUBLIC_SUPABASE_ANON_KEY', env) || '';
 
         if (!supabaseUrl || !supabaseKey) {
             console.error('Missing Supabase credentials for signed URL generation');
@@ -113,8 +114,9 @@ export async function createDigitalDelivery(
     orderId: string,
     customerEmail: string,
     fileUrl: string,
-    siteBaseUrl?: string
-): Promise<{ success: boolean; token?: string; error?: string }> {
+    siteBaseUrl?: string,
+    env?: any
+): Promise<{ success: boolean; token?: string; emailSent?: boolean; emailError?: string; error?: string }> {
     console.log('[Digital Delivery] Starting digital delivery process:', {
         orderId,
         customerEmail: customerEmail ? `${customerEmail.substring(0, 3)}...` : 'MISSING',
@@ -145,8 +147,8 @@ export async function createDigitalDelivery(
     }
 
     try {
-        const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL') || '';
-        const supabaseKey = getEnv('SUPABASE_SERVICE_ROLE_KEY') || '';
+        const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL', env) || '';
+        const supabaseKey = getEnv('SUPABASE_SERVICE_ROLE_KEY', env) || '';
 
         console.log('[Digital Delivery] Supabase config:', {
             hasUrl: !!supabaseUrl,
@@ -166,7 +168,7 @@ export async function createDigitalDelivery(
         let signedUrl: string | null = null;
         try {
             console.log('[Digital Delivery] Attempting to generate signed URL for:', finalFileUrl);
-            signedUrl = await generateSignedUrl(finalFileUrl);
+            signedUrl = await generateSignedUrl(finalFileUrl, env);
             console.log('[Digital Delivery] Signed URL generated:', signedUrl ? 'Yes' : 'No');
         } catch (e: any) {
             console.warn('[Digital Delivery] Could not generate signed URL, using original file URL:', e.message);
@@ -214,7 +216,7 @@ export async function createDigitalDelivery(
         let emailError = null;
 
         try {
-            await sendDigitalDeliveryEmail(customerEmail, token, downloadUrl, siteBaseUrl);
+            await sendDigitalDeliveryEmail(customerEmail, token, downloadUrl, siteBaseUrl, env);
             emailSent = true;
             console.log('[Digital Delivery] ✅ Email sent successfully');
         } catch (emailErr: any) {
@@ -244,7 +246,8 @@ async function sendDigitalDeliveryEmail(
     toEmail: string,
     token: string,
     downloadUrl: string,
-    siteBaseUrl?: string
+    siteBaseUrl?: string,
+    env?: any
 ): Promise<void> {
     console.log(`[Digital Delivery Email] Starting email send process to: ${toEmail}`);
 
@@ -254,14 +257,14 @@ async function sendDigitalDeliveryEmail(
         console.log(`[Digital Delivery Email] Download URL (truncated): ${downloadUrl.substring(0, 100)}...`);
         console.log(`[Digital Delivery Email] Site Base URL: ${siteBaseUrl || 'Not provided'}`);
 
-        // Get Resend API key from environment only
-        const resendApiKey = getEnv('RESEND_API_KEY');
+        // Get Resend API key from environment
+        const resendApiKey = getEnv('RESEND_API_KEY', env);
         const isCloudflareWorker = typeof WebSocketPair !== 'undefined' || (typeof globalThis !== 'undefined' && (globalThis as any).WebSocketPair);
 
         console.log(`[Digital Delivery Email] Environment check:`);
         console.log(`  - Resend API Key present: ${!!resendApiKey}`);
         console.log(`  - Running in Cloudflare Worker: ${isCloudflareWorker}`);
-        console.log(`  - Available env keys: ${Object.keys((globalThis as any).env || {}).filter(k => !k.includes('KEY') && !k.includes('SECRET')).join(', ') || 'N/A'}`);
+        console.log(`  - Available env keys: ${Object.keys(env || {}).filter(k => !k.includes('KEY') && !k.includes('SECRET')).join(', ') || 'N/A'}`);
 
         if (!resendApiKey) {
             console.error('[Digital Delivery Email] ❌ RESEND_API_KEY is required but not set in environment');
@@ -270,7 +273,7 @@ async function sendDigitalDeliveryEmail(
         }
 
         // Create a user-friendly download page URL
-        const siteUrl = siteBaseUrl || getEnv('PUBLIC_SITE_URL');
+        const siteUrl = siteBaseUrl || getEnv('PUBLIC_SITE_URL', env);
         if (!siteUrl) {
             console.error('[Digital Delivery Email] ❌ PUBLIC_SITE_URL is not configured');
             throw new Error('PUBLIC_SITE_URL environment variable is required');
@@ -279,8 +282,8 @@ async function sendDigitalDeliveryEmail(
         console.log(`[Digital Delivery Email] Download page URL: ${downloadPageUrl}`);
 
         // Use configured sender email or fallback
-        const senderEmailFromEnv = getEnv('RESEND_SENDER_EMAIL');
-        const senderNameFromEnv = getEnv('RESEND_SENDER_NAME') || 'Tepak.ID';
+        const senderEmailFromEnv = getEnv('RESEND_SENDER_EMAIL', env);
+        const senderNameFromEnv = getEnv('RESEND_SENDER_NAME', env) || 'Tepak.ID';
 
         // Validate email format (must contain @ and domain)
         const isValidEmail = (email: string): boolean => {
