@@ -6,17 +6,25 @@ import { type ClientDirective } from "astro";
 
 // Helper to safely get environment variables (compatible with Cloudflare Workers)
 const getEnv = (key: string) => {
-    // 1. Try passed runtime env (Cloudflare v6+)
-    const runtime = Astro.locals.runtime;
-    if (runtime && runtime.env && runtime.env[key]) return runtime.env[key];
+    try {
+        // 1. Try passed runtime env (Cloudflare v6+)
+        if (typeof Astro !== 'undefined' && Astro.locals && Astro.locals.runtime && Astro.locals.runtime.env) {
+            const val = Astro.locals.runtime.env[key];
+            if (val) return val;
+        }
 
-    // 2. Vite / Astro Build-time (PUBLIC_ vars)
-    if (import.meta.env[key]) return import.meta.env[key];
+        // 2. Vite / Astro Build-time (PUBLIC_ vars)
+        if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
+            return import.meta.env[key];
+        }
 
-    // 3. Global Fallback
-    if (typeof globalThis !== 'undefined') {
-        if ((globalThis as any)[key]) return (globalThis as any)[key];
-        if ((globalThis as any).env && (globalThis as any).env[key]) return (globalThis as any).env[key];
+        // 3. Global Fallback
+        if (typeof globalThis !== 'undefined') {
+            if ((globalThis as any)[key]) return (globalThis as any)[key];
+            if ((globalThis as any).env && (globalThis as any).env[key]) return (globalThis as any).env[key];
+        }
+    } catch (e) {
+        console.error(`[Digital Delivery] Error getting env ${key}:`, e);
     }
 
     return null;
@@ -36,7 +44,20 @@ console.log("[Digital Delivery] Init:", {
     hasKey: !!supabaseKey 
 });
 
-const supabase = createClient(supabaseUrl || '', supabaseKey || '');
+// Initialize Supabase client
+let supabase: any = null;
+const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL');
+const supabaseKey = getEnv('SUPABASE_SERVICE_ROLE_KEY') || getEnv('PUBLIC_SUPABASE_ANON_KEY');
+
+try {
+    if (supabaseUrl && supabaseKey) {
+        supabase = createClient(supabaseUrl, supabaseKey);
+    } else {
+        console.error("[Digital Delivery] Missing Supabase config:", { supabaseUrl: !!supabaseUrl, supabaseKey: !!supabaseKey });
+    }
+} catch (e) {
+    console.error("[Digital Delivery] Supabase init error:", e);
+}
 
 let isValid = false;
 let errorMessage = "";
@@ -50,7 +71,7 @@ let buyerEmail = "";
 let orderId = "";
 let accessCount = 0;
 
-if (token && email) {
+if (token && email && supabase) {
     try {
         // Verify token access - use left join (remove !inner) to handle cases without order links
         const { data: delivery, error } = await supabase
