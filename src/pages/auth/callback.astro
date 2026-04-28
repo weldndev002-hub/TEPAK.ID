@@ -154,14 +154,24 @@ console.log("[Auth Callback] ⚠️ No code found, falling back to client-side h
     </div>
     
     <script>
-        // Check if there's an implicit flow token hash from Supabase
-        if (window.location.hash && window.location.hash.includes('access_token')) {
+        // DIAGNOSTIC SCRIPT: Catch absolutely everything
+        const hash = window.location.hash;
+        const search = window.location.search;
+        
+        if (hash && hash.includes('access_token')) {
             console.log("[Auth Callback Client] ⚡ Found access_token in hash, redirecting to login handler...");
-            // Pass the hash to the login page where our React component (LoginForm.tsx) will intercept and process it
-            window.location.replace('/login' + window.location.hash);
+            window.location.replace('/login' + hash);
+        } else if (hash && hash.includes('error=')) {
+            // Supabase sent an error in the hash!
+            console.error("[Auth Callback Client] ❌ Found error in hash:", hash);
+            const params = new URLSearchParams(hash.substring(1));
+            const errorDesc = params.get('error_description') || params.get('error') || 'Unknown Hash Error';
+            window.location.replace('/login?error=supabase_hash_error&detail=' + encodeURIComponent(errorDesc));
         } else {
-            console.error("[Auth Callback Client] ❌ No hash found. Authentication failed.");
-            window.location.replace('/login?error=no_code');
+            // Complete failure. Send the exact URL string for debugging.
+            console.error("[Auth Callback Client] ❌ No token or error in hash. URL:", window.location.href);
+            const debugInfo = "URL: " + window.location.pathname + search + hash;
+            window.location.replace('/login?error=no_code_received&detail=' + encodeURIComponent(debugInfo));
         }
     </script>
 </body>
