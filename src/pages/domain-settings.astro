@@ -3,6 +3,37 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { LightSidebar } from '../components/layout/LightSidebar';
 import { LightTopNavbar } from '../components/layout/LightTopNavbar';
 import { DomainSettingsDashboard } from '../components/settings/DomainSettings';
+
+// Server-side feature gating
+const { supabase } = Astro.locals;
+const session = await supabase.auth.getSession();
+const user = session.data.session?.user;
+
+if (!user) {
+    return Astro.redirect('/login');
+}
+
+// Fetch user settings and plan features
+const { data: settings } = await supabase
+    .from('user_settings')
+    .select('plan_status')
+    .eq('user_id', user.id)
+    .single();
+
+const planId = settings?.plan_status || 'free';
+
+const { data: plan } = await supabase
+    .from('subscription_plans')
+    .select('features')
+    .eq('id', planId)
+    .single();
+
+const features = plan?.features || [];
+const hasDomainFeature = features.includes('Custom Domain (CNAME)');
+
+if (!hasDomainFeature) {
+    return Astro.redirect('/dashboard?error=feature_locked');
+}
 ---
 
 <BaseLayout title="Domain Settings | Creator Hub">

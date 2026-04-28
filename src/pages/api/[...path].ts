@@ -2156,7 +2156,20 @@ app.get('/subscription/status', async (c) => {
 
     if (settingsError && settingsError.code !== 'PGRST116') throw settingsError;
 
-    const planId = settings?.plan_status || 'free';
+    let planId = settings?.plan_status || 'free';
+
+    // Auto-revert expired subscriptions
+    if (planId !== 'free' && settings?.plan_expiry) {
+      const expiryDate = new Date(settings.plan_expiry);
+      if (new Date() > expiryDate) {
+        console.log(`[Subscription] Plan expired for user ${user.id}. Auto-reverting to free.`);
+        await supabase
+          .from('user_settings')
+          .update({ plan_status: 'free', auto_renewal: false })
+          .eq('user_id', user.id);
+        planId = 'free';
+      }
+    }
 
     // Fetch plan details (features, config, etc)
     const { data: planDetails } = await supabase
@@ -2175,6 +2188,7 @@ app.get('/subscription/status', async (c) => {
     return c.json({ error: err.message }, 500);
   }
 });
+
 
 // 1.2 Cancel Subscription (Turn off Auto-Renewal)
 app.post('/subscription/cancel', async (c) => {

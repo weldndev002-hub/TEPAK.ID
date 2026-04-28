@@ -55,34 +55,78 @@ try {
             profiles: { ...profileData }
         };
 
-        // 2. Fetch Products & Analytics for this merchant
-        const [{ data: productList }, { data: viewsData }] = await Promise.all([
-            supabase
-                .from('products')
-                .select('*')
-                .eq('merchant_id', profileData.id || profileData.user_id)
-                .eq('status', 'published')
-                .order('created_at', { ascending: false }),
-            supabase
-                .from('analytics_events')
-                .select('product_id, event_type')
-                .eq('merchant_id', profileData.id || profileData.user_id)
-                .in('event_type', ['view', 'page_view'])
-        ]);
-        
-        products = productList || [];
-        const viewCounts = viewsData || [];
+        // Auto-revert expired subscription for this creator
+        let activePlanId = settings?.plan_status || 'free';
+        if (activePlanId !== 'free' && settings?.plan_expiry) {
+            const expiry = new Date(settings.plan_expiry);
+            if (new Date() > expiry) {
+                console.log(`[PublicProfile] Plan expired for creator ${profileData.id}. Treating as free.`);
+                // Update database in background
+                supabase.from('user_settings').update({ plan_status: 'free', auto_renewal: false }).eq('user_id', profileData.id);
+                activePlanId = 'free';
+                merchantData.plan_status = 'free';
+            }
+        }
 
-        formatted_products = products.map(p => ({
-            id: p.id,
-            title: p.title,
-            price: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p.price),
-            description: p.description,
-            image: p.cover_url || "https://images.unsplash.com/photo-1544006659-f0b21f04cb1b?w=400&h=400&fit=crop",
-            views_count: viewCounts.filter(v => v.product_id === p.id).length
-        }));
+        // Fetch creator's active plan features AND config
+        let creatorFeatures: string[] = [];
+        let allowedBlockTypes: string[] | null = null; // null = all allowed
+        if (activePlanId) {
+            const { data: planDetails } = await supabase
+                .from('subscription_plans')
+                .select('features, config')
+                .eq('id', activePlanId)
+                .single();
+            creatorFeatures = planDetails?.features || [];
+            // If config.allowed_blocks is explicitly set, use it as a filter
+            if (planDetails?.config?.allowed_blocks !== undefined) {
+                allowedBlockTypes = planDetails.config.allowed_blocks as string[];
+            }
+        }
 
-        blocks = merchantData.profiles?.blocks || [];
+        const hasCommerceFeature = creatorFeatures.includes('Digital Product Sales');
+        const hasLandingPageFeature = creatorFeatures.includes('Landing Page Builder');
+
+        // 2. Fetch Products (only if creator's plan allows Digital Product Sales)
+        if (hasCommerceFeature) {
+            const [{ data: productList }, { data: viewsData }] = await Promise.all([
+                supabase
+                    .from('products')
+                    .select('*')
+                    .eq('merchant_id', profileData.id || profileData.user_id)
+                    .eq('status', 'published')
+                    .order('created_at', { ascending: false }),
+                supabase
+                    .from('analytics_events')
+                    .select('product_id, event_type')
+                    .eq('merchant_id', profileData.id || profileData.user_id)
+                    .in('event_type', ['view', 'page_view'])
+            ]);
+
+            products = productList || [];
+            const viewCounts = viewsData || [];
+
+            formatted_products = products.map(p => ({
+                id: p.id,
+                title: p.title,
+                price: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p.price),
+                description: p.description,
+                image: p.cover_url || "https://images.unsplash.com/photo-1544006659-f0b21f04cb1b?w=400&h=400&fit=crop",
+                views_count: viewCounts.filter((v: any) => v.product_id === p.id).length
+            }));
+        }
+
+        // 3. Blocks — only if Landing Page Builder is enabled AND block type is allowed
+        if (hasLandingPageFeature) {
+            const rawBlocks: any[] = merchantData.profiles?.blocks || [];
+            if (allowedBlockTypes !== null) {
+                // Filter: only show blocks whose type is in the allowed list
+                blocks = rawBlocks.filter((b: any) => allowedBlockTypes!.includes(b.type));
+            } else {
+                // No restriction configured → show all
+                blocks = rawBlocks;
+            }
+        }
     }
 } catch (err) {
     console.error('[Public Profile Error]', err);
@@ -140,6 +184,9 @@ const socials = [
 // Data mapping complete
 
 const is_banned = merchantData?.plan_status === 'banned' || merchantData?.profiles?.is_banned;
+
+// Commerce feature flag — controls visibility of products section on public page
+const showProductsSection = formatted_products.length > 0;
 ---
 
 <BaseLayout title={seo.title} description={seo.description}>
@@ -249,7 +296,8 @@ const is_banned = merchantData?.plan_status === 'banned' || merchantData?.profil
                             </div>
                     </section>
 
-                    {/* PRODUCTS COLLECTION SECTION */}
+                    {/* PRODUCTS COLLECTION SECTION — Only shown if creator's plan has Digital Product Sales */}
+                    {showProductsSection && (
                     <section class="animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-300">
                          <div class="flex flex-col md:flex-row justify-between items-center md:items-end mb-16 gap-6">
                             <div class="text-center md:text-left">
@@ -281,6 +329,7 @@ const is_banned = merchantData?.plan_status === 'banned' || merchantData?.profil
                             ))}
                         </div>
                     </section>
+                    )}
                 </>
             )}
         </main>

@@ -13,6 +13,9 @@ interface SignupFormProps {
 export const SignupForm: React.FC<SignupFormProps> = ({ supabaseUrl, supabaseAnonKey }) => {
     // Use getSupabaseBrowserClient which includes cookie handlers for PKCE OAuth flow
     const [supabase] = useState(() => {
+        if (!supabaseUrl || !supabaseAnonKey) {
+            console.error('[Signup] ERROR: Supabase URL or Anon Key is missing!', { supabaseUrl, supabaseAnonKey });
+        }
         return getSupabaseBrowserClient(supabaseUrl, supabaseAnonKey);
     });
 
@@ -56,8 +59,12 @@ export const SignupForm: React.FC<SignupFormProps> = ({ supabaseUrl, supabaseAno
             isValid = false;
         }
 
-        if (!isValid) return;
+        if (!isValid) {
+            console.log('[Signup] Validation failed:', { nameError, emailError, passwordError });
+            return;
+        }
 
+        console.log('[Signup] Starting signup process for:', email);
         // Real Supabase Sign-up Process
         setIsLoading(true);
 
@@ -74,7 +81,10 @@ export const SignupForm: React.FC<SignupFormProps> = ({ supabaseUrl, supabaseAno
                 }
             });
 
+            console.log('[Signup] Supabase response:', { data, error });
+
             if (error) {
+                console.error('[Signup] Supabase error:', error);
                 if (error.message.toLowerCase().includes('already registered')) {
                     setEmailError('Email ini sudah terdaftar. Silakan login.');
                 } else {
@@ -97,6 +107,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ supabaseUrl, supabaseAno
                 }
             }
         } catch (err: any) {
+            console.error('[Signup] Unexpected error:', err);
             setEmailError('Terjadi kesalahan sistem. Silakan coba lagi.');
         } finally {
             setIsLoading(false);

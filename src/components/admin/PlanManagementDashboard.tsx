@@ -64,19 +64,13 @@ const ConfirmModal = ({
 };
 
 // Available page blocks / modules
+// Available page blocks / modules that actually exist in the Creator Editor
 const ALL_BLOCKS = [
-    { id: 'hero', label: 'Hero Section', category: 'Layout', desc: 'Full-width banner with headline' },
-    { id: 'about', label: 'About Section', category: 'Layout', desc: 'Profile or brand info block' },
-    { id: 'testimonial', label: 'Testimonial Block', category: 'Social Proof', desc: 'Customer reviews grid' },
-    { id: 'faq', label: 'FAQ Accordion', category: 'Content', desc: 'Collapsible Q&A section' },
-    { id: 'gallery', label: 'Photo Gallery', category: 'Media', desc: 'Image grid with lightbox' },
-    { id: 'video', label: 'Video Embed', category: 'Media', desc: 'YouTube / custom video player' },
-    { id: 'countdown', label: 'Countdown Timer', category: 'Marketing', desc: 'Urgency timer for offers' },
-    { id: 'pricing', label: 'Pricing Table', category: 'Commerce', desc: 'Multi-tier pricing display' },
-    { id: 'order_form', label: 'Order Form', category: 'Commerce', desc: 'Inline order / checkout form' },
-    { id: 'whatsapp_btn', label: 'WhatsApp Button', category: 'Integration', desc: 'Floating WA contact button' },
-    { id: 'pixel_tracking', label: 'Pixel / Analytics', category: 'Integration', desc: 'FB Pixel, GA4, TikTok Ads' },
-    { id: 'custom_code', label: 'Custom Code Block', category: 'Advanced', desc: 'Inject HTML/CSS/JS snippet' },
+    { id: 'link', label: 'Link Block', category: 'Dasar', desc: 'Tombol tautan eksternal' },
+    { id: 'text', label: 'Teks / Paragraf', category: 'Dasar', desc: 'Blok teks dan deskripsi' },
+    { id: 'image', label: 'Gambar', category: 'Media', desc: 'Unggah banner / foto' },
+    { id: 'video', label: 'Video Embed', category: 'Media', desc: 'YouTube / Vimeo Player' },
+    { id: 'social', label: 'Ikon Sosmed', category: 'Integrasi', desc: 'Deretan tautan sosial media' },
 ];
 
 export const PlanManagementDashboard = () => {

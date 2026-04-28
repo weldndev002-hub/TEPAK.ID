@@ -61,8 +61,10 @@ const BottomNavbarContent: React.FC<BottomNavbarProps> = ({
     variant = 'creator'
 }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const { plan } = useSubscription();
-    const isPaid = plan !== 'free' && !!plan;
+    const { plan, hasFeature } = useSubscription();
+    const showCommerce = hasFeature('Digital Product Sales');
+    const showAnalytics = hasFeature('Analytics');
+    const showCustomers = hasFeature('Customer Management');
 
     const toggleMenu = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -74,15 +76,15 @@ const BottomNavbarContent: React.FC<BottomNavbarProps> = ({
         main: [
             { icon: Squares2X2Icon, label: "Home", href: "/dashboard", id: "dashboard" },
             { icon: WindowIcon, label: "Editor", href: "/editor", id: "editor" },
-            ...(isPaid ? [{ icon: WalletIcon, label: "Wallet", href: "/wallet", id: "wallet" }] : []),
+            ...(showCommerce ? [{ icon: WalletIcon, label: "Wallet", href: "/wallet", id: "wallet" }] : []),
         ],
         more: [
-            { icon: ChartBarIcon, label: "Analytics", href: "/analytics", id: "analytics" },
-            ...(isPaid ? [
+            ...(showAnalytics ? [{ icon: ChartBarIcon, label: "Analytics", href: "/analytics", id: "analytics" }] : []),
+            ...(showCommerce ? [
                 { icon: ArchiveBoxIcon, label: "Products", href: "/products", id: "products" },
                 { icon: DocumentTextIcon, label: "Orders", href: "/orders", id: "orders" },
             ] : []),
-            { icon: UsersIcon, label: "Customers", href: "/customers", id: "customers" },
+            ...(showCustomers ? [{ icon: UsersIcon, label: "Customers", href: "/customers", id: "customers" }] : []),
             { icon: AcademicCapIcon, label: "Academy", href: "/academy", id: "academy" },
             { icon: UserCircleIcon, label: "Profile", href: "/settings", id: "profile" },
             { icon: Cog6ToothIcon, label: "Settings", href: "/account-management", id: "settings" },

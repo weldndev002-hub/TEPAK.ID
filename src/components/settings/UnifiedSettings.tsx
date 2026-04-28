@@ -44,7 +44,8 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
     const [showPassword, setShowPassword] = useState(false);
     const [isTerminating, setIsTerminating] = useState(false);
     const [terminateError, setTerminateError] = useState<string | null>(null);
-    const isPro = plan !== 'free';
+    const { hasFeature } = useSubscription();
+    const showCommerce = hasFeature('Digital Product Sales');
 
     // --- Bank State ---
     const [bankData, setBankData] = useState<{
@@ -216,7 +217,7 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                     <KeyIcon className="w-4 h-4" />
                     Security & Account
                 </button>
-                {isPro && (
+                {showCommerce && (
                     <button 
                         onClick={() => setActiveTab('bank')}
                         className={cn(
@@ -327,7 +328,7 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
             )}
 
             {/* TAB CONTENT: BANK PAYOUT */}
-            {isPro && activeTab === 'bank' && (
+            {showCommerce && activeTab === 'bank' && (
                 <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="bg-slate-900 rounded-[3rem] p-10 flex items-start gap-8 shadow-2xl relative overflow-hidden">
                         <div className="bg-white/10 p-5 rounded-3xl backdrop-blur-md relative z-10">

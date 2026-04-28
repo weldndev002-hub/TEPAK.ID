@@ -4,7 +4,6 @@ import { ImpersonationBanner } from "../components/admin/ImpersonationBanner";
 import { AnalyticsTracker } from "../components/AnalyticsTracker";
 import { AnalyticsDebugPanel } from "../components/AnalyticsDebugPanel";
 import { createClient } from "@supabase/supabase-js";
-import { BrandingProvider } from "../hooks/useBranding";
 
 // Fetch Branding Settings from locals (more resilient)
 const supabase = Astro.locals.supabase;
@@ -110,11 +109,9 @@ const isAdmin = Astro.locals.isAdmin || false;
 		class="min-h-screen font-sans antialiased"
 		data-is-admin={isAdmin ? "true" : "false"}
 	>
-		<BrandingProvider initialData={branding} client:load>
-			<ImpersonationBanner client:only="react" />
-			<AnalyticsDebugPanel client:only="react" />
-			<slot />
-		</BrandingProvider>
+		<ImpersonationBanner client:only="react" />
+		<AnalyticsDebugPanel client:only="react" />
+		<slot />
 
 		<script>
 			// Global Maintenance Mode Watcher

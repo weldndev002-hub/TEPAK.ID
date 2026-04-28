@@ -21,18 +21,25 @@ export interface AddBlockDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectBlock?: (blockId: string) => void;
+  allowedBlocks?: string[] | null; // null = all allowed, [] = none allowed
   className?: string;
 }
 
 export const AddBlockDrawer: React.FC<AddBlockDrawerProps> = ({ 
-  isOpen, onClose, onSelectBlock, className 
+  isOpen, onClose, onSelectBlock, allowedBlocks, className 
 }) => {
   const defaultBlocks: BlockType[] = [
     { id: 'link', label: 'Link', icon: LinkIcon },
-    { id: 'video', label: 'Video', icon: VideoCameraIcon },
+    { id: 'text', label: 'Teks', icon: DocumentTextIcon },
     { id: 'image', label: 'Gambar', icon: PhotoIcon },
+    { id: 'video', label: 'Video', icon: VideoCameraIcon },
     { id: 'social', label: 'Ikon Sosmed', icon: MegaphoneIcon },
   ];
+
+  // null = no restriction (show all), defined array = only show those IDs
+  const visibleBlocks = allowedBlocks !== null && allowedBlocks !== undefined
+      ? defaultBlocks.filter(b => (allowedBlocks as string[]).includes(b.id))
+      : defaultBlocks;
 
   return (
     <div 
@@ -55,20 +62,32 @@ export const AddBlockDrawer: React.FC<AddBlockDrawerProps> = ({
         </button>
       </div>
       
-      <div className="p-6 grid grid-cols-2 gap-4 overflow-y-auto no-scrollbar">
-        {defaultBlocks.map(block => (
-          <div 
-            key={block.id}
-            onClick={() => onSelectBlock?.(block.id)}
-            className="p-6 border border-slate-50 bg-slate-50/50 rounded-3xl flex flex-col items-center gap-4 hover:border-primary hover:bg-white cursor-pointer transition-all hover:shadow-2xl hover:shadow-primary/5 group"
-          >
-            <div className="w-14 h-14 rounded-2xl bg-white shadow-sm border border-slate-50 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                <block.icon className="w-7 h-7" />
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900">{block.label}</span>
+      {visibleBlocks.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-300">
+            <XMarkIcon className="w-7 h-7" />
           </div>
-        ))}
-      </div>
+          <div>
+            <p className="text-[11px] font-black text-slate-700 uppercase tracking-widest">Tidak Ada Blok Tersedia</p>
+            <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">Paket langganan Anda saat ini tidak mengizinkan penambahan blok.<br/>Upgrade paket untuk mengaktifkan fitur ini.</p>
+          </div>
+        </div>
+      ) : (
+        <div className="p-6 grid grid-cols-2 gap-4 overflow-y-auto no-scrollbar">
+          {visibleBlocks.map(block => (
+            <div 
+              key={block.id}
+              onClick={() => onSelectBlock?.(block.id)}
+              className="p-6 border border-slate-50 bg-slate-50/50 rounded-3xl flex flex-col items-center gap-4 hover:border-primary hover:bg-white cursor-pointer transition-all hover:shadow-2xl hover:shadow-primary/5 group"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-white shadow-sm border border-slate-50 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                  <block.icon className="w-7 h-7" />
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900">{block.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

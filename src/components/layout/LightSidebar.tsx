@@ -57,7 +57,7 @@ const LightSidebarContent: React.FC<LightSidebarProps> = ({ activePage = 'dashbo
   const [username, setUsername] = useState<string | null>(null);
   const { branding } = useBranding();
   const { plan, isLoading: subLoading, hasFeature } = useSubscription();
-  const isPaid = plan !== 'free' && !!plan;
+  const showCommerce = hasFeature('Digital Product Sales');
   const showAnalytics = hasFeature('Analytics');
   const showCustomers = hasFeature('Customer Management');
 
@@ -97,7 +97,7 @@ const LightSidebarContent: React.FC<LightSidebarProps> = ({ activePage = 'dashbo
 
           <NavItem icon={WindowIcon} label="Editor" href="/editor" active={activePage === 'editor'} />
           
-          {isPaid && (
+          {showCommerce && (
             <>
               <NavItem icon={ArchiveBoxIcon} label="Products" href="/products" active={activePage === 'products'} />
               <NavItem icon={DocumentTextIcon} label="Orders" href="/orders" active={activePage === 'orders'} />

@@ -17,6 +17,33 @@ const user = await Astro.locals.getUser?.();
 if (!user) {
   return Astro.redirect('/login');
 }
+
+const supabase = Astro.locals.supabase;
+
+let hasAnalyticsFeature = false;
+try {
+    const { data: settings } = await supabase
+        .from('user_settings')
+        .select('plan_status')
+        .eq('user_id', user.id)
+        .single();
+        
+    const planId = settings?.plan_status || 'free';
+
+    const { data: planDetails } = await supabase
+        .from('subscription_plans')
+        .select('features')
+        .eq('id', planId)
+        .single();
+        
+    if (planDetails && Array.isArray(planDetails.features) && planDetails.features.includes('Analytics')) {
+        hasAnalyticsFeature = true;
+    }
+} catch (e) {}
+
+if (!hasAnalyticsFeature) {
+    return Astro.redirect('/plan-info?upgrade=required');
+}
 ---
 
 <BaseLayout title="Performance Insights — Orbit Site Analytics">

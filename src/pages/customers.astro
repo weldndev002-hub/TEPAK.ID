@@ -4,6 +4,38 @@ import { LightSidebar } from '../components/layout/LightSidebar';
 import { LightTopNavbar } from '../components/layout/LightTopNavbar';
 import { CustomersDashboard } from '../components/customers/CustomersDashboard';
 import { BottomNavbar } from '../components/layout/BottomNavbar';
+
+const user = await Astro.locals.getUser();
+const supabase = Astro.locals.supabase;
+
+if (!user || !supabase) {
+    return Astro.redirect('/login');
+}
+
+let hasCustomerFeature = false;
+try {
+    const { data: settings } = await supabase
+        .from('user_settings')
+        .select('plan_status')
+        .eq('user_id', user.id)
+        .single();
+        
+    const planId = settings?.plan_status || 'free';
+
+    const { data: planDetails } = await supabase
+        .from('subscription_plans')
+        .select('features')
+        .eq('id', planId)
+        .single();
+        
+    if (planDetails && Array.isArray(planDetails.features) && planDetails.features.includes('Customer Management')) {
+        hasCustomerFeature = true;
+    }
+} catch (e) {}
+
+if (!hasCustomerFeature) {
+    return Astro.redirect('/plan-info?upgrade=required');
+}
 ---
 
 <BaseLayout title="Customer Management - Orbit Site">

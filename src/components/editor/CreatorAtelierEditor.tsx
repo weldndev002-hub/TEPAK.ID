@@ -32,7 +32,13 @@ export const CreatorAtelierEditor: React.FC<CreatorAtelierEditorProps> = (props)
 };
 
 const CreatorAtelierEditorContent: React.FC<CreatorAtelierEditorProps> = ({ initialBranding }) => {
-    const { hasFeature, isLoading: subLoading } = useSubscription();
+    const { hasFeature, planDetails, isLoading: subLoading } = useSubscription();
+
+    // If config.allowed_blocks is explicitly set (even []), respect it.
+    // Only fall back to all blocks if config is completely undefined (not yet configured in admin).
+    const allowedBlocks: string[] | null = planDetails?.config?.allowed_blocks !== undefined
+        ? (planDetails.config.allowed_blocks as string[])
+        : null; // null = allow all (no restriction configured)
 
     React.useEffect(() => {
         // Block access if feature is disabled in Admin
@@ -484,6 +490,7 @@ const CreatorAtelierEditorContent: React.FC<CreatorAtelierEditorProps> = ({ init
                 isOpen={isAddBlockOpen} 
                 onClose={() => setIsAddBlockOpen(false)} 
                 onSelectBlock={handleSelectBlock}
+                allowedBlocks={allowedBlocks}
             />
 
             {activeBlockType && (
