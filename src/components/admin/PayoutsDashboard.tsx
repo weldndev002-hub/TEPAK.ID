@@ -124,7 +124,6 @@ export const PayoutsDashboard = () => {
             setProofPreview(url);
         }
     };
-
     const executeUpdate = async (id: string, status: string, notes: string) => {
         setProcessing(true);
         try {
@@ -402,7 +401,19 @@ export const PayoutsDashboard = () => {
                                                     {selectedPayout.bank_accounts?.account_number}
                                                 </p>
                                                 {showAccountNumber && (
-                                                    <span className="text-[8px] font-black text-emerald-500 uppercase bg-emerald-50 px-1.5 py-0.5 rounded">Revealed</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            onClick={() => {
+                                                                navigator.clipboard.writeText(selectedPayout.bank_accounts?.account_number);
+                                                                showToast('success', 'Account number copied!');
+                                                            }}
+                                                            className="p-1.5 hover:bg-slate-100 rounded-lg text-primary transition-all"
+                                                            title="Copy to Clipboard"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[16px]">content_copy</span>
+                                                        </button>
+                                                        <span className="text-[8px] font-black text-emerald-500 uppercase bg-emerald-50 px-1.5 py-0.5 rounded">Revealed</span>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>

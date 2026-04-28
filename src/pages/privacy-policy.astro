@@ -1,0 +1,122 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Kebijakan Privasi - Tepak.ID">
+  <main class="min-h-screen bg-white py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto">
+      {/* Header */}
+      <div class="mb-12">
+        <h1 class="text-4xl font-black text-slate-900 mb-2">Kebijakan Privasi</h1>
+        <p class="text-slate-600">Terakhir diperbarui: {new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+      </div>
+
+      {/* Content */}
+      <div class="prose prose-slate max-w-none space-y-6 text-slate-700">
+        <section>
+          <h2 class="text-2xl font-bold text-slate-900 mb-4">1. Pengenalan</h2>
+          <p>
+            Tepak.ID ("kami", "kami", atau "perusahaan kami") mengoperasikan platform (situs web dan aplikasi). Halaman ini menginformasikan Anda tentang kebijakan privasi kami mengenai pengumpulan, penggunaan, dan pengungkapan data pribadi Anda saat Anda menggunakan Layanan kami.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold text-slate-900 mb-4">2. Data Apa yang Kami Kumpulkan</h2>
+          <p>Kami mengumpulkan berbagai jenis informasi dalam kaitannya dengan layanan yang kami sediakan, termasuk:</p>
+          <ul class="list-disc list-inside space-y-2 ml-4">
+            <li>Informasi akun: nama, alamat email, kata sandi, foto profil</li>
+            <li>Informasi transaksi: riwayat pembelian, metode pembayaran, invoices</li>
+            <li>Informasi perangkat: IP address, jenis browser, sistem operasi</li>
+            <li>Informasi penggunaan: halaman yang dikunjungi, waktu kunjungan, fitur yang digunakan</li>
+            <li>Informasi dari pihak ketiga: data dari Google dan Apple saat login menggunakan OAuth</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold text-slate-900 mb-4">3. Bagaimana Kami Menggunakan Data Anda</h2>
+          <p>Kami menggunakan informasi yang kami kumpulkan untuk tujuan berikut:</p>
+          <ul class="list-disc list-inside space-y-2 ml-4">
+            <li>Menyediakan, memelihara, dan meningkatkan layanan kami</li>
+            <li>Memproses transaksi dan mengirim informasi terkait</li>
+            <li>Mengirim pemberitahuan dan pembaruan layanan</li>
+            <li>Merespons pertanyaan dan permintaan dukungan Anda</li>
+            <li>Mendeteksi, mencegah, dan mengatasi penipuan atau masalah keamanan</li>
+            <li>Mematuhi persyaratan hukum dan peraturan yang berlaku</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold text-slate-900 mb-4">4. Keamanan Data</h2>
+          <p>
+            Kami mengimplementasikan tindakan keamanan yang sesuai untuk melindungi informasi pribadi Anda dari akses, pengubahan, pengungkapan, atau penghancuran yang tidak sah. Namun, tidak ada metode transmisi melalui Internet atau penyimpanan elektronik yang 100% aman.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold text-slate-900 mb-4">5. Bagaimana Kami Bagikan Data Anda</h2>
+          <p>Kami dapat membagikan informasi pribadi Anda dengan:</p>
+          <ul class="list-disc list-inside space-y-2 ml-4">
+            <li>Penyedia layanan pihak ketiga (pembayaran, hosting, analitik)</li>
+            <li>Mitra bisnis dengan persetujuan Anda</li>
+            <li>Pihak berwenang ketika diwajibkan oleh hukum</li>
+            <li>Google dan Apple saat Anda menggunakan OAuth mereka untuk login</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold text-slate-900 mb-4">6. Hak Privasi Anda</h2>
+          <p>Anda memiliki hak untuk:</p>
+          <ul class="list-disc list-inside space-y-2 ml-4">
+            <li>Mengakses data pribadi Anda</li>
+            <li>Memperbaiki atau memperbarui data yang tidak akurat</li>
+            <li>Menghapus akun Anda dan data terkait</li>
+            <li>Membatalkan persetujuan untuk pemrosesan data tertentu</li>
+          </ul>
+          <p class="mt-4">Untuk menggunakan hak-hak ini, silakan hubungi kami di support@tepak.id</p>
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold text-slate-900 mb-4">7. Perubahan pada Kebijakan Ini</h2>
+          <p>
+            Kami dapat memperbarui kebijakan privasi ini dari waktu ke waktu. Kami akan memberitahukan kepada Anda tentang perubahan apa pun dengan memposting kebijakan baru di halaman ini dan memperbarui tanggal "Terakhir diperbarui" di bagian atas halaman ini.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold text-slate-900 mb-4">8. Hubungi Kami</h2>
+          <p>
+            Jika Anda memiliki pertanyaan tentang kebijakan privasi ini, silakan hubungi kami di:
+            <br /><br />
+            Email: support@tepak.id<br />
+            Alamat: [Alamat Kantor Anda]
+          </p>
+        </section>
+      </div>
+
+      {/* Back Button */}
+      <div class="mt-12 pt-6 border-t border-slate-200">
+        <a href="/" class="inline-flex items-center gap-2 text-primary font-semibold hover:underline">
+          ← Kembali ke Beranda
+        </a>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<style is:global>
+  .prose ul {
+    list-style-type: none;
+    padding: 0;
+  }
+
+  .prose li {
+    position: relative;
+    padding-left: 1.5rem;
+  }
+
+  .prose li:before {
+    content: "•";
+    position: absolute;
+    left: 0;
+  }
+</style>

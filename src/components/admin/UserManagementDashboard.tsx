@@ -455,6 +455,41 @@ export const UserManagementDashboard = () => {
                                     </div>
                                 </div>
 
+                                {/* Plan Package & Capabilities */}
+                                <div className="col-span-2 space-y-4 pt-4 border-t border-slate-50">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Plan Package Details</p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Core Features</p>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {selectedUser.plan?.toLowerCase() === 'pro' ? (
+                                                    ['Custom Domain', 'WhatsApp Integration', 'Priority Support', 'Advanced Analytics'].map(f => (
+                                                        <Badge key={f} variant="ghost" className="bg-blue-50 text-blue-600 border-none text-[8px] px-1.5">{f}</Badge>
+                                                    ))
+                                                ) : (
+                                                    ['Basic Landing Page', 'Product Sales', 'Standard Analytics'].map(f => (
+                                                        <Badge key={f} variant="ghost" className="bg-slate-100 text-slate-500 border-none text-[8px] px-1.5">{f}</Badge>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Allowed Blocks</p>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {selectedUser.plan?.toLowerCase() === 'pro' ? (
+                                                    ['Countdown', 'Testimonials', 'FAQ', 'Custom Code', 'WhatsApp Button'].map(f => (
+                                                        <Badge key={f} variant="ghost" className="bg-emerald-50 text-emerald-600 border-none text-[8px] px-1.5">{f}</Badge>
+                                                    ))
+                                                ) : (
+                                                    ['Hero', 'About', 'Pricing', 'Order Form'].map(f => (
+                                                        <Badge key={f} variant="ghost" className="bg-slate-100 text-slate-500 border-none text-[8px] px-1.5">{f}</Badge>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {/* NEW STATS */}
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Total Pages</p>

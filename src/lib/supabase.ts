@@ -60,7 +60,7 @@ const getEnv = (key: string): string | undefined => {
         return clean((window as any).__SUPABASE_CONFIG__[key], key.includes('URL'));
       }
     }
-  } catch (e) {}
+  } catch (e) { }
 
   return undefined;
 };
@@ -96,7 +96,31 @@ export const getSupabaseBrowserClient = (url?: string, key?: string) => {
     return null as any;
   }
 
-  browserClient = createBrowserClient(finalUrl, finalKey);
+  // CRITICAL: Cookie handlers are REQUIRED for PKCE OAuth flow.
+  // Without these, the code_verifier is stored in memory/localStorage
+  // and is inaccessible to the server-side callback handler,
+  // causing exchangeCodeForSession to return null session.
+  browserClient = createBrowserClient(finalUrl, finalKey, {
+    cookies: {
+      getAll() {
+        return document.cookie.split('; ').filter(Boolean).map(cookie => {
+          const [name, ...valueParts] = cookie.split('=');
+          return { name, value: valueParts.join('=') };
+        });
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          let cookieString = `${name}=${value}`;
+          if (options?.path) cookieString += `; path=${options.path}`;
+          if (options?.maxAge !== undefined) cookieString += `; max-age=${options.maxAge}`;
+          if (options?.domain) cookieString += `; domain=${options.domain}`;
+          if (options?.sameSite) cookieString += `; samesite=${options.sameSite}`;
+          if (options?.secure && window.location.protocol === 'https:') cookieString += '; secure';
+          document.cookie = cookieString;
+        });
+      },
+    },
+  });
   return browserClient;
 };
 

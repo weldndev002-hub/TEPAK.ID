@@ -16,11 +16,26 @@ export const LoginForm: React.FC<LoginFormProps> = ({ envUrl, envKey }) => {
 
     // Pendekatan useEffect untuk Inisialisasi sesuai permintaan
     useEffect(() => {
+        let subscription: any = null;
         if (envUrl && envKey) {
             try {
                 const client = getSupabaseBrowserClient(envUrl, envKey);
                 setSupabase(client);
-                if (!client) {
+                
+                if (client) {
+                    // Listen for Auth changes. This handles cases where Supabase redirects to /login 
+                    // with an implicit flow token hash instead of /auth/callback.
+                    const { data } = client.auth.onAuthStateChange((event: string, session: any) => {
+                        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
+                            console.log('[LoginForm] Valid session detected via auth state change, redirecting...');
+                            setIsSuccess(true);
+                            setTimeout(() => {
+                                window.location.href = '/dashboard';
+                            }, 500);
+                        }
+                    });
+                    subscription = data.subscription;
+                } else {
                     console.error('[LoginForm] getSupabaseBrowserClient returned null even with props');
                 }
             } catch (err) {
@@ -32,6 +47,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ envUrl, envKey }) => {
                 hasKey: !!envKey 
             });
         }
+
+        return () => {
+            if (subscription) {
+                subscription.unsubscribe();
+            }
+        };
     }, [envUrl, envKey]);
 
     const [email, setEmail] = useState('');
@@ -207,6 +228,21 @@ export const LoginForm: React.FC<LoginFormProps> = ({ envUrl, envKey }) => {
             <div className="grid grid-cols-2 gap-6">
                 <SocialButton supabase={supabase} provider="google" />
                 <SocialButton supabase={supabase} provider="apple" />
+            </div>
+
+            {/* Privacy Policy Disclaimer */}
+            <div className="pt-4 border-t border-slate-200">
+                <p className="text-[10px] leading-relaxed text-slate-500 text-center">
+                    Dengan mengklik tombol di atas, Anda menerima{' '}
+                    <a href="/privacy-policy" className="font-semibold text-primary hover:underline">
+                        Kebijakan Privasi
+                    </a>
+                    {' '}dan{' '}
+                    <a href="/terms-of-service" className="font-semibold text-primary hover:underline">
+                        Syarat & Ketentuan
+                    </a>
+                    {' '}kami. Data Anda akan diproses sesuai dengan kebijakan ini.
+                </p>
             </div>
         </div>
     );

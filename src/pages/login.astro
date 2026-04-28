@@ -1,187 +1,287 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
-import LoginForm from '../components/auth/LoginForm';
+import BaseLayout from "../layouts/BaseLayout.astro";
+import LoginForm from "../components/auth/LoginForm";
 
 // Fetch Branding from locals (more resilient in Cloudflare)
 const supabase = Astro.locals.supabase;
+
+// Check if user is already logged in server-side
+const user = await Astro.locals.getUser();
+if (user) {
+    return Astro.redirect('/dashboard');
+}
 
 let branding: any = null;
 if (supabase) {
     try {
         const { data } = await supabase
-          .from('platform_configs')
-          .select('*')
-          .eq('id', 1)
-          .single();
+            .from("platform_configs")
+            .select("*")
+            .eq("id", 1)
+            .single();
         branding = data;
     } catch (e) {
-        console.error('[Login] Branding Fetch Error:', e);
+        console.error("[Login] Branding Fetch Error:", e);
     }
 }
 
-const siteName = branding?.site_name || 'Tepak.ID';
-const logoUrl = branding?.logo_url || '/logo-light.png';
+const siteName = branding?.site_name || "Tepak.ID";
+const logoUrl = branding?.logo_url || "/logo-light.png";
+
+// Check for OAuth callback errors
+const callbackError = Astro.url.searchParams.get("error");
+const callbackDetail = Astro.url.searchParams.get("detail");
 
 // Pass Env to Client Component - Priority: Build-time > Runtime > Injected
-let supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
-let supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
+let supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || "";
+let supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || "";
 
 // Aggressive Runtime Detection
 let allKeys: string[] = [];
-let lastError = '';
+let lastError = "";
 try {
     // Capture Environment - Aggressive detection for Astro/Cloudflare
     let runtimeEnv: Record<string, any> = { ...(import.meta.env || {}) };
     try {
-      // @ts-ignore
-      const locals = Astro.locals || {};
-      // @ts-ignore
-      const cfRuntime = locals.runtime || Astro.runtime || {};
-      
-      const envSources = [
-        cfRuntime.env,
-        (globalThis as any).process?.env,
-        (globalThis as any).env
-      ];
-
-      for (const source of envSources) {
-        if (source && typeof source === 'object') {
-          runtimeEnv = { ...runtimeEnv, ...source };
-        }
-      }
-
-      // Modern Cloudflare Standard (Internal import)
-      try {
         // @ts-ignore
-        const cf = await import('cloudflare:workers');
-        if (cf?.env) runtimeEnv = { ...runtimeEnv, ...cf.env };
-      } catch (e: any) {
-        lastError = `CF Import Error: ${e.message}`;
-      }
-    } catch (e: any) { 
+        const locals = Astro.locals || {};
+        // @ts-ignore
+        const cfRuntime = locals.runtime || Astro.runtime || {};
+
+        const envSources = [
+            cfRuntime.env,
+            (globalThis as any).process?.env,
+            (globalThis as any).env,
+        ];
+
+        for (const source of envSources) {
+            if (source && typeof source === "object") {
+                runtimeEnv = { ...runtimeEnv, ...source };
+            }
+        }
+
+        // Modern Cloudflare Standard (Internal import)
+        try {
+            // @ts-ignore
+            const cf = await import("cloudflare:workers");
+            if (cf?.env) runtimeEnv = { ...runtimeEnv, ...cf.env };
+        } catch (e: any) {
+            lastError = `CF Import Error: ${e.message}`;
+        }
+    } catch (e: any) {
         lastError = `Locals Access Error: ${e.message}`;
     }
 
     // Inject into globalThis for modules like lib/supabase.ts to pick up
-    if (typeof globalThis !== 'undefined' && runtimeEnv) {
-      (globalThis as any).env = { ...((globalThis as any).env || {}), ...runtimeEnv };
-      allKeys = Object.keys(runtimeEnv);
-      
-      // Try with PUBLIC prefix first, then without
-      supabaseUrl = runtimeEnv.PUBLIC_SUPABASE_URL || runtimeEnv.SUPABASE_URL || supabaseUrl;
-      supabaseAnonKey = runtimeEnv.PUBLIC_SUPABASE_ANON_KEY || runtimeEnv.SUPABASE_ANON_KEY || supabaseAnonKey;
+    if (typeof globalThis !== "undefined" && runtimeEnv) {
+        (globalThis as any).env = {
+            ...((globalThis as any).env || {}),
+            ...runtimeEnv,
+        };
+        allKeys = Object.keys(runtimeEnv);
+
+        // Try with PUBLIC prefix first, then without
+        supabaseUrl =
+            runtimeEnv.PUBLIC_SUPABASE_URL ||
+            runtimeEnv.SUPABASE_URL ||
+            supabaseUrl;
+        supabaseAnonKey =
+            runtimeEnv.PUBLIC_SUPABASE_ANON_KEY ||
+            runtimeEnv.SUPABASE_ANON_KEY ||
+            supabaseAnonKey;
     }
 } catch (e: any) {
     lastError = `Global Catch: ${e.message}`;
 }
 
 // Debug Mode
-const isDebug = Astro.url.searchParams.get('debug') === 'true';
-const debugData = isDebug ? {
-    hasLocalsSupabase: !!Astro.locals.supabase,
-    urlLength: supabaseUrl?.length || 0,
-    keyLength: supabaseAnonKey?.length || 0,
-    urlMask: supabaseUrl ? `${supabaseUrl.substring(0, 10)}...` : 'MISSING',
-    keyMask: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 10)}...` : 'MISSING',
-    brandingLoaded: !!branding,
-    availableKeys: allKeys.join(', ') || 'NONE',
-    lastError
-} : null;
+const isDebug = Astro.url.searchParams.get("debug") === "true";
+const debugData = isDebug
+    ? {
+          hasLocalsSupabase: !!Astro.locals.supabase,
+          urlLength: supabaseUrl?.length || 0,
+          keyLength: supabaseAnonKey?.length || 0,
+          urlMask: supabaseUrl
+              ? `${supabaseUrl.substring(0, 10)}...`
+              : "MISSING",
+          keyMask: supabaseAnonKey
+              ? `${supabaseAnonKey.substring(0, 10)}...`
+              : "MISSING",
+          brandingLoaded: !!branding,
+          availableKeys: allKeys.join(", ") || "NONE",
+          lastError,
+      }
+    : null;
 ---
 
 <BaseLayout title={`Masuk ke ${siteName}`}>
-    
-    {/* Inject config into global window for components to pick up if props fail */}
+    {
+        /* Inject config into global window for components to pick up if props fail */
+    }
     <script is:inline define:vars={{ supabaseUrl, supabaseAnonKey }}>
         window.__SUPABASE_CONFIG__ = {
             PUBLIC_SUPABASE_URL: supabaseUrl,
-            PUBLIC_SUPABASE_ANON_KEY: supabaseAnonKey
+            PUBLIC_SUPABASE_ANON_KEY: supabaseAnonKey,
         };
     </script>
-        
-        {/* BRAND LOGO TOP LEFT */}
-        <div class="fixed top-10 left-10 hidden lg:block">
-            <a href="/">
-                <img src={logoUrl} alt={siteName} class="w-32 h-auto" />
-            </a>
-        </div>
 
-        {/* MAIN AREA */}
-        <main class="flex-grow flex items-center justify-center p-6">
-            <div class="max-w-6xl w-full grid lg:grid-cols-2 gap-16 items-center">
-                
-                {/* LEFT SECTION: BRANDING */}
-                <div class="hidden lg:block space-y-12">
-                    <h1 class="text-7xl font-black tracking-tighter text-slate-900 leading-[0.95] uppercase">
-                        Kelola bisnis Anda dengan <span class="text-primary italic font-medium lowercase">Presisi Digital.</span>
-                    </h1>
-                    <p class="text-slate-500 text-xl max-w-sm leading-relaxed font-medium">
-                        Platform manajemen untuk kreator dan UMKM Indonesia dengan estetika editorial tingkat tinggi.
-                    </p>
-                    
-                    <div class="pt-8">
-                        <div class="inline-flex items-center gap-6 p-6 bg-white rounded-3xl border border-slate-100 shadow-sm group hover:shadow-xl transition-all duration-500">
-                            <div class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                                <span class="material-symbols-outlined text-3xl">trending_up</span>
-                            </div>
-                            <div>
-                                <p class="font-black text-slate-900 text-lg tracking-tight uppercase">Insight Akurat</p>
-                                <p class="text-sm text-slate-500 font-medium">Data real-time untuk setiap langkah.</p>
-                            </div>
+    {/* OAUTH CALLBACK ERROR BANNER */}
+    {
+        callbackError && (
+            <div class="fixed top-0 left-0 right-0 z-[300] bg-rose-500 text-white px-6 py-4 text-center">
+                <p class="font-bold text-sm">
+                    ⚠️ OAuth Error:{" "}
+                    <span class="font-mono">{callbackError}</span>
+                    {callbackDetail && (
+                        <span class="opacity-80 ml-2">({callbackDetail})</span>
+                    )}
+                </p>
+                <p class="text-xs opacity-70 mt-1">
+                    Cek console browser untuk detail diagnostik
+                </p>
+            </div>
+        )
+    }
+
+    {/* BRAND LOGO TOP LEFT */}
+    <div class="fixed top-10 left-10 hidden lg:block">
+        <a href="/">
+            <img src={logoUrl} alt={siteName} class="w-32 h-auto" />
+        </a>
+    </div>
+
+    {/* MAIN AREA */}
+    <main class="flex-grow flex items-center justify-center p-6">
+        <div class="max-w-6xl w-full grid lg:grid-cols-2 gap-16 items-center">
+            {/* LEFT SECTION: BRANDING */}
+            <div class="hidden lg:block space-y-12">
+                <h1
+                    class="text-7xl font-black tracking-tighter text-slate-900 leading-[0.95] uppercase"
+                >
+                    Kelola bisnis Anda dengan <span
+                        class="text-primary italic font-medium lowercase"
+                        >Presisi Digital.</span
+                    >
+                </h1>
+                <p
+                    class="text-slate-500 text-xl max-w-sm leading-relaxed font-medium"
+                >
+                    Platform manajemen untuk kreator dan UMKM Indonesia dengan
+                    estetika editorial tingkat tinggi.
+                </p>
+
+                <div class="pt-8">
+                    <div
+                        class="inline-flex items-center gap-6 p-6 bg-white rounded-3xl border border-slate-100 shadow-sm group hover:shadow-xl transition-all duration-500"
+                    >
+                        <div
+                            class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform"
+                        >
+                            <span class="material-symbols-outlined text-3xl"
+                                >trending_up</span
+                            >
                         </div>
-                    </div>
-                </div>
-
-                {/* RIGHT SECTION: LOGIN CARD */}
-                <div class="w-full max-w-md mx-auto">
-                    <div class="bg-white rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.08)] p-10 md:p-12 border border-white">
-                        <header class="mb-10">
-                            <h2 class="text-3xl font-black text-slate-900 tracking-tight mb-3 uppercase">Masuk ke Akun</h2>
-                            <p class="text-slate-400 text-sm font-medium">Selamat datang kembali di ekosistem kreator.</p>
-                        </header>
-
-                        {/* INTERACTIVE FORM COMPONENT */}
-                        <LoginForm 
-                            client:only="react" 
-                            envUrl={supabaseUrl} 
-                            envKey={supabaseAnonKey} 
-                        />
-
-                        <div class="mt-12 pt-8 border-t border-slate-50 text-center">
-                            <p class="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em]">
-                                Belum punya akun? 
-                                <a href="/signup" class="text-primary hover:underline ml-2">Daftar Gratis</a>
+                        <div>
+                            <p
+                                class="font-black text-slate-900 text-lg tracking-tight uppercase"
+                            >
+                                Insight Akurat
+                            </p>
+                            <p class="text-sm text-slate-500 font-medium">
+                                Data real-time untuk setiap langkah.
                             </p>
                         </div>
                     </div>
                 </div>
-
             </div>
-        </main>
 
-        {/* FOOTER */}
-        <footer class="w-full py-12 px-8 text-center">
-            <p class="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                © {new Date().getFullYear()} {siteName} - {branding?.site_tagline || 'Digital Ecosystem'}
-            </p>
-        </footer>
+            {/* RIGHT SECTION: LOGIN CARD */}
+            <div class="w-full max-w-md mx-auto">
+                <div
+                    class="bg-white rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.08)] p-10 md:p-12 border border-white"
+                >
+                    <header class="mb-10">
+                        <h2
+                            class="text-3xl font-black text-slate-900 tracking-tight mb-3 uppercase"
+                        >
+                            Masuk ke Akun
+                        </h2>
+                        <p class="text-slate-400 text-sm font-medium">
+                            Selamat datang kembali di ekosistem kreator.
+                        </p>
+                    </header>
 
-        {isDebug && (
-            <div class="fixed bottom-4 right-4 z-[200] max-w-sm bg-slate-900 text-white p-6 rounded-3xl shadow-2xl text-[10px] font-mono opacity-90 backdrop-blur-md border border-white/10">
-                <h4 class="text-primary font-bold mb-3 uppercase tracking-widest text-xs">Diagnostic Mode</h4>
-                <div class="space-y-2 opacity-80 overflow-hidden">
-                    <p>Supabase Local: {debugData?.hasLocalsSupabase ? '✅' : '❌'}</p>
-                    <p>URL: {debugData?.urlMask} ({debugData?.urlLength})</p>
-                    <p>Key: {debugData?.keyMask} ({debugData?.keyLength})</p>
-                    <p>Branding: {debugData?.brandingLoaded ? '✅' : '❌'}</p>
-                    <hr class="border-white/10 my-2" />
-                    <p class="text-[8px] text-slate-400 break-all">Available Keys: {debugData?.availableKeys}</p>
-                    {debugData?.lastError && <p class="text-[8px] text-rose-400 break-all mt-1">Error: {debugData.lastError}</p>}
+                    {/* INTERACTIVE FORM COMPONENT */}
+                    <LoginForm
+                        client:only="react"
+                        envUrl={supabaseUrl}
+                        envKey={supabaseAnonKey}
+                    />
+
+                    <div
+                        class="mt-12 pt-8 border-t border-slate-50 text-center"
+                    >
+                        <p
+                            class="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em]"
+                        >
+                            Belum punya akun?
+                            <a
+                                href="/signup"
+                                class="text-primary hover:underline ml-2"
+                                >Daftar Gratis</a
+                            >
+                        </p>
+                    </div>
                 </div>
-                <button onclick="window.location.href='/login'" class="mt-4 w-full py-2 bg-white/10 rounded-xl hover:bg-white/20 transition-colors uppercase font-bold">Close Debug</button>
             </div>
-        )}
+        </div>
+    </main>
 
-    </div>
+    {/* FOOTER */}
+    <footer class="w-full py-12 px-8 text-center">
+        <p
+            class="text-[10px] font-black text-slate-300 uppercase tracking-widest"
+        >
+            © {new Date().getFullYear()}
+            {siteName} - {branding?.site_tagline || "Digital Ecosystem"}
+        </p>
+    </footer>
 
+    {
+        isDebug && (
+            <div class="fixed bottom-4 right-4 z-[200] max-w-sm bg-slate-900 text-white p-6 rounded-3xl shadow-2xl text-[10px] font-mono opacity-90 backdrop-blur-md border border-white/10">
+                <h4 class="text-primary font-bold mb-3 uppercase tracking-widest text-xs">
+                    Diagnostic Mode
+                </h4>
+                <div class="space-y-2 opacity-80 overflow-hidden">
+                    <p>
+                        Supabase Local:{" "}
+                        {debugData?.hasLocalsSupabase ? "✅" : "❌"}
+                    </p>
+                    <p>
+                        URL: {debugData?.urlMask} ({debugData?.urlLength})
+                    </p>
+                    <p>
+                        Key: {debugData?.keyMask} ({debugData?.keyLength})
+                    </p>
+                    <p>Branding: {debugData?.brandingLoaded ? "✅" : "❌"}</p>
+                    <hr class="border-white/10 my-2" />
+                    <p class="text-[8px] text-slate-400 break-all">
+                        Available Keys: {debugData?.availableKeys}
+                    </p>
+                    {debugData?.lastError && (
+                        <p class="text-[8px] text-rose-400 break-all mt-1">
+                            Error: {debugData.lastError}
+                        </p>
+                    )}
+                </div>
+                <button
+                    onclick="window.location.href='/login'"
+                    class="mt-4 w-full py-2 bg-white/10 rounded-xl hover:bg-white/20 transition-colors uppercase font-bold"
+                >
+                    Close Debug
+                </button>
+            </div>
+        )
+    }
 </BaseLayout>

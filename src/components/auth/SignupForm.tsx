@@ -3,8 +3,7 @@ import Button from '../ui/Button';
 import Input from '../ui/Input';
 import SocialButton from '../ui/SocialButton';
 import { UserIcon, EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
-import { supabase as globalSupabase } from '../../lib/supabase';
-import { createBrowserClient } from '@supabase/ssr';
+import { getSupabaseBrowserClient } from '../../lib/supabase';
 
 interface SignupFormProps {
     supabaseUrl?: string;
@@ -12,12 +11,9 @@ interface SignupFormProps {
 }
 
 export const SignupForm: React.FC<SignupFormProps> = ({ supabaseUrl, supabaseAnonKey }) => {
-    // Initialized client
+    // Use getSupabaseBrowserClient which includes cookie handlers for PKCE OAuth flow
     const [supabase] = useState(() => {
-        if (supabaseUrl && supabaseAnonKey) {
-            return createBrowserClient(supabaseUrl, supabaseAnonKey);
-        }
-        return globalSupabase;
+        return getSupabaseBrowserClient(supabaseUrl, supabaseAnonKey);
     });
 
     const [name, setName] = useState('');
@@ -227,6 +223,20 @@ export const SignupForm: React.FC<SignupFormProps> = ({ supabaseUrl, supabaseAno
                 />
             </div>
 
+            {/* Privacy Policy Disclaimer */}
+            <div className="pt-4 border-t border-slate-200">
+                <p className="text-[10px] leading-relaxed text-slate-500 text-center">
+                    Dengan mengklik tombol di atas, Anda menerima{' '}
+                    <a href="/privacy-policy" className="font-semibold text-primary hover:underline">
+                        Kebijakan Privasi
+                    </a>
+                    {' '}dan{' '}
+                    <a href="/terms-of-service" className="font-semibold text-primary hover:underline">
+                        Syarat & Ketentuan
+                    </a>
+                    {' '}kami. Data Anda akan diproses sesuai dengan kebijakan ini.
+                </p>
+            </div>
         </div>
     );
 };

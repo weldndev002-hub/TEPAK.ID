@@ -1,64 +1,133 @@
 ---
-import { getServerClient } from '../../lib/supabase';
+import { getServerClient } from "../../lib/supabase";
+
+// ===== DIAGNOSTIC: Log all incoming params =====
+const allParams = Object.fromEntries(Astro.url.searchParams.entries());
+console.log("[Auth Callback] 🔍 FULL DIAGNOSTIC:", {
+  url: Astro.url.href,
+  pathname: Astro.url.pathname,
+  params: allParams,
+  hasCode: !!Astro.url.searchParams.get("code"),
+  hasError: !!Astro.url.searchParams.get("error"),
+  cookieHeader:
+    Astro.request.headers.get("Cookie")?.substring(0, 200) || "NO_COOKIES",
+});
 
 const { code, error, error_description } = Astro.url.searchParams;
 
 // Handle error cases
 if (error) {
-  console.error('[Auth Callback] Error:', error, error_description);
-  
-  if (error === 'access_denied' && error_description?.includes('otp_expired')) {
-    return Astro.redirect('/verify-email?error=link_expired');
+  console.error("[Auth Callback] ❌ OAuth Error:", error, error_description);
+
+  if (error === "access_denied" && error_description?.includes("otp_expired")) {
+    return Astro.redirect("/verify-email?error=link_expired");
   }
-  
+
   return Astro.redirect(`/login?error=${error}`);
 }
 
 // Handle verification code
 if (code) {
   const supabase = getServerClient(Astro.cookies, Astro.request);
-  
+
+  if (!supabase) {
+    console.error("[Auth Callback] ❌ FATAL: Supabase client is null!");
+    return Astro.redirect("/login?error=no_supabase_client");
+  }
+
   try {
+    // ===== DIAGNOSTIC: Log cookies before exchange =====
+    const preExchangeCookies = Astro.request.headers.get("Cookie") || "";
+    console.log(
+      "[Auth Callback] 🔍 Pre-exchange cookies (looking for code_verifier):",
+      {
+        hasCodeVerifier: preExchangeCookies.includes("code_verifier"),
+        cookieNames: preExchangeCookies
+          .split(";")
+          .map((c) => c.trim().split("=")[0])
+          .filter(Boolean),
+      },
+    );
+
     // Exchange verification code for session
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-    
+
+    // ===== DIAGNOSTIC: Log exchange result =====
+    console.log("[Auth Callback] 🔍 Exchange result:", {
+      hasError: !!error,
+      errorMessage: error?.message,
+      errorCode: error?.code,
+      hasSession: !!data?.session,
+      hasUser: !!data?.user,
+      sessionAccessToken: data?.session?.access_token ? "PRESENT" : "MISSING",
+      userId: data?.session?.user?.id || data?.user?.id || "NONE",
+      userEmail: data?.session?.user?.email || data?.user?.email || "NONE",
+    });
+
     if (error) {
-      console.error('[Auth Callback] Exchange code error:', error);
-      return Astro.redirect('/login?error=verification_failed');
+      console.error("[Auth Callback] ❌ Exchange code error:", error);
+      return Astro.redirect("/login?error=verification_failed");
     }
 
     if (data.session) {
       // Set session cookies
-      Astro.cookies.set('sb-session', JSON.stringify(data.session), {
-        path: '/',
+      Astro.cookies.set("sb-session", JSON.stringify(data.session), {
+        path: "/",
         secure: true,
         httpOnly: true,
-        sameSite: 'lax'
+        sameSite: "lax",
       });
 
       // Check if user has completed onboarding
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('onboarding_completed, username')
-        .eq('id', data.session.user.id)
-        .single();
+      const [{ data: profile }, { data: settings }] = await Promise.all([
+        supabase.from("profiles").select("username").eq("id", data.session.user.id).maybeSingle(),
+        supabase.from("user_settings").select("onboarding_completed").eq("user_id", data.session.user.id).maybeSingle()
+      ]);
 
-      const hasCompletedOnboarding = profile?.onboarding_completed === true && !!profile?.username;
+      // ===== DIAGNOSTIC: Log query results =====
+      console.log("[Auth Callback] 🔍 Data query result:", {
+        hasProfile: !!profile,
+        hasSettings: !!settings,
+        onboardingCompleted: settings?.onboarding_completed,
+        username: profile?.username,
+      });
+
+      const hasCompletedOnboarding =
+        settings?.onboarding_completed === true && !!profile?.username;
 
       if (hasCompletedOnboarding) {
-        console.log('[Auth Callback] Session verified, redirecting to dashboard');
-        return Astro.redirect('/dashboard');
+        console.log(
+          "[Auth Callback] ✅ Session verified, redirecting to dashboard",
+        );
+        return Astro.redirect("/dashboard");
       } else {
-        console.log('[Auth Callback] New user, redirecting to onboarding');
-        return Astro.redirect('/onboarding');
+        console.log("[Auth Callback] ✅ New user, redirecting to onboarding");
+        return Astro.redirect("/onboarding");
       }
+    } else {
+      // ===== DIAGNOSTIC: Session is null after exchange =====
+      console.error(
+        "[Auth Callback] ❌ CRITICAL: exchangeCodeForSession returned NO session and NO error!",
+      );
+      console.log(
+        "[Auth Callback] 🔍 Full data object:",
+        JSON.stringify(data, null, 2),
+      );
+      return Astro.redirect("/login?error=no_session_after_exchange");
     }
   } catch (err: any) {
-    console.error('[Auth Callback] Unexpected error:', err);
-    return Astro.redirect('/login?error=callback_error');
+    console.error(
+      "[Auth Callback] ❌ Unexpected error:",
+      err.message,
+      err.stack,
+    );
+    return Astro.redirect(
+      `/login?error=callback_error&detail=${encodeURIComponent(err.message)}`,
+    );
   }
 }
 
-// No code or error provided, redirect to login
-return Astro.redirect('/login');
+// No code or error provided
+console.error("[Auth Callback] ❌ No code or error parameter in callback URL!");
+return Astro.redirect("/login?error=no_code");
 ---

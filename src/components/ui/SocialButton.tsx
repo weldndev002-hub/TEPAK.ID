@@ -29,7 +29,6 @@ export const SocialButton: React.FC<SocialButtonProps> = ({
                     redirectTo: `${window.location.origin}/auth/callback`,
                     queryParams: {
                         access_type: 'offline',
-                        prompt: 'consent',
                     },
                 },
             });

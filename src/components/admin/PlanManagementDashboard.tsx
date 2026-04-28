@@ -566,6 +566,74 @@ export const PlanManagementDashboard = () => {
                 </Card>
             </div>
 
+            {/* Blocks Capability Matrix */}
+            <div className="space-y-6 mt-16">
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 className="text-xl font-bold text-primary">Landing Page Blocks Capability</h3>
+                        <p className="text-xs text-slate-500 font-medium">Control which blocks creators can add to their pages based on their plan.</p>
+                    </div>
+                </div>
+
+                <Card className="overflow-hidden border-slate-100 shadow-sm p-0">
+                    <Table className="w-full">
+                        <TableHeader>
+                            <TableRow className="bg-slate-50 border-none">
+                                <TableHead className="px-8 py-5 text-[11px] font-black text-slate-500 uppercase tracking-widest">Page Block Module</TableHead>
+                                {plans.map(plan => (
+                                    <TableHead key={plan.id} className="px-6 py-5 text-[11px] font-black text-slate-500 uppercase tracking-widest text-center">{plan.name}</TableHead>
+                                ))}
+                                <TableHead className="px-8 py-5 text-[11px] font-black text-slate-500 uppercase tracking-widest text-right">Category</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {ALL_BLOCKS.map(block => (
+                                <TableRow key={block.id} className="hover:bg-slate-50/50 transition-colors">
+                                    <TableCell className="px-8 py-5">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400">
+                                                <span className="material-symbols-outlined text-sm">widgets</span>
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-slate-700">{block.label}</div>
+                                                <div className="text-[10px] text-slate-400 font-medium">{block.desc}</div>
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                    {plans.map(plan => (
+                                        <TableCell key={plan.id} className="text-center">
+                                            <div className="flex justify-center">
+                                                <Toggle
+                                                    checked={(plan.config?.allowed_blocks || []).includes(block.id)}
+                                                    onChange={() => {
+                                                        setPlans(prev => prev.map(p => {
+                                                            if (p.id !== plan.id) return p;
+                                                            const currentBlocks = p.config?.allowed_blocks || [];
+                                                            return {
+                                                                ...p,
+                                                                config: {
+                                                                    ...p.config,
+                                                                    allowed_blocks: currentBlocks.includes(block.id)
+                                                                        ? currentBlocks.filter((id: string) => id !== block.id)
+                                                                        : [...currentBlocks, block.id]
+                                                                }
+                                                            };
+                                                        }));
+                                                    }}
+                                                />
+                                            </div>
+                                        </TableCell>
+                                    ))}
+                                    <TableCell className="px-8 text-right">
+                                        <Badge variant="ghost" className="border-none text-[9px] font-black bg-slate-50 text-slate-400 uppercase">{block.category}</Badge>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </Card>
+            </div>
+
             {/* Add Plan Modal */}
             {isAddingPlan && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
