@@ -1,10 +1,23 @@
 import React, { useState } from 'react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/Button';
-import { WalletIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { WalletIcon, CheckCircleIcon, ClockIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 
 export interface PayoutFormProps {
     className?: string;
+}
+
+interface WithdrawResult {
+    success: boolean;
+    withdrawalId: string;
+    disburseId: number;
+    status: 'completed' | 'processing' | 'failed';
+    accountName: string;
+    amount: number;
+    fee: number;
+    netTransfer: number;
+    newBalance: number;
+    error?: string;
 }
 
 export const PayoutForm: React.FC<PayoutFormProps> = ({ className }) => {
@@ -14,7 +27,7 @@ export const PayoutForm: React.FC<PayoutFormProps> = ({ className }) => {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [initLoading, setInitLoading] = useState(true);
-    const [successModal, setSuccessModal] = useState<{ amount: number; fee: number } | null>(null);
+    const [successModal, setSuccessModal] = useState<WithdrawResult | null>(null);
     const [payoutsEnabled, setPayoutsEnabled] = useState(true);
 
     // Dynamic fees from platform_configs (fetched via /api/wallet/stats)
@@ -72,8 +85,8 @@ export const PayoutForm: React.FC<PayoutFormProps> = ({ className }) => {
             return;
         }
 
-        if (amount + fee > balance) {
-            setError("Saldo tidak mencukupi untuk penarikan dan biaya admin.");
+        if (amount > balance) {
+            setError("Saldo tidak mencukupi untuk penarikan.");
             setLoading(false);
             return;
         }
@@ -88,13 +101,20 @@ export const PayoutForm: React.FC<PayoutFormProps> = ({ className }) => {
                 })
             });
 
-            if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.error || 'Failed to submit withdrawal');
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || 'Gagal memproses penarikan');
             }
 
-            setBalance(prev => prev - amount - fee);
-            setSuccessModal({ amount, fee });
+            // Update balance dari response server (sudah dikurangi)
+            if (data.newBalance !== undefined) {
+                setBalance(data.newBalance);
+            } else {
+                setBalance(prev => prev - amount);
+            }
+
+            setSuccessModal(data);
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -150,7 +170,7 @@ export const PayoutForm: React.FC<PayoutFormProps> = ({ className }) => {
                                     <p className="text-xs font-bold text-rose-500 uppercase tracking-tight">Belum ada rekening bank</p>
                                 </div>
                             )}
-                            <a href="/settings" className="text-[10px] font-black text-primary uppercase tracking-[0.2em] hover:underline underline-offset-4 pr-1">Manage</a>
+                            <a href="/bank-info" className="text-[10px] font-black text-primary uppercase tracking-[0.2em] hover:underline underline-offset-4 pr-1">Manage</a>
                         </div>
                     </div>
 
@@ -199,22 +219,118 @@ export const PayoutForm: React.FC<PayoutFormProps> = ({ className }) => {
                 </div>
             </div>
 
-            {/* Withdrawal Success Modal */}
+            {/* Withdrawal Result Modal */}
             {successModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
                     <div className="bg-white w-full max-w-sm rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                         <div className="p-8 text-center">
-                            <div className="w-16 h-16 rounded-full flex items-center justify-center bg-emerald-100 mx-auto mb-4">
-                                <CheckCircleIcon className="w-9 h-9 text-emerald-500" />
-                            </div>
-                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Penarikan Diajukan!</h3>
-                            <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                                Penarikan sebesar <strong className="text-slate-900">Rp {successModal.amount.toLocaleString('id-ID')}</strong> berhasil diajukan.<br />
-                                Biaya transfer <strong className="text-rose-500">Rp {successModal.fee.toLocaleString('id-ID')}</strong> telah dipotong.
-                            </p>
+                            {successModal.status === 'completed' ? (
+                                <>
+                                    <div className="w-16 h-16 rounded-full flex items-center justify-center bg-emerald-100 mx-auto mb-4">
+                                        <CheckCircleIcon className="w-9 h-9 text-emerald-500" />
+                                    </div>
+                                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Transfer Berhasil!</h3>
+                                    <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                        Penarikan sebesar <strong className="text-slate-900">Rp {successModal.amount.toLocaleString('id-ID')}</strong> berhasil ditransfer ke<br />
+                                        <strong className="text-emerald-600">{successModal.accountName}</strong>
+                                    </p>
+                                    <div className="mt-4 p-3 bg-slate-50 rounded-xl text-left space-y-1">
+                                        <div className="flex justify-between text-xs">
+                                            <span className="text-slate-400">Nominal Penarikan</span>
+                                            <span className="font-bold text-slate-700">Rp {successModal.amount.toLocaleString('id-ID')}</span>
+                                        </div>
+                                        <div className="flex justify-between text-xs">
+                                            <span className="text-slate-400">Biaya Transfer</span>
+                                            <span className="font-bold text-rose-500">- Rp {(successModal.fee || 0).toLocaleString('id-ID')}</span>
+                                        </div>
+                                        <div className="flex justify-between text-xs border-t border-slate-200 pt-1 mt-1">
+                                            <span className="text-slate-900 font-black">Dana Diterima</span>
+                                            <span className="font-black text-emerald-600">Rp {(successModal.netTransfer || (successModal.amount - (successModal.fee || 0))).toLocaleString('id-ID')}</span>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : successModal.status === 'pending' ? (
+                                <>
+                                    <div className="w-16 h-16 rounded-full flex items-center justify-center bg-amber-100 mx-auto mb-4">
+                                        <ClockIcon className="w-9 h-9 text-amber-500" />
+                                    </div>
+                                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Permintaan Dikirim!</h3>
+                                    <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                        Penarikan sebesar <strong className="text-slate-900">Rp {successModal.amount.toLocaleString('id-ID')}</strong> sedang menunggu persetujuan Admin.
+                                    </p>
+                                    <div className="mt-4 p-3 bg-slate-50 rounded-xl text-left space-y-1">
+                                        <div className="flex justify-between text-xs">
+                                            <span className="text-slate-400">Nominal Penarikan</span>
+                                            <span className="font-bold text-slate-700">Rp {successModal.amount.toLocaleString('id-ID')}</span>
+                                        </div>
+                                        <div className="flex justify-between text-xs">
+                                            <span className="text-slate-400">Biaya Transfer</span>
+                                            <span className="font-bold text-rose-500">- Rp {(successModal.fee || 0).toLocaleString('id-ID')}</span>
+                                        </div>
+                                        <div className="flex justify-between text-xs border-t border-slate-200 pt-1 mt-1">
+                                            <span className="text-slate-900 font-black">Dana Akan Diterima</span>
+                                            <span className="font-black text-amber-600">Rp {(successModal.netTransfer || (successModal.amount - (successModal.fee || 0))).toLocaleString('id-ID')}</span>
+                                        </div>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 font-medium mt-3 leading-relaxed">
+                                        Admin akan memproses transfer secara manual. Status akan diperbarui setelah transfer selesai.
+                                    </p>
+                                </>
+                            ) : successModal.status === 'processing' ? (
+                                <>
+                                    <div className="w-16 h-16 rounded-full flex items-center justify-center bg-amber-100 mx-auto mb-4">
+                                        <ClockIcon className="w-9 h-9 text-amber-500" />
+                                    </div>
+                                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Sedang Diproses</h3>
+                                    <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                        Penarikan sebesar <strong className="text-slate-900">Rp {successModal.amount.toLocaleString('id-ID')}</strong> sedang diproses ke<br />
+                                        <strong className="text-amber-600">{successModal.accountName}</strong>
+                                    </p>
+                                    <p className="text-[10px] text-slate-400 font-medium mt-3 leading-relaxed">
+                                        Transfer sedang diproses oleh bank. Status akan diperbarui secara otomatis.
+                                    </p>
+                                    <div className="mt-4 p-3 bg-slate-50 rounded-xl text-left space-y-1">
+                                        <div className="flex justify-between text-xs">
+                                            <span className="text-slate-400">Nominal Penarikan</span>
+                                            <span className="font-bold text-slate-700">Rp {successModal.amount.toLocaleString('id-ID')}</span>
+                                        </div>
+                                        <div className="flex justify-between text-xs">
+                                            <span className="text-slate-400">Biaya Transfer</span>
+                                            <span className="font-bold text-rose-500">- Rp {(successModal.fee || 0).toLocaleString('id-ID')}</span>
+                                        </div>
+                                        <div className="flex justify-between text-xs border-t border-slate-200 pt-1 mt-1">
+                                            <span className="text-slate-900 font-black">Dana Diterima</span>
+                                            <span className="font-black text-amber-600">Rp {(successModal.netTransfer || (successModal.amount - (successModal.fee || 0))).toLocaleString('id-ID')}</span>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="w-16 h-16 rounded-full flex items-center justify-center bg-rose-100 mx-auto mb-4">
+                                        <ExclamationCircleIcon className="w-9 h-9 text-rose-500" />
+                                    </div>
+                                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Transfer Gagal</h3>
+                                    <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                        {successModal.error || 'Transfer gagal diproses. Saldo telah dikembalikan.'}
+                                    </p>
+                                </>
+                            )}
                         </div>
                         <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex justify-center">
-                            <button className="px-8 py-2.5 rounded-xl font-black bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 transition-all text-[10px] uppercase tracking-widest" onClick={() => setSuccessModal(null)}>OK, Mengerti</button>
+                            <button
+                                className={`px-8 py-2.5 rounded-xl font-black text-white shadow-lg transition-all text-[10px] uppercase tracking-widest ${
+                                    successModal.status === 'completed'
+                                        ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20'
+                                        : successModal.status === 'pending'
+                                        ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20'
+                                        : successModal.status === 'processing'
+                                        ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20'
+                                        : 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/20'
+                                }`}
+                                onClick={() => setSuccessModal(null)}
+                            >
+                                OK, Mengerti
+                            </button>
                         </div>
                     </div>
                 </div>

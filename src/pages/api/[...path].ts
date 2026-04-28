@@ -149,7 +149,8 @@ app.post('/onboarding/complete', zValidator('json', z.object({
   avatar_url: z.string().optional().nullable(),
   instagram_url: z.string().optional().nullable(),
   tiktok_url: z.string().optional().nullable(),
-  youtube_url: z.string().optional().nullable()
+  youtube_url: z.string().optional().nullable(),
+  theme: z.string().optional().default('atelier-dark')
 })), async (c) => {
   let step = 'init';
   try {
@@ -161,7 +162,7 @@ app.post('/onboarding/complete', zValidator('json', z.object({
     const body = c.req.valid('json');
     const adminSupabase = getSupabaseAdmin(cfEnv);
 
-    console.log(`[Atomic Onboarding] [Step: ${step}] User: ${user.id}, Domain: ${body.domain_name}`);
+    console.log(`[Atomic Onboarding] [Step: ${step}] User: ${user.id}, Domain: ${body.domain_name}, Theme: ${body.theme}`);
 
     // 1. Check domain availability
     step = 'domain-check';
@@ -202,19 +203,60 @@ app.post('/onboarding/complete', zValidator('json', z.object({
       throw new Error(`Profil gagal disimpan: ${pErr.message}`);
     }
 
-    // 3. Perform Domain Upsert
+    // 3. Perform Domain + Theme + Onboarding Completed Upsert
+    // Try with theme/onboarding_completed first (after migration), fallback without (before migration)
     step = 'domain-upsert';
-    console.log(`[Atomic Onboarding] [Step: ${step}] Upserting user_settings table...`);
-    const { data: settings, error: sErr } = await adminSupabase
+    console.log(`[Atomic Onboarding] [Step: ${step}] Upserting user_settings table with theme=${body.theme}...`);
+
+    let settings: any = null;
+    let sErr: any = null;
+
+    // Attempt with new columns (theme, onboarding_completed)
+    const upsertData: any = {
+      user_id: user.id,
+      domain_name: body.domain_name,
+      domain_verified: true,
+      theme: body.theme,
+      onboarding_completed: true,
+      updated_at: new Date().toISOString()
+    };
+
+    const upsertResult = await adminSupabase
       .from('user_settings')
-      .upsert({
-        user_id: user.id,
-        domain_name: body.domain_name,
-        domain_verified: true,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id' })
+      .upsert(upsertData, { onConflict: 'user_id' })
       .select()
       .single();
+
+    // DEBUG: Log the full error structure to diagnose schema cache issues
+    if (upsertResult.error) {
+      console.error(`[Atomic Onboarding] [Step: ${step}] Upsert error details:`, {
+        code: upsertResult.error.code,
+        message: upsertResult.error.message,
+        details: upsertResult.error.details,
+        hint: upsertResult.error.hint,
+        fullError: JSON.stringify(upsertResult.error)
+      });
+    }
+
+    if (upsertResult.error && (upsertResult.error.code === '42703' || upsertResult.error.message?.includes('schema cache'))) {
+      // Column doesn't exist yet (migration not run) or PostgREST schema cache is stale - fallback without theme/onboarding_completed
+      console.warn(`[Atomic Onboarding] [Step: ${step}] theme/onboarding_completed columns not found (code=${upsertResult.error.code}), falling back to basic upsert`);
+      const fallbackResult = await adminSupabase
+        .from('user_settings')
+        .upsert({
+          user_id: user.id,
+          domain_name: body.domain_name,
+          domain_verified: true,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' })
+        .select()
+        .single();
+      settings = fallbackResult.data;
+      sErr = fallbackResult.error;
+    } else {
+      settings = upsertResult.data;
+      sErr = upsertResult.error;
+    }
 
     if (sErr) {
       console.error(`[Atomic Onboarding] [Step: ${step}] Settings Error:`, sErr);
@@ -230,6 +272,46 @@ app.post('/onboarding/complete', zValidator('json', z.object({
       step,
       stack: err.stack
     }, 500);
+  }
+});
+
+// --- ONBOARDING DATA (GET) - Fetch existing user data for pre-fill ---
+app.get('/onboarding/data', async (c) => {
+  try {
+    const { user } = await getAuthContext(c);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const adminSupabase = getSupabaseAdmin(cfEnv);
+
+    // Fetch profile data
+    const { data: profile, error: pErr } = await adminSupabase
+      .from('profiles')
+      .select('full_name, bio, avatar_url, instagram_url, tiktok_url, youtube_url')
+      .eq('id', user.id)
+      .single();
+
+    if (pErr && pErr.code !== 'PGRST116') {
+      console.error('[Onboarding Data] Profile fetch error:', pErr);
+    }
+
+    // Fetch user_settings data (use select('*') for resilience - theme/onboarding_completed columns may not exist yet)
+    const { data: settings, error: sErr } = await adminSupabase
+      .from('user_settings')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+
+    if (sErr && sErr.code !== 'PGRST116') {
+      console.error('[Onboarding Data] Settings fetch error:', sErr);
+    }
+
+    return c.json({
+      profile: profile || {},
+      settings: settings || {}
+    });
+  } catch (err: any) {
+    console.error('[Onboarding Data] Error:', err);
+    return c.json({ error: err.message || 'Server error' }, 500);
   }
 });
 
@@ -565,7 +647,7 @@ app.get('/withdrawals', async (c) => {
   }
 });
 
-// Request new withdrawal
+// Request new withdrawal (Manual approval by Admin)
 app.post('/wallet/withdraw', async (c) => {
   const { supabase, user } = await getAuthContext(c);
   if (!user) return c.json({ error: 'Unauthorized' }, 401);
@@ -574,7 +656,7 @@ app.post('/wallet/withdraw', async (c) => {
     // --- SECURITY: Check if Payouts are globally enabled ---
     const { data: config } = await supabase
       .from('platform_configs')
-      .select('payouts_enabled')
+      .select('payouts_enabled, payout_fee, min_withdrawal')
       .eq('id', 1)
       .single();
 
@@ -585,22 +667,332 @@ app.post('/wallet/withdraw', async (c) => {
     }
 
     const { amount, bankAccountId } = await c.req.json();
-    if (!amount || amount <= 0) throw new Error('Invalid amount');
-    if (!bankAccountId) throw new Error('Bank account is required');
+    if (!amount || amount <= 0) throw new Error('Jumlah penarikan tidak valid');
+    if (!bankAccountId) throw new Error('Rekening bank wajib dipilih');
 
-    console.log(`[Withdraw Request API] User ${user.id} requesting withdrawal of ${amount}, bankAccountId: ${bankAccountId}`);
+    const payoutFee = config?.payout_fee || 5000;
+    const minWithdrawal = config?.min_withdrawal || 50000;
+    if (Number(amount) < minWithdrawal) {
+      return c.json({ error: `Minimal penarikan adalah Rp ${minWithdrawal.toLocaleString('id-ID')}` }, 400);
+    }
 
-    // Use RPC for atomic transaction: check balance + subtract + create record
-    const { data: withdrawalId, error } = await supabase.rpc('initiate_withdrawal', {
+    console.log(`[Withdraw API] User ${user.id} requesting withdrawal of ${amount}, bankAccountId: ${bankAccountId}`);
+
+    // --- Step 1: Ambil info rekening bank dari database ---
+    const { data: bankAccount, error: bankError } = await supabase
+      .from('bank_accounts')
+      .select('id, bank_name, account_number, account_name')
+      .eq('id', bankAccountId)
+      .eq('merchant_id', user.id)
+      .single();
+
+    if (bankError || !bankAccount) {
+      throw new Error('Rekening bank tidak ditemukan. Silakan daftarkan rekening terlebih dahulu.');
+    }
+
+    // --- Step 2: Cek saldo wallet ---
+    const { data: wallet, error: walletError } = await supabase
+      .from('wallets')
+      .select('available_balance')
+      .eq('merchant_id', user.id)
+      .single();
+
+    if (walletError) throw walletError;
+
+    const availableBalance = Number(wallet?.available_balance || 0);
+    if (availableBalance < Number(amount)) {
+      return c.json({ error: `Saldo tidak mencukupi. Saldo tersedia: Rp ${availableBalance.toLocaleString('id-ID')}` }, 400);
+    }
+
+    // --- Step 3: Initiate Withdrawal via Atomic RPC ---
+    // Creates a pending record and deducts available balance (moves to pending_balance)
+    console.log(`[Withdraw API] RPC initiate_withdrawal for ${amount}`);
+    const { data: withdrawalId, error: rpcError } = await supabase.rpc('initiate_withdrawal', {
       p_merchant_id: user.id,
       p_amount: Number(amount),
       p_bank_account_id: bankAccountId
     });
 
-    if (error) throw error;
-    return c.json({ success: true, withdrawalId });
+    if (rpcError) {
+      console.error('[Withdraw API] RPC Error:', rpcError);
+      return c.json({ error: `Gagal inisialisasi penarikan: ${rpcError.message}` }, 500);
+    }
+
+    // --- Step 4: Return pending status ---
+    // Admin will manually review, transfer, and approve via /admin/payouts
+    console.log(`[Withdraw API] ✅ Withdrawal request created (pending): ${withdrawalId}`);
+    return c.json({
+      success: true,
+      withdrawalId,
+      status: 'pending',
+      accountName: bankAccount.account_name,
+      bankName: bankAccount.bank_name,
+      amount: Number(amount),
+      fee: payoutFee,
+      netTransfer: Number(amount) - payoutFee,
+      newBalance: availableBalance - Number(amount)
+    });
+
   } catch (err: any) {
-    console.error('[Withdraw Request API] error:', err);
+    console.error('[Withdraw API] error:', err);
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+// --- DISBURSEMENT (DUITKU TRANSFER) ROUTES ---
+
+// Cek saldo akun Duitku
+app.get('/disbursement/balance', async (c) => {
+  const { supabase, user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  try {
+    const { DuitkuDisbursementService } = await import('../../lib/duitku-disbursement');
+    const service = new DuitkuDisbursementService();
+    const balance = await service.checkBalance();
+    return c.json(balance);
+  } catch (err: any) {
+    console.error('[Disbursement Balance] error:', err);
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+// Inquiry / Validasi nomor rekening
+app.post('/disbursement/inquiry', async (c) => {
+  const { supabase, user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  try {
+    const { bankCode, bankAccount, amountTransfer, purpose } = await c.req.json();
+    if (!bankCode || !bankAccount) {
+      return c.json({ error: 'bankCode dan bankAccount wajib diisi' }, 400);
+    }
+
+    const { DuitkuDisbursementService } = await import('../../lib/duitku-disbursement');
+    const service = new DuitkuDisbursementService();
+    const inquiry = await service.inquiryAccount(
+      bankCode,
+      bankAccount,
+      amountTransfer || 50000,
+      purpose || 'Inquiry rekening Tepak.ID'
+    );
+    return c.json(inquiry);
+  } catch (err: any) {
+    console.error('[Disbursement Inquiry] error:', err);
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+// Daftar bank yang tersedia untuk disbursement
+app.get('/disbursement/banks', async (c) => {
+  const { supabase, user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  try {
+    const { DuitkuDisbursementService } = await import('../../lib/duitku-disbursement');
+    const service = new DuitkuDisbursementService();
+    const bankList = await service.getBankList();
+    return c.json(bankList);
+  } catch (err: any) {
+    console.error('[Disbursement Banks] error:', err);
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+// Cek status transfer
+app.get('/disbursement/status/:disburseId', async (c) => {
+  const { supabase, user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  try {
+    const disburseId = c.req.param('disburseId');
+    if (!disburseId) {
+      return c.json({ error: 'disburseId wajib diisi' }, 400);
+    }
+
+    const { DuitkuDisbursementService } = await import('../../lib/duitku-disbursement');
+    const service = new DuitkuDisbursementService();
+    const status = await service.checkTransferStatus(disburseId);
+    return c.json(status);
+  } catch (err: any) {
+    console.error('[Disbursement Status] error:', err);
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+// Withdraw dengan Duitku Disbursement (gabungan inquiry + transfer)
+app.post('/disbursement/withdraw', async (c) => {
+  const { supabase, user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  try {
+    const { amount, bankCode, bankAccount, bankAccountId } = await c.req.json();
+
+    // --- Validasi input ---
+    if (!amount || amount <= 0) {
+      return c.json({ error: 'Amount harus lebih dari 0' }, 400);
+    }
+    if (!bankCode) {
+      return c.json({ error: 'Bank code wajib diisi' }, 400);
+    }
+    if (!bankAccount) {
+      return c.json({ error: 'Nomor rekening (bankAccount) wajib diisi' }, 400);
+    }
+
+    // --- SECURITY: Check if Payouts are globally enabled ---
+    const { data: config } = await supabase
+      .from('platform_configs')
+      .select('payouts_enabled, payout_fee, min_withdrawal')
+      .eq('id', 1)
+      .single();
+
+    if (config && config.payouts_enabled === false) {
+      return c.json({
+        error: 'Penarikan saldo sedang ditangguhkan sementara untuk pemeliharaan sistem. Harap coba lagi nanti.'
+      }, 403);
+    }
+
+    const minWithdrawal = config?.min_withdrawal || 50000;
+
+    if (Number(amount) < minWithdrawal) {
+      return c.json({ error: `Minimal penarikan adalah Rp ${minWithdrawal.toLocaleString('id-ID')}` }, 400);
+    }
+
+    // --- Cek saldo wallet user ---
+    const { data: wallet, error: walletError } = await supabase
+      .from('wallets')
+      .select('available_balance')
+      .eq('merchant_id', user.id)
+      .single();
+
+    if (walletError) throw walletError;
+
+    const availableBalance = Number(wallet?.available_balance || 0);
+    if (availableBalance < Number(amount)) {
+      return c.json({ error: `Saldo tidak mencukupi. Saldo tersedia: Rp ${availableBalance.toLocaleString('id-ID')}` }, 400);
+    }
+
+    // --- Step 1: Inquiry rekening (validasi nama pemilik) ---
+    const { DuitkuDisbursementService } = await import('../../lib/duitku-disbursement');
+    const service = new DuitkuDisbursementService();
+
+    console.log(`[Disbursement Withdraw] Step 1: Inquiry for bank=${bankCode}, account=${bankAccount}, amount=${amount}`);
+    const inquiry = await service.inquiryAccount(
+      bankCode,
+      bankAccount,
+      Number(amount),
+      `Withdrawal Tepak.ID - ${user.id.substring(0, 8)}`
+    );
+
+    if (inquiry.responseCode !== '00') {
+      return c.json({
+        error: `Validasi rekening gagal: ${inquiry.responseDesc}`,
+        inquiry
+      }, 400);
+    }
+
+    // --- Step 2: Initiate Withdrawal via Atomic RPC ---
+    // This handles balance check, deduction, and record creation in one transaction
+    console.log(`[Disbursement Withdraw] Step 2: RPC initiate_withdrawal for ${amount}`);
+
+    // First, find or create the bank account record to get an ID
+    let targetBankAccountId = bankAccountId;
+    if (!targetBankAccountId) {
+      const { data: existingBank } = await supabase
+        .from('bank_accounts')
+        .select('id')
+        .eq('merchant_id', user.id)
+        .eq('account_number', bankAccount)
+        .eq('bank_name', bankCode)
+        .single();
+
+      if (existingBank) {
+        targetBankAccountId = existingBank.id;
+      } else {
+        const { data: newBank, error: bankCreateError } = await supabase
+          .from('bank_accounts')
+          .insert({
+            merchant_id: user.id,
+            bank_name: bankCode,
+            account_number: bankAccount,
+            account_name: inquiry.accountName,
+            is_primary: false
+          })
+          .select('id')
+          .single();
+
+        if (bankCreateError) throw bankCreateError;
+        targetBankAccountId = newBank.id;
+      }
+    }
+
+    const { data: withdrawalId, error: rpcError } = await supabase.rpc('initiate_withdrawal', {
+      p_merchant_id: user.id,
+      p_amount: Number(amount),
+      p_bank_account_id: targetBankAccountId
+    });
+
+    if (rpcError) {
+      console.error('[Disbursement Withdraw] RPC Error:', rpcError);
+      return c.json({ error: `Gagal inisialisasi penarikan: ${rpcError.message}` }, 500);
+    }
+
+    // --- Step 3: Eksekusi transfer via Duitku (menggunakan data inquiry) ---
+    console.log(`[Disbursement Withdraw] Step 3: Transfer disburseId=${inquiry.disburseId}`);
+    const transfer = await service.requestTransfer(inquiry);
+
+    // --- Step 4: Update record withdrawal dengan transfer info ---
+    const transferStatus = transfer.responseCode === '00' ? 'completed' : 'processing';
+    const isFailed = transfer.responseCode !== '00' && transfer.responseCode !== '01'; // 01 usually means pending/processing
+
+    await supabase
+      .from('withdrawals')
+      .update({
+        status: isFailed ? 'failed' : transferStatus,
+        processed_at: new Date().toISOString(),
+        disburse_id: inquiry.disburseId,
+        cust_ref_number: inquiry.custRefNumber,
+        notes: `Duitku Disbursement - disburseId: ${inquiry.disburseId}, custRef: ${inquiry.custRefNumber}, responseCode: ${transfer.responseCode}`
+      })
+      .eq('id', withdrawalId);
+
+    if (isFailed) {
+      // Refund via RPC
+      await supabase.rpc('update_wallet_payout_reject', {
+        p_merchant_id: user.id,
+        p_amount: Number(amount)
+      });
+
+      return c.json({
+        success: false,
+        error: `Transfer gagal: ${transfer.responseDesc}. Saldo dikembalikan.`,
+        withdrawalId,
+        disburseId: inquiry.disburseId
+      }, 500);
+    }
+
+    console.log(`[Disbursement Withdraw] Transfer ${transferStatus}: disburseId=${inquiry.disburseId}`);
+
+    return c.json({
+      success: true,
+      withdrawalId,
+      disburseId: inquiry.disburseId,
+      custRefNumber: inquiry.custRefNumber,
+      status: transferStatus,
+      inquiry: {
+        accountName: inquiry.accountName,
+        bankCode: inquiry.bankCode,
+        bankAccount: inquiry.bankAccount
+      },
+      transfer: {
+        responseCode: transfer.responseCode,
+        responseDesc: transfer.responseDesc,
+        amountTransfer: transfer.amountTransfer
+      }
+    });
+
+  } catch (err: any) {
+    console.error('[Disbursement Withdraw] error:', err);
     return c.json({ error: err.message }, 500);
   }
 });
@@ -621,6 +1013,65 @@ app.get('/bank-accounts', async (c) => {
     if (error && error.code !== 'PGRST116') throw error;
     return c.json({ exists: !!data, details: data || null });
   } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+// Save/Update bank account info
+app.post('/bank-accounts', zValidator('json', z.object({
+  bank_name: z.string().min(1, 'Nama bank wajib diisi'),
+  account_number: z.string().min(1, 'Nomor rekening wajib diisi').regex(/^\d+$/, 'Nomor rekening hanya boleh berisi angka'),
+  account_name: z.string().min(1, 'Nama pemilik rekening wajib diisi')
+})), async (c) => {
+  const { supabase, user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  try {
+    const { bank_name, account_number, account_name } = c.req.valid('json');
+    const adminSupabase = getSupabaseAdmin(cfEnv);
+
+    // Upsert: if primary bank exists, update it; otherwise insert new
+    const { data: existing } = await adminSupabase
+      .from('bank_accounts')
+      .select('id')
+      .eq('merchant_id', user.id)
+      .eq('is_primary', true)
+      .maybeSingle();
+
+    let result: any;
+    if (existing) {
+      const { data, error } = await adminSupabase
+        .from('bank_accounts')
+        .update({
+          bank_name,
+          account_number,
+          account_name,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existing.id)
+        .select()
+        .single();
+      if (error) throw error;
+      result = data;
+    } else {
+      const { data, error } = await adminSupabase
+        .from('bank_accounts')
+        .insert({
+          merchant_id: user.id,
+          bank_name,
+          account_number,
+          account_name,
+          is_primary: true
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      result = data;
+    }
+
+    return c.json({ success: true, details: result });
+  } catch (err: any) {
+    console.error('[Bank Accounts POST] error:', err);
     return c.json({ error: err.message }, 500);
   }
 });
@@ -840,17 +1291,17 @@ app.delete('/profile', async (c) => {
       .single();
 
     if (settings?.plan_status && settings.plan_status !== 'free') {
-      return c.json({ 
-        error: 'Berlangganan PRO harus dihentikan (Matikan Auto-Renew) terlebih dahulu sebelum menghapus akun.' 
+      return c.json({
+        error: 'Berlangganan PRO harus dihentikan (Matikan Auto-Renew) terlebih dahulu sebelum menghapus akun.'
       }, 400);
     }
 
     // 2. Gunakan Admin Client untuk menghapus User dari auth.users
     const { getSupabaseAdmin } = await import('../../lib/supabase');
     const adminClient = getSupabaseAdmin(cfEnv);
-    
+
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id);
-    
+
     if (deleteError) throw deleteError;
 
     // Supabase akan menghapus data di tabel lain secara otomatis jika cascade delete aktif,
@@ -1733,14 +2184,14 @@ app.post('/subscription/cancel', async (c) => {
   try {
     const { error } = await supabase
       .from('user_settings')
-      .update({ 
-        auto_renewal: false, 
-        updated_at: new Date().toISOString() 
+      .update({
+        auto_renewal: false,
+        updated_at: new Date().toISOString()
       })
       .eq('user_id', user.id);
 
     if (error) throw error;
-    
+
     // Log the cancellation in history if needed
     console.log(`[Subscription] Cancelled for user ${user.id}`);
 
@@ -2024,6 +2475,135 @@ app.post(
 
 // 2. Handler Webhook DuitKu (untuk notifikasi pembayaran)
 app.post('/payments/duitku/webhook', async (c) => {
+
+  // --- DISBURSEMENT WEBHOOK (Duitku Transfer Callback) ---
+  // Endpoint ini menerima callback dari Duitku saat status transfer berubah (Success/Failed)
+  app.post('/webhooks/duitku-disbursement', async (c) => {
+    console.log('[Disbursement Webhook] Received callback');
+
+    try {
+      // Duitku Disbursement webhook mengirim JSON body
+      const body = await c.req.json();
+
+      console.log('[Disbursement Webhook] Payload:', JSON.stringify(body, null, 2));
+
+      const {
+        disburseId,
+        custRefNumber,
+        responseCode,
+        responseDesc,
+        amountTransfer,
+        bankCode,
+        bankAccount,
+        accountName,
+        signature
+      } = body;
+
+      if (!disburseId || !responseCode) {
+        return c.json({ error: 'Missing required fields' }, 400);
+      }
+
+      // --- Validasi Signature ---
+      const { DuitkuDisbursementService } = await import('../../lib/duitku-disbursement');
+      const service = new DuitkuDisbursementService();
+
+      const isValid = await service.validateWebhook(body);
+      if (!isValid) {
+        console.error('[Disbursement Webhook] ❌ Invalid signature');
+        return c.json({ error: 'Invalid signature' }, 401);
+      }
+
+      // --- Update database berdasarkan status ---
+      const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL') || '';
+      const supabaseKey = getEnv('SUPABASE_SERVICE_ROLE_KEY') || '';
+      const supabase = createClient(supabaseUrl, supabaseKey);
+
+      // Cari withdrawal berdasarkan disburse_id kolom (pencarian lebih cepat & akurat)
+      const { data: withdrawals, error: findError } = await supabase
+        .from('withdrawals')
+        .select('id, merchant_id, amount, status, notes')
+        .eq('disburse_id', disburseId)
+        .limit(1);
+
+      if (findError) {
+        console.error('[Disbursement Webhook] Error finding withdrawal:', findError);
+      }
+
+      // Fallback: jika tidak ditemukan via kolom, coba via notes (legacy support)
+      let withdrawal = (withdrawals && withdrawals.length > 0) ? withdrawals[0] : null;
+      if (!withdrawal) {
+        console.log(`[Disbursement Webhook] Withdrawal not found by column, trying legacy notes search for ${disburseId}`);
+        const { data: legacyWithdrawals } = await supabase
+          .from('withdrawals')
+          .select('id, merchant_id, amount, status, notes')
+          .ilike('notes', `%${disburseId}%`)
+          .limit(1);
+
+        if (legacyWithdrawals && legacyWithdrawals.length > 0) {
+          withdrawal = legacyWithdrawals[0];
+        }
+      }
+
+      if (responseCode === '00') {
+        // --- TRANSFER SUKSES ---
+        console.log(`[Disbursement Webhook] ✅ Transfer SUCCESS: ${disburseId}`);
+
+        if (withdrawal) {
+          await supabase
+            .from('withdrawals')
+            .update({
+              status: 'completed',
+              processed_at: new Date().toISOString(),
+              notes: `${withdrawal.notes} | COMPLETED via webhook`
+            })
+            .eq('id', withdrawal.id);
+
+          console.log(`[Disbursement Webhook] Withdrawal ${withdrawal.id} marked as completed`);
+        }
+
+      } else {
+        // --- TRANSFER GAGAL ---
+        console.log(`[Disbursement Webhook] ❌ Transfer FAILED: ${disburseId}, reason: ${responseDesc}`);
+
+        if (withdrawal) {
+          // Update status withdrawal ke rejected
+          await supabase
+            .from('withdrawals')
+            .update({
+              status: 'rejected',
+              processed_at: new Date().toISOString(),
+              notes: `${withdrawal.notes} | FAILED: ${responseDesc}`
+            })
+            .eq('id', withdrawal.id);
+
+          // --- REFUND: Kembalikan saldo ke wallet user via RPC ---
+          const { error: refundError } = await supabase.rpc('update_wallet_payout_reject', {
+            p_merchant_id: withdrawal.merchant_id,
+            p_amount: Number(withdrawal.amount)
+          });
+
+          if (refundError) {
+            console.error(`[Disbursement Webhook] Refund Error:`, refundError);
+          } else {
+            console.log(`[Disbursement Webhook] Refunded Rp ${withdrawal.amount} to wallet ${withdrawal.merchant_id} via RPC`);
+          }
+        }
+      }
+
+      // Selalu return 200 ke Duitku agar mereka tidak retry
+      return c.json({
+        received: true,
+        disburseId,
+        status: responseCode === '00' ? 'SUCCESS' : 'FAILED'
+      });
+
+    } catch (err: any) {
+      console.error('[Disbursement Webhook] Error:', err);
+      // Tetap return 200 agar Duitku tidak retry terus
+      return c.json({ received: true, error: err.message }, 200);
+    }
+  });
+
   // Duitku bisa mengirim JSON atau Form-UrlEncoded.
   // parseBody() mengembalikan Record<string, string | File>, tapi Duitku selalu mengirim string values.
   const rawBody = await c.req.parseBody();
@@ -2361,32 +2941,32 @@ app.post('/payments/duitku/webhook', async (c) => {
 // DEBUG: Manual trigger digital delivery for testing
 app.post('/test/digital-delivery', async (c) => {
   const { supabase, user } = await getAuthContext(c);
-  
+
   // Require admin access
   if (!user) return c.json({ error: 'Unauthorized' }, 401);
-  
+
   try {
     const body = await c.req.json();
     const { orderId, email, fileUrl } = body;
-    
+
     if (!orderId || !email || !fileUrl) {
-      return c.json({ 
-        error: 'Missing required fields', 
+      return c.json({
+        error: 'Missing required fields',
         required: ['orderId', 'email', 'fileUrl'],
         received: { orderId, email, fileUrl }
       }, 400);
     }
-    
+
     console.log(`[Test Digital Delivery] Manually triggering for order: ${orderId}`);
     console.log(`[Test Digital Delivery] Email: ${email}`);
     console.log(`[Test Digital Delivery] File URL: ${fileUrl}`);
-    
+
     const { createDigitalDelivery } = await import('../../lib/digital-delivery');
-    
+
     const siteBaseUrl = getEnv('PUBLIC_SITE_URL') || 'https://tepak.id';
-    
+
     console.log(`[Test Digital Delivery] Using site URL: ${siteBaseUrl}`);
-    
+
     const result = await createDigitalDelivery(
       orderId,
       email,
@@ -2394,9 +2974,9 @@ app.post('/test/digital-delivery', async (c) => {
       siteBaseUrl,
       c.env // Pass Hono environment
     );
-    
+
     console.log(`[Test Digital Delivery] Result:`, result);
-    
+
     return c.json({
       success: result.success,
       token: result.token,
@@ -2404,7 +2984,7 @@ app.post('/test/digital-delivery', async (c) => {
       emailError: result.emailError,
       testUrl: result.token ? `${siteBaseUrl}/digital-delivery/${result.token}?email=${encodeURIComponent(email)}` : null
     });
-    
+
   } catch (err: any) {
     console.error('[Test Digital Delivery] Error:', err);
     return c.json({ error: err.message }, 500);
@@ -2718,7 +3298,7 @@ app.get('/analytics/dashboard', async (c) => {
       startDate.setHours(0, 0, 0, 0);
     }
     const startDateStr = startDate.toISOString();
-    
+
     const endDate = end ? new Date(end) : new Date();
     endDate.setHours(23, 59, 59, 999);
     const endDateStr = endDate.toISOString();
@@ -3146,7 +3726,7 @@ app.get('/public/settings', async (c) => {
 
     const { data, error } = await supabase
       .from('platform_configs')
-      .select('site_name, site_tagline, logo_url, favicon_url, primary_color, maintenance_mode, registration_enabled, payouts_enabled, support_email, whatsapp_number, office_address, seo_description')
+      .select('site_name, site_tagline, logo_url, favicon_url, primary_color, maintenance_mode, registration_enabled, payouts_enabled, payout_fee, min_withdrawal, support_email, whatsapp_number, office_address, seo_description')
       .eq('id', 1)
       .single();
 
@@ -3360,6 +3940,10 @@ app.get('/admin/overview', async (c) => {
   if (!isAdmin) return c.json({ error: 'Forbidden' }, 403);
 
   try {
+    // Use Admin Client to bypass RLS for cross-user data access
+    const { getSupabaseAdmin } = await import('../../lib/supabase');
+    const adminSupabase = getSupabaseAdmin(cfEnv);
+
     // Parallel fetch for global metrics
     const [
       { count: totalUsers },
@@ -3369,12 +3953,12 @@ app.get('/admin/overview', async (c) => {
       { data: latestProfiles },
       { data: latestWithdrawals }
     ] = await Promise.all([
-      supabase.from('profiles').select('*', { count: 'exact', head: true }),
-      supabase.from('user_settings').select('*', { count: 'exact', head: true }).eq('plan_status', 'pro'),
-      supabase.from('orders').select('amount').in('status', ['success', 'paid']),
-      supabase.from('withdrawals').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-      supabase.from('profiles').select('full_name, username, created_at').order('created_at', { ascending: false }).limit(5),
-      supabase.from('withdrawals').select('amount, status, requested_at, profiles(full_name, username)').order('requested_at', { ascending: false }).limit(5)
+      adminSupabase.from('profiles').select('*', { count: 'exact', head: true }),
+      adminSupabase.from('user_settings').select('*', { count: 'exact', head: true }).eq('plan_status', 'pro'),
+      adminSupabase.from('orders').select('amount').in('status', ['success', 'paid']),
+      adminSupabase.from('withdrawals').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      adminSupabase.from('profiles').select('full_name, username, created_at').order('created_at', { ascending: false }).limit(5),
+      adminSupabase.from('withdrawals').select('amount, status, requested_at, profiles(full_name, username)').order('requested_at', { ascending: false }).limit(5)
     ]);
 
     const totalGMV = gmvData?.reduce((sum, o) => sum + Number(o.amount), 0) || 0;
@@ -3382,7 +3966,7 @@ app.get('/admin/overview', async (c) => {
     // Registration Growth (last 7 days grouped by name)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const { data: growthResult } = await supabase
+    const { data: growthResult } = await adminSupabase
       .from('profiles')
       .select('created_at')
       .gte('created_at', sevenDaysAgo.toISOString());
@@ -3447,7 +4031,11 @@ app.get('/admin/payouts', async (c) => {
   if (!isAdmin) return c.json({ error: 'Forbidden' }, 403);
 
   try {
-    const { data, error } = await supabase
+    // Use Admin Client to bypass RLS — admin needs to see ALL withdrawals from all creators
+    const { getSupabaseAdmin } = await import('../../lib/supabase');
+    const adminSupabase = getSupabaseAdmin(cfEnv);
+
+    const { data, error } = await adminSupabase
       .from('withdrawals')
       .select(`
         *,
@@ -3469,10 +4057,14 @@ app.post('/admin/payouts/update-status', async (c) => {
   if (!isAdmin) return c.json({ error: 'Forbidden' }, 403);
 
   try {
+    // Use Admin Client to bypass RLS — admin needs to update ANY creator's withdrawal
+    const { getSupabaseAdmin } = await import('../../lib/supabase');
+    const adminSupabase = getSupabaseAdmin(cfEnv);
+
     const { id, status, notes, proof_url } = await c.req.json();
 
     // 1. Get the withdrawal record
-    const { data: withdrawal, error: fetchErr } = await supabase
+    const { data: withdrawal, error: fetchErr } = await adminSupabase
       .from('withdrawals')
       .select('*')
       .eq('id', id)
@@ -3486,7 +4078,7 @@ app.post('/admin/payouts/update-status', async (c) => {
 
     // 2. Process status change
     if (status === 'completed') {
-      const { error: updateErr } = await supabase
+      const { error: updateErr } = await adminSupabase
         .from('withdrawals')
         .update({
           status: 'completed',
@@ -3498,14 +4090,14 @@ app.post('/admin/payouts/update-status', async (c) => {
       if (updateErr) throw updateErr;
 
       // Reduce pending balance (already reserved when requested)
-      const { error: walletErr } = await supabase.rpc('update_wallet_payout_success', {
+      const { error: walletErr } = await adminSupabase.rpc('update_wallet_payout_success', {
         p_merchant_id: creatorId,
         p_amount: amount
       });
       if (walletErr) throw walletErr;
 
       // 3. Send Notification to Creator
-      await supabase.from('notifications').insert({
+      await adminSupabase.from('notifications').insert({
         user_id: creatorId,
         title: 'Withdrawal Successful',
         message: `Pencairan dana sebesar Rp ${amount.toLocaleString('id-ID')} telah berhasil diproses.`,
@@ -3513,7 +4105,7 @@ app.post('/admin/payouts/update-status', async (c) => {
       });
 
     } else if (status === 'rejected') {
-      const { error: updateErr } = await supabase
+      const { error: updateErr } = await adminSupabase
         .from('withdrawals')
         .update({
           status: 'rejected',
@@ -3524,14 +4116,14 @@ app.post('/admin/payouts/update-status', async (c) => {
       if (updateErr) throw updateErr;
 
       // Refund from pending back to available
-      const { error: walletErr } = await supabase.rpc('update_wallet_payout_reject', {
+      const { error: walletErr } = await adminSupabase.rpc('update_wallet_payout_reject', {
         p_merchant_id: creatorId,
         p_amount: amount
       });
       if (walletErr) throw walletErr;
 
       // 3. Send Notification to Creator
-      await supabase.from('notifications').insert({
+      await adminSupabase.from('notifications').insert({
         user_id: creatorId,
         title: 'Withdrawal Rejected',
         message: `Permintaan pencairan dana sebesar Rp ${amount.toLocaleString('id-ID')} ditolak. Alasan: ${notes}. Saldo telah dikembalikan ke Virtual Balance Anda.`,

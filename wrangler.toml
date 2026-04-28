@@ -11,14 +11,16 @@ vars = {
   # PUBLIC_SUPABASE_ANON_KEY = "your-anon-key",
   # PUBLIC_DUITKU_MERCHANT_CODE = "your-merchant-code",
   DUITKU_ENVIRONMENT = "production",
-  DUITKU_CALLBACK_URL = "https://yourdomain.com/api/payments/duitku/webhook"
+  DUITKU_CALLBACK_URL = "https://yourdomain.com/api/payments/duitku/webhook",
+  DUITKU_DISBURSEMENT_CALLBACK_URL = "https://yourdomain.com/api/webhooks/duitku-disbursement"
 }
 
 [env.development]
 vars = { 
   # Load from .env file in development
   DUITKU_ENVIRONMENT = "sandbox",
-  DUITKU_CALLBACK_URL = "http://localhost:4321/api/payments/duitku/webhook"
+  DUITKU_CALLBACK_URL = "http://localhost:4321/api/payments/duitku/webhook",
+  DUITKU_DISBURSEMENT_CALLBACK_URL = "http://localhost:4321/api/webhooks/duitku-disbursement"
 }
 
 [vars]

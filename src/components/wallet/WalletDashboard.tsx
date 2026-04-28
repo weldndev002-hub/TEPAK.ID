@@ -17,7 +17,9 @@ import {
     ArrowPathIcon,
     ShieldCheckIcon,
     XMarkIcon,
-    ExclamationTriangleIcon
+    ExclamationTriangleIcon,
+    CheckCircleIcon,
+    ClockIcon
 } from '@heroicons/react/24/outline';
 import { SubscriptionProvider, useSubscription } from '../../context/SubscriptionContext';
 
@@ -34,6 +36,8 @@ const WalletDashboardContent = () => {
     const [error, setError] = useState<string | null>(null);
     const [isBankInfoComplete, setIsBankInfoComplete] = useState(true);
     const [showBankWarning, setShowBankWarning] = useState(false);
+    const [toast, setToast] = useState<string | null>(null);
+    const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000); };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -95,6 +99,12 @@ const WalletDashboardContent = () => {
     return (
         <>
             <div className="max-w-7xl w-full mx-auto space-y-8 ">
+                {/* Toast Notification */}
+                {toast && (
+                    <div className="fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl text-sm font-bold bg-emerald-500 text-white animate-in slide-in-from-right duration-300">
+                        <CheckCircleIcon className="w-5 h-5 shrink-0" />{toast}
+                    </div>
+                )}
                 {/* Error Banner - shown inline instead of replacing entire page */}
                 {error && (
                     <div className="bg-rose-50 border border-rose-100 rounded-2xl p-6 flex items-center gap-4">
@@ -105,7 +115,10 @@ const WalletDashboardContent = () => {
                             <p className="text-sm font-black text-rose-700 uppercase tracking-tight">{error}</p>
                             <p className="text-[10px] text-rose-500 font-medium mt-1">Beberapa data mungkin tidak akurat. Tombol tarik dinonaktifkan sementara.</p>
                         </div>
-                        <Button variant="outline" size="sm" className="shrink-0" onClick={() => window.location.reload()}>
+                        <Button variant="outline" size="sm" className="shrink-0" onClick={() => {
+                            showToast('Memuat ulang data...');
+                            window.location.reload();
+                        }}>
                             <ArrowPathIcon className="w-3.5 h-3.5 mr-1" /> Coba Lagi
                         </Button>
                     </div>
@@ -214,9 +227,11 @@ const WalletDashboardContent = () => {
                                             <TableCell colSpan={5} className="text-center py-10 text-slate-400 font-medium italic text-xs uppercase tracking-widest">Belum ada riwayat penarikan</TableCell>
                                         </TableRow>
                                     ) : withdrawals.map(wd => (
-                                        <TableRow key={wd.id}>
+                                        <TableRow key={wd.id} className={wd.status === 'pending' ? 'bg-amber-50/40' : ''}>
                                             <TableCell className="text-primary font-black">
-                                                <span className="hover:underline">#{wd.id.substring(0, 8).toUpperCase()}</span>
+                                                <span className="hover:underline cursor-pointer" onClick={() => window.location.href = `/withdrawal-details?id=${wd.id}`}>
+                                                    #{wd.id.substring(0, 8).toUpperCase()}
+                                                </span>
                                             </TableCell>
                                             <TableCell className="text-slate-600 font-bold">{wd.bank_accounts?.bank_name || 'Bank'}</TableCell>
                                             <TableCell className="text-slate-900 font-black">Rp {Number(wd.amount).toLocaleString('id-ID')}</TableCell>
@@ -224,9 +239,32 @@ const WalletDashboardContent = () => {
                                                 {new Date(wd.requested_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                                             </TableCell>
                                             <TableCell>
-                                                <Badge variant={wd.status === 'completed' ? 'success' : wd.status === 'processing' ? 'pending' : 'failed'}>
-                                                    {wd.status === 'completed' ? 'Berhasil' : wd.status === 'processing' ? 'Diproses' : wd.status.toUpperCase()}
-                                                </Badge>
+                                                {wd.status === 'pending' ? (
+                                                    <div className="flex flex-col gap-1">
+                                                        <Badge variant="pending" className="flex items-center gap-1 w-fit">
+                                                            <ClockIcon className="w-3 h-3" />
+                                                            Pending
+                                                        </Badge>
+                                                        <span className="text-[9px] text-amber-600 font-medium uppercase tracking-wider">Menunggu Admin</span>
+                                                    </div>
+                                                ) : wd.status === 'processing' ? (
+                                                    <Badge variant="pending">
+                                                        <span className="flex items-center gap-1"><ArrowPathIcon className="w-3 h-3" /> Diproses</span>
+                                                    </Badge>
+                                                ) : wd.status === 'completed' ? (
+                                                    <Badge variant="success">Berhasil</Badge>
+                                                ) : wd.status === 'rejected' ? (
+                                                    <div className="flex flex-col gap-1">
+                                                        <Badge variant="failed">Ditolak</Badge>
+                                                        {wd.notes && (
+                                                            <span className="text-[9px] text-rose-500 font-medium uppercase tracking-wider truncate max-w-[120px] block" title={wd.notes}>
+                                                                {wd.notes.replace(/^Rejected:\s*/i, '').substring(0, 30)}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <Badge variant="failed">{wd.status.toUpperCase()}</Badge>
+                                                )}
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -394,7 +432,10 @@ const WalletDashboardContent = () => {
                             </div>
                             <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
                                 <button className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setShowBankWarning(false)}>Tutup</button>
-                                <button className="px-6 py-2.5 rounded-xl font-black bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 transition-all text-[10px] uppercase tracking-widest" onClick={() => window.location.href = '/bank-info'}>Lengkapi Sekarang</button>
+                                <button className="px-6 py-2.5 rounded-xl font-black bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 transition-all text-[10px] uppercase tracking-widest" onClick={() => {
+                                    sessionStorage.setItem('bank_info_toast', 'Harap lengkapi informasi bank Anda');
+                                    window.location.href = '/bank-info';
+                                }}>Lengkapi Sekarang</button>
                             </div>
                         </div>
                     </div>

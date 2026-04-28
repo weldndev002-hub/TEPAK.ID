@@ -47,35 +47,117 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
     const isPro = plan !== 'free';
 
     // --- Bank State ---
-    const [bankData, setBankData] = useState({
-        bankName: 'Bank Central Asia (BCA)',
-        accountNumber: '57219908',
-        ownerName: 'John Doe',
-        isVerified: true
-    });
+    const [bankData, setBankData] = useState<{
+        bankName: string;
+        accountNumber: string;
+        ownerName: string;
+        isVerified: boolean;
+    } | null>(null);
     const [formData, setFormData] = useState({
-        bankName: 'BCA',
+        bankName: '',
         accountNumber: '',
         ownerName: ''
     });
     const [bankLoading, setBankLoading] = useState(false);
+    const [bankInitLoading, setBankInitLoading] = useState(true);
+    const [accountNumberError, setAccountNumberError] = useState<string | null>(null);
     const [showSaveConfirm, setShowSaveConfirm] = useState(false);
     const [showTerminateConfirm, setShowTerminateConfirm] = useState(false);
     const [toast, setToast] = useState<string | null>(null);
     const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000); };
 
+    // Load bank data from API on mount
+    React.useEffect(() => {
+        // Show toast if redirected from wallet with bank info warning
+        const bankToast = sessionStorage.getItem('bank_info_toast');
+        if (bankToast) {
+            sessionStorage.removeItem('bank_info_toast');
+            showToast(bankToast);
+        }
+
+        const fetchBankData = async () => {
+            try {
+                const res = await fetch('/api/bank-accounts');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.exists && data.details) {
+                        const d = data.details;
+                        setBankData({
+                            bankName: d.bank_name || '',
+                            accountNumber: d.account_number || '',
+                            ownerName: d.account_name || '',
+                            isVerified: true
+                        });
+                        setFormData({
+                            bankName: d.bank_name || '',
+                            accountNumber: d.account_number || '',
+                            ownerName: d.account_name || ''
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to fetch bank data:', err);
+            } finally {
+                setBankInitLoading(false);
+            }
+        };
+        fetchBankData();
+    }, []);
+
+    const validateAccountNumber = (value: string): boolean => {
+        if (value && !/^\d*$/.test(value)) {
+            setAccountNumberError('Nomor rekening hanya boleh berisi angka');
+            return false;
+        }
+        setAccountNumberError(null);
+        return true;
+    };
+
     const handleSaveBank = async () => {
+        // Validate account number (digits only)
+        if (!validateAccountNumber(formData.accountNumber)) return;
+        if (!formData.bankName) {
+            showToast('Nama bank wajib diisi');
+            return;
+        }
+        if (!formData.accountNumber) {
+            showToast('Nomor rekening wajib diisi');
+            return;
+        }
+        if (!formData.ownerName) {
+            showToast('Nama pemilik rekening wajib diisi');
+            return;
+        }
+
         setBankLoading(true);
         setShowSaveConfirm(false);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setBankData({
-            ...bankData,
-            bankName: formData.bankName === 'BCA' ? 'Bank Central Asia (BCA)' : formData.bankName,
-            accountNumber: formData.accountNumber || bankData.accountNumber,
-            ownerName: formData.ownerName || bankData.ownerName,
-        });
-        setBankLoading(false);
-        showToast('Informasi bank berhasil diperbarui!');
+        try {
+            const res = await fetch('/api/bank-accounts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    bank_name: formData.bankName,
+                    account_number: formData.accountNumber,
+                    account_name: formData.ownerName
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || 'Gagal menyimpan informasi bank');
+            }
+            // Update displayed bank data
+            setBankData({
+                bankName: formData.bankName,
+                accountNumber: formData.accountNumber,
+                ownerName: formData.ownerName,
+                isVerified: true
+            });
+            showToast('Informasi bank berhasil diperbarui!');
+        } catch (err: any) {
+            showToast(err.message || 'Gagal menyimpan informasi bank');
+        } finally {
+            setBankLoading(false);
+        }
     };
 
     const handleTerminate = async () => {
@@ -260,24 +342,44 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                         {/* Current Bank Info */}
                         <div className="lg:col-span-5">
                             <h4 className="text-[10px] font-black text-slate-400 mb-6 uppercase tracking-[0.2em] ml-1">Current Payout Method</h4>
-                            <Card className="p-8 border-none bg-blue-50/50 rounded-[2.5rem] shadow-sm border border-white">
-                                <div className="space-y-6">
-                                    <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100">
-                                        <BanknotesIcon className="w-8 h-8 text-[#005BAB]" />
+                            {bankInitLoading ? (
+                                <Card className="p-8 border-none bg-blue-50/50 rounded-[2.5rem] shadow-sm border border-white">
+                                    <div className="flex items-center justify-center py-8">
+                                        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                                     </div>
-                                    <div>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{bankData.bankName}</p>
-                                        <h3 className="text-2xl font-black text-slate-900 tracking-tight">•••• •••• {bankData.accountNumber.slice(-4)}</h3>
-                                        <p className="text-[11px] font-black text-slate-900/40 uppercase mt-2 tracking-widest">a.n. {bankData.ownerName}</p>
+                                </Card>
+                            ) : bankData ? (
+                                <Card className="p-8 border-none bg-blue-50/50 rounded-[2.5rem] shadow-sm border border-white">
+                                    <div className="space-y-6">
+                                        <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100">
+                                            <BanknotesIcon className="w-8 h-8 text-[#005BAB]" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{bankData.bankName}</p>
+                                            <h3 className="text-2xl font-black text-slate-900 tracking-tight">•••• •••• {bankData.accountNumber.slice(-4)}</h3>
+                                            <p className="text-[11px] font-black text-slate-900/40 uppercase mt-2 tracking-widest">a.n. {bankData.ownerName}</p>
+                                        </div>
+                                        <Badge variant="pro" className="px-4 py-2 font-black text-[10px]">VERIFIED METHOD</Badge>
                                     </div>
-                                    <Badge variant="pro" className="px-4 py-2 font-black text-[10px]">VERIFIED METHOD</Badge>
-                                </div>
-                            </Card>
+                                </Card>
+                            ) : (
+                                <Card className="p-8 border-none bg-amber-50/50 rounded-[2.5rem] shadow-sm border border-amber-100">
+                                    <div className="space-y-6 text-center">
+                                        <div className="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center shadow-sm border border-amber-200 mx-auto">
+                                            <ExclamationTriangleIcon className="w-8 h-8 text-amber-500" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Belum Ada Rekening</h3>
+                                            <p className="text-[10px] text-slate-500 font-medium">Lengkapi informasi bank untuk dapat melakukan penarikan saldo.</p>
+                                        </div>
+                                    </div>
+                                </Card>
+                            )}
                         </div>
 
                         {/* Update Bank Form */}
                         <div className="lg:col-span-7">
-                            <h4 className="text-[10px] font-black text-slate-400 mb-6 uppercase tracking-[0.2em] ml-1">Update Bank Data</h4>
+                            <h4 className="text-[10px] font-black text-slate-400 mb-6 uppercase tracking-[0.2em] ml-1">{bankData ? 'Update Bank Data' : 'Register Bank Account'}</h4>
                             <Card className="p-10 border-none rounded-[3rem] shadow-sm bg-white space-y-8">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-3">
@@ -287,9 +389,15 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                                             onChange={(e) => setFormData({...formData, bankName: e.target.value})}
                                             className="h-14 rounded-xl bg-slate-50 border-slate-100 font-bold"
                                         >
+                                            <option value="">Pilih Bank</option>
                                             <option value="BCA">Bank Central Asia (BCA)</option>
                                             <option value="Mandiri">Bank Mandiri</option>
                                             <option value="BNI">Bank Negara Indonesia (BNI)</option>
+                                            <option value="BRI">Bank Rakyat Indonesia (BRI)</option>
+                                            <option value="CIMB">CIMB Niaga</option>
+                                            <option value="Danamon">Bank Danamon</option>
+                                            <option value="Permata">Bank Permata</option>
+                                            <option value="BCA Digital">BCA Digital (Blu)</option>
                                         </Select>
                                     </div>
                                     <div className="space-y-3">
@@ -297,9 +405,16 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                                         <Input 
                                             placeholder="Ex: 5721..." 
                                             value={formData.accountNumber}
-                                            onChange={(e) => setFormData({...formData, accountNumber: e.target.value})}
-                                            className="h-14 rounded-xl bg-slate-50 border-slate-100" 
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setFormData({...formData, accountNumber: val});
+                                                validateAccountNumber(val);
+                                            }}
+                                            className={cn("h-14 rounded-xl bg-slate-50 border-slate-100", accountNumberError && "border-rose-300 bg-rose-50/30")} 
                                         />
+                                        {accountNumberError && (
+                                            <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">{accountNumberError}</p>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="space-y-3">

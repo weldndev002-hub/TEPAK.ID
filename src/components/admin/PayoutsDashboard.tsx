@@ -80,6 +80,9 @@ export const PayoutsDashboard = () => {
     const [rejectConfirm, setRejectConfirm] = React.useState(false);
     const [processing, setProcessing] = React.useState(false);
 
+    // Dynamic fee from platform_configs
+    const [payoutFee, setPayoutFee] = React.useState<number>(5000);
+
     // Success/Error toast
     const [toast, setToast] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const showToast = (type: 'success' | 'error', message: string) => {
@@ -90,10 +93,17 @@ export const PayoutsDashboard = () => {
     const fetchPayouts = async () => {
         setLoading(true);
         try {
-            const res = await fetch('/api/admin/payouts');
-            if (res.ok) {
-                const data = await res.json();
+            const [payoutsRes, configRes] = await Promise.all([
+                fetch('/api/admin/payouts'),
+                fetch('/api/public/settings')
+            ]);
+            if (payoutsRes.ok) {
+                const data = await payoutsRes.json();
                 setPayouts(data);
+            }
+            if (configRes.ok) {
+                const config = await configRes.json();
+                if (config.payout_fee) setPayoutFee(Number(config.payout_fee));
             }
         } catch (err) {
             console.error('Failed to fetch payouts:', err);
@@ -131,11 +141,11 @@ export const PayoutsDashboard = () => {
                     .upload(filePath, proofFile);
 
                 if (uploadError) throw new Error(`Upload bukti gagal: ${uploadError.message}`);
-                
+
                 const { data: { publicUrl } } = supabase.storage
                     .from('payout-proofs')
                     .getPublicUrl(filePath);
-                
+
                 proof_url = publicUrl;
             }
 
@@ -204,7 +214,7 @@ export const PayoutsDashboard = () => {
                     "fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl text-sm font-bold transition-all",
                     toast.type === 'success' ? "bg-emerald-500 text-white" : "bg-rose-500 text-white"
                 )}>
-                    {toast.type === 'success' 
+                    {toast.type === 'success'
                         ? <CheckCircleIcon className="w-5 h-5 shrink-0" />
                         : <XCircleIcon className="w-5 h-5 shrink-0" />
                     }
@@ -232,19 +242,19 @@ export const PayoutsDashboard = () => {
 
             {/* Navigation Tabs */}
             <div className="flex items-center gap-8 mb-8 border-b border-slate-100">
-                <button 
+                <button
                     onClick={() => setActiveTab('pending')}
                     className={`pb-4 text-sm font-bold transition-all px-2 ${activeTab === 'pending' ? 'text-[#465f89] border-b-2 border-[#465f89]' : 'text-slate-400 hover:text-[#005ab4]'}`}
                 >
                     Pending ({payouts.filter(p => p.status === 'pending').length})
                 </button>
-                <button 
+                <button
                     onClick={() => setActiveTab('completed')}
                     className={`pb-4 text-sm font-bold transition-all px-2 ${activeTab === 'completed' ? 'text-emerald-500 border-b-2 border-emerald-500' : 'text-slate-400 hover:text-emerald-500'}`}
                 >
                     Successful ({payouts.filter(p => p.status === 'completed').length})
                 </button>
-                <button 
+                <button
                     onClick={() => setActiveTab('rejected')}
                     className={`pb-4 text-sm font-bold transition-all px-2 ${activeTab === 'rejected' ? 'text-rose-500 border-b-2 border-rose-500' : 'text-slate-400 hover:text-rose-500'}`}
                 >
@@ -289,7 +299,7 @@ export const PayoutsDashboard = () => {
                                         <div className="space-y-1">
                                             <p className="font-black text-slate-900">Rp {Number(payout.amount).toLocaleString('id-ID')}</p>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded tracking-tighter">Net: Rp {(Number(payout.amount) - 5000).toLocaleString('id-ID')}</span>
+                                                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded tracking-tighter">Net: Rp {(Number(payout.amount) - payoutFee).toLocaleString('id-ID')}</span>
                                             </div>
                                         </div>
                                     </TableCell>
@@ -333,7 +343,7 @@ export const PayoutsDashboard = () => {
                                 <h2 className="text-2xl font-black text-primary">Payout Request Details</h2>
                                 <p className="text-sm text-slate-500 font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[400px]">ID: {selectedPayout.id}</p>
                             </div>
-                            <button 
+                            <button
                                 className="p-2 hover:bg-slate-100 rounded-full transition-colors"
                                 onClick={() => setIsModalOpen(false)}
                             >
@@ -354,11 +364,11 @@ export const PayoutsDashboard = () => {
                                         </div>
                                         <div className="flex justify-between items-center text-sm">
                                             <span className="text-slate-500 font-medium">Processing fee</span>
-                                            <span className="font-bold text-rose-500">-Rp 5.000</span>
+                                            <span className="font-bold text-rose-500">-Rp {payoutFee.toLocaleString('id-ID')}</span>
                                         </div>
                                         <div className="pt-3 border-t border-slate-200 flex justify-between items-center">
                                             <span className="text-xs font-black text-primary uppercase tracking-wider">Net to Transfer</span>
-                                            <span className="text-xl font-black text-primary">Rp {(Number(selectedPayout.amount) - 5000).toLocaleString('id-ID')}</span>
+                                            <span className="text-xl font-black text-primary">Rp {(Number(selectedPayout.amount) - payoutFee).toLocaleString('id-ID')}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -438,8 +448,8 @@ export const PayoutsDashboard = () => {
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black text-rose-400 uppercase tracking-widest px-1">Alasan Penolakan</label>
-                                            <textarea 
-                                                className="w-full bg-rose-50/30 border border-rose-100 rounded-xl py-3 px-4 text-xs font-medium focus:ring-2 focus:ring-rose-500/10 outline-none transition-all h-[120px] resize-none" 
+                                            <textarea
+                                                className="w-full bg-rose-50/30 border border-rose-100 rounded-xl py-3 px-4 text-xs font-medium focus:ring-2 focus:ring-rose-500/10 outline-none transition-all h-[120px] resize-none"
                                                 placeholder="No. Rekening tidak terdaftar / Salah bank..."
                                                 value={rejectReason}
                                                 onChange={(e) => setRejectReason(e.target.value)}
@@ -453,7 +463,7 @@ export const PayoutsDashboard = () => {
                                             </div>
                                             <div>
                                                 <h4 className="text-sm font-black text-amber-600 uppercase tracking-tight">Financial Warning</h4>
-                                                <p className="text-[11px] text-amber-700/70 font-medium leading-relaxed">Pastikan nominal transfer ke <strong>{selectedPayout.bank_accounts?.account_name}</strong> adalah <strong>Rp {(Number(selectedPayout.amount) - 5000).toLocaleString('id-ID')}</strong>. Biaya transfer dibebankan ke Admin (Rp 5.000).</p>
+                                                <p className="text-[11px] text-amber-700/70 font-medium leading-relaxed">Pastikan nominal transfer ke <strong>{selectedPayout.bank_accounts?.account_name}</strong> adalah <strong>Rp {(Number(selectedPayout.amount) - payoutFee).toLocaleString('id-ID')}</strong>. Biaya transfer dibebankan ke Admin (Rp {payoutFee.toLocaleString('id-ID')}).</p>
                                             </div>
                                         </div>
                                     </div>
@@ -478,7 +488,7 @@ export const PayoutsDashboard = () => {
                         <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
                             {selectedPayout.status === 'pending' ? (
                                 <>
-                                    <button 
+                                    <button
                                         className="px-6 py-2.5 rounded-xl font-black text-rose-500 hover:bg-rose-50 transition-all border border-transparent hover:border-rose-100 text-[10px] uppercase tracking-widest"
                                         onClick={handleRejectClick}
                                         disabled={processing}
@@ -487,7 +497,7 @@ export const PayoutsDashboard = () => {
                                     </button>
                                     <div className="flex gap-3">
                                         <button className="px-6 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setIsModalOpen(false)}>Close</button>
-                                        <button 
+                                        <button
                                             className="px-8 py-2.5 rounded-xl bg-[#465f89] text-white font-black shadow-lg shadow-[#465f89]/20 hover:scale-[1.02] active:scale-95 transition-all text-[10px] uppercase tracking-widest"
                                             onClick={handleApproveClick}
                                             disabled={processing}
@@ -520,7 +530,7 @@ export const PayoutsDashboard = () => {
                     </div>
                 }
                 message={
-                    <>Anda akan menyetujui transfer sebesar <strong>Rp {(Number(selectedPayout?.amount) - 5000).toLocaleString('id-ID')}</strong> ke rekening <strong>{selectedPayout?.bank_accounts?.bank_name} {selectedPayout?.bank_accounts?.account_name}</strong>. Tindakan ini tidak bisa dibatalkan.</>
+                    <>Anda akan menyetujui transfer sebesar <strong>Rp {(Number(selectedPayout?.amount) - payoutFee).toLocaleString('id-ID')}</strong> ke rekening <strong>{selectedPayout?.bank_accounts?.bank_name} {selectedPayout?.bank_accounts?.account_name}</strong>. Tindakan ini tidak bisa dibatalkan.</>
                 }
             />
 
