@@ -12,8 +12,9 @@ console.log("[Auth Callback] 🔍 FULL DIAGNOSTIC:", {
   cookieHeader:
     Astro.request.headers.get("Cookie")?.substring(0, 200) || "NO_COOKIES",
 });
-
-const { code, error, error_description } = Astro.url.searchParams;
+const code = Astro.url.searchParams.get("code");
+const error = Astro.url.searchParams.get("error");
+const error_description = Astro.url.searchParams.get("error_description");
 
 // Handle error cases
 if (error) {
