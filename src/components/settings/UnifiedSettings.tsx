@@ -216,16 +216,18 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                     <KeyIcon className="w-4 h-4" />
                     Security & Account
                 </button>
-                <button 
-                    onClick={() => setActiveTab('bank')}
-                    className={cn(
-                        "flex items-center gap-3 px-8 py-4 rounded-[1.5rem] transition-all font-black uppercase tracking-widest text-[11px]",
-                        activeTab === 'bank' ? "bg-white text-slate-900 shadow-xl shadow-slate-200" : "text-slate-500 hover:text-slate-700"
-                    )}
-                >
-                    <BanknotesIcon className="w-4 h-4" />
-                    Payout Method
-                </button>
+                {isPro && (
+                    <button 
+                        onClick={() => setActiveTab('bank')}
+                        className={cn(
+                            "flex items-center gap-3 px-8 py-4 rounded-[1.5rem] transition-all font-black uppercase tracking-widest text-[11px]",
+                            activeTab === 'bank' ? "bg-white text-slate-900 shadow-xl shadow-slate-200" : "text-slate-500 hover:text-slate-700"
+                        )}
+                    >
+                        <BanknotesIcon className="w-4 h-4" />
+                        Payout Method
+                    </button>
+                )}
             </div>
 
             {/* TAB CONTENT: ACCOUNT & SECURITY */}
@@ -325,7 +327,7 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
             )}
 
             {/* TAB CONTENT: BANK PAYOUT */}
-            {activeTab === 'bank' && (
+            {isPro && activeTab === 'bank' && (
                 <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="bg-slate-900 rounded-[3rem] p-10 flex items-start gap-8 shadow-2xl relative overflow-hidden">
                         <div className="bg-white/10 p-5 rounded-3xl backdrop-blur-md relative z-10">

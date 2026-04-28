@@ -4,6 +4,31 @@ import { LightSidebar } from '../components/layout/LightSidebar';
 import { LightTopNavbar } from '../components/layout/LightTopNavbar';
 import { ProductsDashboard } from '../components/products/ProductsDashboard';
 import { BottomNavbar } from '../components/layout/BottomNavbar';
+
+const user = await Astro.locals.getUser();
+const supabase = Astro.locals.supabase;
+
+if (!user || !supabase) {
+    return Astro.redirect('/login');
+}
+
+let isPaid = false;
+try {
+    const { data: sub } = await supabase
+        .from('subscriptions')
+        .select('plan_id, status')
+        .eq('user_id', user.id)
+        .in('status', ['active', 'past_due', 'trialing'])
+        .maybeSingle();
+    
+    if (sub && sub.plan_id !== 'free') {
+        isPaid = true;
+    }
+} catch (e) {}
+
+if (!isPaid) {
+    return Astro.redirect('/plan-info?upgrade=required');
+}
 ---
 
 <BaseLayout title="Digital Products - Orbit Site">

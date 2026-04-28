@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useSubscription, SubscriptionProvider } from '../../context/SubscriptionContext';
 import { cn } from '../../lib/utils';
 import { 
     Squares2X2Icon, 
@@ -47,11 +48,21 @@ interface BottomNavbarProps {
     variant?: 'creator' | 'admin';
 }
 
-export const BottomNavbar: React.FC<BottomNavbarProps> = ({ 
+export const BottomNavbar: React.FC<BottomNavbarProps> = (props) => {
+    return (
+        <SubscriptionProvider>
+            <BottomNavbarContent {...props} />
+        </SubscriptionProvider>
+    );
+};
+
+const BottomNavbarContent: React.FC<BottomNavbarProps> = ({ 
     activePage = 'dashboard',
     variant = 'creator'
 }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const { plan } = useSubscription();
+    const isPaid = plan !== 'free' && !!plan;
 
     const toggleMenu = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -63,12 +74,14 @@ export const BottomNavbar: React.FC<BottomNavbarProps> = ({
         main: [
             { icon: Squares2X2Icon, label: "Home", href: "/dashboard", id: "dashboard" },
             { icon: WindowIcon, label: "Editor", href: "/editor", id: "editor" },
-            { icon: WalletIcon, label: "Wallet", href: "/wallet", id: "wallet" },
+            ...(isPaid ? [{ icon: WalletIcon, label: "Wallet", href: "/wallet", id: "wallet" }] : []),
         ],
         more: [
             { icon: ChartBarIcon, label: "Analytics", href: "/analytics", id: "analytics" },
-            { icon: ArchiveBoxIcon, label: "Products", href: "/products", id: "products" },
-            { icon: DocumentTextIcon, label: "Orders", href: "/orders", id: "orders" },
+            ...(isPaid ? [
+                { icon: ArchiveBoxIcon, label: "Products", href: "/products", id: "products" },
+                { icon: DocumentTextIcon, label: "Orders", href: "/orders", id: "orders" },
+            ] : []),
             { icon: UsersIcon, label: "Customers", href: "/customers", id: "customers" },
             { icon: AcademicCapIcon, label: "Academy", href: "/academy", id: "academy" },
             { icon: UserCircleIcon, label: "Profile", href: "/settings", id: "profile" },

@@ -96,9 +96,15 @@ const LightSidebarContent: React.FC<LightSidebarProps> = ({ activePage = 'dashbo
           )}
 
           <NavItem icon={WindowIcon} label="Editor" href="/editor" active={activePage === 'editor'} />
-          <NavItem icon={ArchiveBoxIcon} label="Products" href="/products" active={activePage === 'products'} />
-          <NavItem icon={DocumentTextIcon} label="Orders" href="/orders" active={activePage === 'orders'} />
-          <NavItem icon={WalletIcon} label="Wallet" href="/wallet" active={activePage === 'wallet'} />
+          
+          {isPaid && (
+            <>
+              <NavItem icon={ArchiveBoxIcon} label="Products" href="/products" active={activePage === 'products'} />
+              <NavItem icon={DocumentTextIcon} label="Orders" href="/orders" active={activePage === 'orders'} />
+              <NavItem icon={WalletIcon} label="Wallet" href="/wallet" active={activePage === 'wallet'} />
+            </>
+          )}
+
           <NavItem icon={AcademicCapIcon} label="Academy" href="/academy" active={activePage === 'academy'} />
           <NavItem icon={UserIcon} label="Profile" href="/settings" active={activePage === 'profile'} />
           <NavItem icon={Cog6ToothIcon} label="Settings" href="/account-management" active={activePage === 'settings'} />
