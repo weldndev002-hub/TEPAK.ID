@@ -95,6 +95,54 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
     locals.isAdmin = isAdmin;
 
+    // ==========================================
+    // DOMAIN & SUBDOMAIN ENGINE
+    // ==========================================
+    const hostname = url.hostname;
+    // Define your primary domains here (local and production)
+    const primaryDomains = [
+        'localhost', 
+        '127.0.0.1', 
+        'tepak.id', 
+        'tepakid.weldn-dev-002.workers.dev'
+    ];
+    
+    const isPrimaryDomain = primaryDomains.some(domain => hostname === domain || hostname.endsWith('.' + domain));
+    
+    locals.detectedUser = null;
+    locals.isCustomDomain = false;
+
+    // If it's NOT a primary domain, it's a candidate for Custom Domain
+    if (!primaryDomains.includes(hostname) && supabase) {
+        // 1. Check if it's a Subdomain (e.g., acep.tepak.id)
+        const isSubdomain = primaryDomains.some(pd => hostname.endsWith('.' + pd));
+        
+        if (isSubdomain) {
+            const part = hostname.split('.')[0];
+            if (part && part !== 'www') {
+                const { data: profile } = await supabase.from('profiles').select('id, username').eq('username', part).single();
+                if (profile) {
+                    locals.detectedUser = profile;
+                    console.log(`[Middleware] Subdomain detected: ${part} -> user ${profile.id}`);
+                }
+            }
+        } 
+        // 2. Check if it's a Custom Domain (e.g., mybrand.com)
+        else {
+            const { data: settings } = await supabase
+                .from('user_settings')
+                .select('user_id, profiles!inner(id, username)')
+                .eq('domain_name', hostname)
+                .single();
+            
+            if (settings) {
+                locals.detectedUser = settings.profiles;
+                locals.isCustomDomain = true;
+                console.log(`[Middleware] Custom Domain detected: ${hostname} -> user ${settings.user_id}`);
+            }
+        }
+    }
+
     // Maintenance logic
     if (platformConfigs.maintenance_mode && !isAdmin && url.pathname !== '/maintenance' && !url.pathname.startsWith('/api')) {
       return redirect('/maintenance');

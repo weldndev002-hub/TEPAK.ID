@@ -20,6 +20,7 @@ import {
 import { getServerClient } from "../lib/supabase";
 import { AnalyticsTracker } from "../components/analytics/AnalyticsTracker";
 import { createClient } from "@supabase/supabase-js";
+import PublicCreatorProfile from "../components/public/PublicCreatorProfile.astro";
 
 const supabase = Astro.locals.supabase;
 
@@ -44,174 +45,111 @@ const logoUrl = branding?.logo_url || "/logo-light.png";
 
 // 2. Detect Hostname & Identity Logic (Dynamic Routing)
 const hostname = Astro.url.hostname;
-const { cookies } = Astro;
+const { detectedUser } = Astro.locals;
 const urlParams = Astro.url.searchParams;
 const testUsername = urlParams.get("u");
 
-let merchantData = null;
-let products = [];
-let blocks = [];
+let merchantData: any = null;
+let products: any[] = [];
+let blocks: any[] = [];
+let plans: any[] = [];
 
 try {
-    if (!supabase) {
-        console.warn(
-            "[Routing Warning] Supabase is null. Some features may not work.",
-        );
-    } else {
-        const isMainDomain =
-            hostname.includes("tepak.id") ||
-            hostname.includes("workers.dev") ||
-            hostname === "localhost" ||
-            hostname === "127.0.0.1";
+    // 1. Fetch Plans for Landing Page (Required by PricingFlow)
+    const { data: pData } = await supabase
+        .from("subscription_plans")
+        .select("*")
+        .eq("is_active", true)
+        .order("price_monthly", { ascending: true });
+    plans = pData || [];
 
-        if (!isMainDomain) {
-            // Search by Custom Domain
-            const { data } = await supabase
-                .from("user_settings")
-                .select("*, profiles(*)")
-                .eq("domain_name", hostname)
-                .eq("domain_verified", true)
+    // 2. Resolve Target User (Priority: Middleware Detection -> URL Param)
+    let targetUser = detectedUser;
+    
+    // Fallback for local testing if no domain detected
+    if (!targetUser && testUsername) {
+        const { data: p } = await supabase.from('profiles').select('id, username').eq('username', testUsername).single();
+        if (p) targetUser = p;
+    }
+
+    if (targetUser && supabase) {
+        // Fetch full profile data
+        const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*, user_settings(*)')
+            .eq('id', targetUser.id)
+            .single();
+
+        if (profileData) {
+            const settings = Array.isArray(profileData.user_settings) ? profileData.user_settings[0] : profileData.user_settings;
+            merchantData = {
+                ...(settings || {}),
+                profiles: { ...profileData }
+            };
+
+            // Features Gating
+            let activePlanId = settings?.plan_status || 'free';
+            const { data: planDetails } = await supabase
+                .from('subscription_plans')
+                .select('features, config')
+                .eq('id', activePlanId)
                 .single();
-            if (data) merchantData = data;
-        } else {
-            // Search by Subdomain or Test Param
-            const subdomain = hostname.split(".")[0];
-            const isMainSiteAlias =
-                subdomain === "tepak" ||
-                subdomain === "tepakid" ||
-                subdomain === "localhost" ||
-                subdomain === "www";
-            const identifier =
-                isMainDomain && !isMainSiteAlias ? subdomain : testUsername;
+            
+            const creatorFeatures = planDetails?.features || [];
+            const allowedBlocks = planDetails?.config?.allowed_blocks || null;
 
-            if (identifier) {
-                // Robust Lookup
-                const { data: profileByUsername } = await supabase
-                    .from("profiles")
-                    .select("*, user_settings(*)")
-                    .eq("username", identifier)
-                    .single();
-                if (profileByUsername) {
-                    merchantData = {
-                        ...profileByUsername.user_settings,
-                        profiles: { ...profileByUsername },
-                    };
-                } else {
-                    // Fallback to domain_name
-                    const { data: profileBySubdomain } = await supabase
-                        .from("user_settings")
-                        .select("*, profiles(*)")
-                        .eq("domain_name", identifier)
-                        .single();
-                    if (profileBySubdomain) merchantData = profileBySubdomain;
-                }
+            // Products
+            if (creatorFeatures.includes('Digital Product Sales')) {
+                const { data: pList } = await supabase
+                    .from('products')
+                    .select('*')
+                    .eq('merchant_id', profileData.id)
+                    .eq('status', 'published');
+                products = pList || [];
             }
-        }
 
-        if (merchantData) {
-            // Only fetch products if merchant has a paid plan
-            const merchantPlanStatus = merchantData.plan_status || 'free';
-            const hasPaidPlan = merchantPlanStatus !== 'free';
-
-            if (hasPaidPlan) {
-                const { data: productList } = await supabase
-                    .from("products")
-                    .select("*")
-                    .eq(
-                        "merchant_id",
-                        merchantData.user_id || merchantData.profiles.id,
-                    )
-                    .eq("status", "published")
-                    .order("created_at", { ascending: false });
-                products = productList || [];
-            } else {
-                // Free users don't have products visible
-                products = [];
-            }
-            blocks = merchantData.profiles?.blocks || [];
+            // Blocks
+            const rawBlocks = profileData.blocks || [];
+            blocks = allowedBlocks 
+                ? rawBlocks.filter((b: any) => (allowedBlocks as string[]).includes(b.type))
+                : rawBlocks;
         }
     }
 } catch (err) {
-    console.error("[Routing Error]", err);
+    console.error("[Index Routing Error]", err);
 }
 
-let plans: any[] = [];
-if (supabase) {
-    try {
-        const { data: pData, error } = await supabase
-            .from("subscription_plans")
-            .select("*")
-            .eq("is_active", true)
-            .order("price_monthly", { ascending: true });
-        if (error) {
-            console.warn("[Index] Active plans fetch failed, falling back to all plans:", error);
-            // fallback: fetch all plans
-            const { data: allData } = await supabase
-                .from("subscription_plans")
-                .select("*")
-                .order("price_monthly", { ascending: true });
-            plans = allData || [];
-        } else {
-            plans = pData || [];
-        }
-        console.log("[Index] Fetched plans:", plans);
-    } catch (e) {
-        console.error("[Index] Plans Fetch Error:", e);
-        // fallback: fetch all plans
-        const { data: allData } = await supabase
-            .from("subscription_plans")
-            .select("*")
-            .order("price_monthly", { ascending: true });
-        plans = allData || [];
-    }
-}
-
+// 3. Formatting & SEO
 const formattedPlans = plans.map((plan) => ({
     ...plan,
     features: Array.isArray(plan.features) ? plan.features : [],
 }));
-console.log("[Index] formattedPlans:", formattedPlans);
-console.log("[Index] merchantData:", merchantData);
-console.log("[Index] hostname:", hostname);
 
-// Map the profile & products if merchant found
-const profile = merchantData
-    ? {
-          name: merchantData.profiles?.full_name || "Merchant",
-          username: merchantData.profiles?.username || "merchant",
-          bio: merchantData.profiles?.bio || "Welcome to my digital store.",
-          avatar:
-              merchantData.profiles?.avatar_url ||
-              "https://images.unsplash.com/photo-1544006659-f0b21f04cb1b?w=400&h=400&fit=crop",
-          is_verified: true,
-      }
-    : null;
+const profile = merchantData ? {
+    name: merchantData.profiles?.full_name || merchantData.profiles?.username || "Merchant",
+    bio: merchantData.profiles?.bio || "Welcome to my digital store.",
+    avatar: merchantData.profiles?.avatar_url || "https://images.unsplash.com/photo-1544006659-f0b21f04cb1b?w=400&h=400&fit=crop",
+} : null;
 
-const seo = merchantData
-    ? {
-          title:
-              merchantData.seo_title ||
-              `${profile?.name || "Merchant"} | ${siteName} Ecosystem`,
-          description: merchantData.seo_description || profile?.bio || "",
-      }
-    : {
-          title: `${siteName} - ${siteTagline}`,
-          description:
-              branding?.site_tagline ||
-              "Satu Link. Semua Kebutuhan Digitalmu. Bangun halaman profesional, jual aset digital, dan kelola event tanpa coding.",
-      };
+const seo = merchantData ? {
+    title: `${profile?.name} | ${siteName}`,
+    description: profile?.bio || ""
+} : {
+    title: `${siteName} - ${siteTagline}`,
+    description: branding?.site_tagline || "Satu Link. Semua Kebutuhan Digitalmu."
+};
 
-// Brand Icons as SVGs
-const BrandIcons = {
+// Brand Icons Mapping
+const BrandIcons: Record<string, string> = {
     instagram: `<svg viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 1.366.062 2.633.332 3.608 1.308.975.975 1.247 2.242 1.308 3.608.058 1.266.07 1.646.07 4.85s-.012 3.584-.07 4.85c-.062 1.366-.332 2.633-1.308 3.608-.975.975-2.242 1.247-3.608 1.308-1.266.058-1.646.07-4.85.07s-3.584-.012-4.85-.07c-1.366-.062-2.633-.332-3.608-1.308-.975-.975-1.247-2.242-1.308-3.608-.058-1.266-.07-1.646-.07-4.85s.012-3.584.07-4.85c.062-1.366.332-2.633 1.308-3.608.975-.975 2.242-1.247 3.608-1.308 1.266-.058 1.646-.07 4.85-.07zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>`,
     tiktok: `<svg viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-4.17.07-8.33.07-12.5z"/></svg>`,
     twitter: `<svg viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.045 4.126H5.078z"/></svg>`,
+    youtube: `<svg viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`,
+    whatsapp: `<svg viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>`,
     facebook: `<svg viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"/></svg>`,
-    threads: `<svg viewBox="0 0 192 192" fill="currentColor" class="w-6 h-6"><path d="M141.537 88.9883C140.71 88.5919 139.87 88.2104 139.019 87.8451C137.537 60.5382 122.616 44.905 97.5619 44.745C97.4484 44.7443 97.3355 44.7443 97.222 44.7443C82.2364 44.7443 69.7731 51.1409 62.102 62.7807L75.881 72.2328C81.6116 63.5383 90.6052 61.6848 97.2286 61.6848C97.3051 61.6848 97.3819 61.6848 97.4576 61.6855C105.707 61.7381 111.932 64.1366 115.961 68.814C118.893 72.2193 120.854 76.925 121.825 82.8638C114.511 81.6207 106.601 81.2385 98.145 81.7233C74.3247 83.0954 59.0111 96.9879 60.0396 116.292C60.5615 126.084 65.4397 134.508 73.775 140.011C80.8224 144.663 89.899 146.938 99.3323 146.423C111.79 145.74 121.563 140.987 128.381 132.296C133.559 125.696 136.834 117.143 138.28 106.366C144.217 109.949 148.617 114.664 151.047 120.332C155.179 129.967 155.42 145.8 142.501 158.708C131.182 170.016 117.576 174.908 97.0135 175.059C74.2042 174.89 56.9538 167.575 45.7381 153.317C35.2355 139.966 29.8077 120.682 29.6052 96C29.8077 71.3178 35.2355 52.0336 45.7381 38.6827C56.9538 24.4249 74.2039 17.11 97.0132 16.9405C119.988 17.1113 137.539 24.4614 149.184 38.788C154.894 45.8136 159.199 54.6488 162.037 64.9503L178.184 60.6422C174.744 47.9622 169.331 37.0357 161.965 27.974C147.036 9.60668 125.202 0.195148 97.0695 0H96.9569C68.8816 0.19447 47.2921 9.6418 32.7883 28.0793C19.8819 44.4864 13.2244 67.3157 13.0007 95.9325L13 96L13.0007 96.0675C13.2244 124.684 19.8819 147.514 32.7883 163.921C47.2921 182.358 68.8816 191.806 96.9569 192H97.0695C122.03 191.827 139.624 185.292 154.118 170.811C173.081 151.866 172.51 128.119 166.26 113.541C161.776 103.087 153.227 94.5962 141.537 88.9883ZM98.4405 129.507C88.0005 130.095 77.1544 125.409 76.6196 115.372C76.2232 107.93 81.9158 99.626 99.0812 98.6368C101.047 98.5234 102.976 98.468 104.871 98.468C111.106 98.468 116.939 99.0737 122.242 100.233C120.264 124.935 108.662 128.946 98.4405 129.507Z"/></svg>`,
+    threads: `<svg viewBox="0 0 192 192" fill="currentColor" class="w-6 h-6"><path d="M141.537 88.9883C140.71 88.5919 139.87 88.2104 139.019 87.8451C137.537 60.5382 122.616 44.905 97.5619 44.745C97.4484 44.7443 97.3355 44.7443 97.222 44.7443C82.2364 44.7443 69.7731 51.1409 62.102 62.7807L75.881 72.2328C81.6116 63.5383 90.6052 61.6848 97.2286 61.6848C97.3051 61.6848 97.3819 61.6848 97.4576 61.6855C105.707 61.7381 111.932 64.1366 115.961 68.814C118.893 72.2193 120.854 76.925 121.825 82.8638C114.511 81.6207 106.601 81.2385 98.145 81.7233C74.3247 83.0954 59.0111 96.9879 60.0396 116.292C60.5615 126.084 65.4397 134.508 73.775 140.011C80.8224 144.663 89.899 146.938 99.3323 146.423C111.79 145.74 121.563 140.987 128.381 132.296C133.559 125.696 136.834 117.143 138.28 106.366C144.217 109.949 148.617 114.664 151.047 120.332C155.179 129.967 155.42 145.8 142.501 158.708C131.182 170.016 117.576 174.908 97.0135 175.059C74.2042 174.89 56.9538 167.575 45.7381 153.317C35.2355 139.966 29.8077 120.682 29.6052 96C29.8077 71.3178 35.2355 52.0336 45.7381 38.6827C56.9538 24.4249 74.2039 17.11 97.0132 16.9405C119.988 17.1113 137.539 24.4614 149.184 38.788C154.894 45.8136 159.199 54.6488 162.037 64.9503L178.184 60.6422C174.744 47.9622 169.331 37.0357 161.965 27.974C147.036 9.60668 125.202 0.195148 97.0695 0H96.9569C68.8816 0.19447 47.2921 9.6418 32.7883 28.0793C19.8819 44.4864 13.2244 67.3157 13.0007 95.9325L13 96L13.0007 96.0675C13.2244 124.684 19.8819 147.514 32.7883 163.921C47.2921 182.358 68.8816 191.806 96.9569 192H97.0695C122.03 191.827 139.624 185.292 154.118 170.811C173.081 151.866 172.51 128.119 166.26 113.541C161.776 103.087 153.227 94.5962 141.537 88.9883ZM98.4405 129.507C88.0005 130.095 77.1544 125.409 76.6196 115.372C76.2232 107.93 81.9158 99.626 99.0812 98.6368C101.047 98.5234 102.976 98.468 104.871 98.468C111.106 98.468 116.939 99.0737 122.242 100.233C120.264 124.935 108.662 128.946 98.4405 129.507Z"/></svg>`
 };
 
-// Extract social data from page blocks (if available)
-// blocks already initialized above
 const socialBlock = blocks.find((b: any) => b.type === "social");
 const socialData = socialBlock?.data || {};
 
@@ -266,6 +204,13 @@ const formatted_products = products.map((p) => ({
 
 const is_banned =
     merchantData?.plan_status === "banned" || merchantData?.profiles?.is_banned;
+
+const showProductsSection = formatted_products.length > 0;
+
+// Logic to show Landing Page vs Profile
+const isMainDomain = hostname.includes("tepak.id") || hostname.includes("workers.dev") || hostname === "localhost" || hostname === "127.0.0.1";
+const isMainSiteAlias = hostname.split(".")[0] === "tepak" || hostname.split(".")[0] === "tepakid" || hostname.split(".")[0] === "www";
+const showLandingPage = isMainDomain && (isMainSiteAlias || !detectedUser);
 ---
 
 <BaseLayout title={seo.title} description={seo.description}>
@@ -273,270 +218,36 @@ const is_banned =
         class="min-h-screen bg-surface font-['Funnel_Display',sans-serif] selection:bg-primary-container selection:text-on-primary-container"
     >
         {
-            merchantData && (
-                <div class="relative overflow-hidden min-h-screen bg-[#F1F5F9]">
-                    {/* DESIGNER BACKGROUND ELEMENTS */}
-                    <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/[0.03] blur-[120px] rounded-full" />
-                    <div class="absolute bottom-[20%] right-[-5%] w-[30%] h-[50%] bg-amber-200/[0.05] blur-[100px] rounded-full" />
-
-                    <main class="relative z-10 pt-16 md:pt-32 pb-32 max-w-5xl mx-auto px-6">
-                        {is_banned ? (
-                            <div class="py-32 flex flex-col items-center text-center space-y-8 animate-in zoom-in duration-500">
-                                <div class="w-24 h-24 bg-rose-50 text-rose-500 rounded-[2.5rem] flex items-center justify-center shadow-sm border border-rose-100">
-                                    <span class="material-symbols-outlined text-5xl">
-                                        block
-                                    </span>
-                                </div>
-                                <h2 class="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">
-                                    Halaman Tidak Tersedia
-                                </h2>
-                                <p class="text-slate-500 font-medium max-w-md mx-auto leading-relaxed mb-8">
-                                    Maaf, halaman ini telah dinonaktifkan oleh
-                                    sistem keamanan kami.
-                                </p>
-                                <a
-                                    href="/"
-                                    class="px-8 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-slate-900/20 hover:-translate-y-1 transition-all"
-                                >
-                                    Kembali Beranda
-                                </a>
-                            </div>
-                        ) : (
-                            <>
-                                {/* PROFILE HERO SECTION (REFINED) */}
-                                <section class="mb-24 flex flex-col items-center text-center relative animate-in fade-in slide-in-from-bottom-12 duration-1000 ease-out group">
-                                    <div class="relative mb-8 md:mb-12">
-                                        <div class="w-32 h-32 md:w-48 md:h-48 rounded-[3rem] overflow-hidden border-[6px] border-white shadow-2xl bg-white transition-all duration-700">
-                                            <img
-                                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                                                src={profile.avatar}
-                                                alt={profile.name}
-                                            />
-                                        </div>
-                                        <div class="absolute -bottom-2 -right-2 bg-primary text-white p-2.5 rounded-2xl flex items-center justify-center border-4 border-white shadow-xl">
-                                            <CheckBadgeIcon className="w-5 h-5" />
-                                        </div>
-                                    </div>
-
-                                    <div class="max-w-xl w-full px-4 md:px-0">
-                                        <h1 class="text-5xl md:text-7xl font-black tracking-tighter text-slate-900 mb-6 leading-none uppercase italic">
-                                            {profile.name}
-                                        </h1>
-                                        <p class="text-slate-500 text-lg md:text-xl font-medium leading-relaxed mb-12 opacity-80 max-w-lg mx-auto">
-                                            {profile.bio}
-                                        </p>
-
-                                        <div class="flex flex-wrap justify-center gap-4">
-                                            {socials.map((social) => (
-                                                <a
-                                                    href={social.url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    class="w-14 h-14 flex items-center justify-center rounded-2xl bg-slate-50 text-slate-400 hover:bg-primary hover:text-white hover:-translate-y-2 transition-all duration-500 shadow-sm hover:shadow-xl hover:shadow-primary/20 border border-slate-100/50"
-                                                >
-                                                    <Fragment
-                                                        set:html={social.icon}
-                                                    />
-                                                </a>
-                                            ))}
-                                        </div>
-
-                                        {/* Custom Blocks — di bawah social icons */}
-                                        {blocks.length > 0 && (
-                                            <div class="w-full mt-8 space-y-3 text-left">
-                                                {blocks.map((block: any) => {
-                                                    if (block.type === "social")
-                                                        return null;
-                                                    if (block.type === "text")
-                                                        return (
-                                                            <div class="py-3 px-2 text-center space-y-2">
-                                                                {block.data
-                                                                    ?.title && (
-                                                                    <h4 class="text-lg font-black text-slate-900 tracking-tighter uppercase">
-                                                                        {
-                                                                            block
-                                                                                .data
-                                                                                .title
-                                                                        }
-                                                                    </h4>
-                                                                )}
-                                                                {block.data
-                                                                    ?.content && (
-                                                                    <p class="text-sm text-slate-500 font-medium leading-relaxed italic">
-                                                                        {
-                                                                            block
-                                                                                .data
-                                                                                .content
-                                                                        }
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    if (block.type === "image")
-                                                        return (
-                                                            <div class="w-full space-y-2">
-                                                                {block.data
-                                                                    ?.imageUrl && (
-                                                                    <div class="w-full aspect-video rounded-3xl overflow-hidden border border-slate-100 shadow-sm">
-                                                                        <img
-                                                                            src={
-                                                                                block
-                                                                                    .data
-                                                                                    .imageUrl
-                                                                            }
-                                                                            class="w-full h-full object-cover"
-                                                                            alt={
-                                                                                block
-                                                                                    .data
-                                                                                    ?.title ||
-                                                                                ""
-                                                                            }
-                                                                        />
-                                                                    </div>
-                                                                )}
-                                                                {block.data
-                                                                    ?.title && (
-                                                                    <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest text-center italic">
-                                                                        {
-                                                                            block
-                                                                                .data
-                                                                                .title
-                                                                        }
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    if (
-                                                        block.type ===
-                                                            "video" &&
-                                                        block.data?.isYouTube &&
-                                                        block.data?.videoId
-                                                    )
-                                                        return (
-                                                            <div class="w-full space-y-2">
-                                                                <div class="w-full aspect-video rounded-3xl overflow-hidden shadow-lg">
-                                                                    <iframe
-                                                                        width="100%"
-                                                                        height="100%"
-                                                                        src={`https://www.youtube.com/embed/${block.data.videoId}`}
-                                                                        title={
-                                                                            block.title ||
-                                                                            "Video"
-                                                                        }
-                                                                        frameborder="0"
-                                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                                        allowfullscreen
-                                                                    />
-                                                                </div>
-                                                                {block.title && (
-                                                                    <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest text-center italic">
-                                                                        {
-                                                                            block.title
-                                                                        }
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    // Default: link / article block
-                                                    return (
-                                                        <a
-                                                            href={
-                                                                block.data
-                                                                    ?.url ||
-                                                                block.url ||
-                                                                (block.subtitle?.startsWith(
-                                                                    "http",
-                                                                )
-                                                                    ? block.subtitle
-                                                                    : "#")
-                                                            }
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            class="flex items-center gap-4 w-full bg-slate-50 hover:bg-white px-5 py-4 rounded-2xl border border-slate-100 hover:shadow-md hover:scale-[1.01] transition-all group"
-                                                        >
-                                                            <div class="w-9 h-9 rounded-xl bg-primary/5 text-primary flex items-center justify-center shrink-0">
-                                                                <span class="material-symbols-outlined text-base">
-                                                                    {block.type ===
-                                                                    "link"
-                                                                        ? "link"
-                                                                        : block.type ===
-                                                                            "article"
-                                                                          ? "article"
-                                                                          : "info"}
-                                                                </span>
-                                                            </div>
-                                                            <div class="flex-1 min-w-0 text-left">
-                                                                <p class="text-sm font-black text-slate-900 uppercase tracking-tight truncate">
-                                                                    {block.title ||
-                                                                        block
-                                                                            .data
-                                                                            ?.title}
-                                                                </p>
-                                                                {block.subtitle && (
-                                                                    <p class="text-[11px] text-slate-400 truncate mt-0.5">
-                                                                        {
-                                                                            block.subtitle
-                                                                        }
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                            <span class="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors text-base shrink-0">
-                                                                arrow_forward
-                                                            </span>
-                                                        </a>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-                                    </div>
-                                </section>
-
-                                {/* PRODUCTS COLLECTION SECTION */}
-                                <section class="animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-300">
-                                    <div class="flex flex-col md:flex-row justify-between items-center md:items-end mb-16 gap-6">
-                                        <div class="text-center md:text-left">
-                                            <div class="flex items-center gap-3 mb-4 justify-center md:justify-start">
-                                                <span class="w-12 h-[2px] bg-amber-400" />
-                                                <span class="text-[10px] font-black uppercase tracking-[0.4em] text-amber-500">
-                                                    Premium Catalog
-                                                </span>
-                                            </div>
-                                            <h2 class="text-4xl md:text-6xl font-black tracking-tighter text-slate-900 leading-none uppercase italic">
-                                                Digital Works
-                                            </h2>
-                                        </div>
-                                        <div class="hidden md:block">
-                                            <p class="text-slate-400 text-sm font-bold uppercase tracking-widest">
-                                                {products.length} Items
-                                                Available
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
-                                        {formatted_products.map((product) => (
-                                            <ProductCard
-                                                id={product.id}
-                                                image={product.image}
-                                                title={product.title}
-                                                price={product.price}
-                                                description={
-                                                    product.description
-                                                }
-                                            />
-                                        ))}
-                                    </div>
-                                </section>
-                            </>
-                        )}
-                    </main>
-                </div>
+            !showLandingPage && merchantData && (
+                <PublicCreatorProfile 
+                    merchantData={merchantData}
+                    products={products}
+                    formatted_products={formatted_products}
+                    blocks={blocks}
+                    profile={profile}
+                    socials={socials}
+                    is_banned={is_banned}
+                    showProductsSection={showProductsSection}
+                />
             )
         }
 
+
         {
-            !merchantData && (
+            showLandingPage && (
                 <>
+                    <nav class="relative z-50 max-w-7xl mx-auto px-6 py-10 flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <img src={logoUrl} alt={siteName} class="h-10 w-auto" />
+                            <div class="h-6 w-[2px] bg-slate-100 hidden md:block"></div>
+                            <span class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 hidden md:block italic">Creator Economy</span>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <a href="/login" class="px-6 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:text-primary transition-colors">Masuk</a>
+                            <a href="/signup" class="px-8 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-slate-900/20 hover:-translate-y-1 transition-all">Daftar Sekarang</a>
+                        </div>
+                    </nav>
+
                     {/* HERO SECTION */}
                     <section class="relative px-8 pt-12 md:pt-24 pb-32 overflow-hidden bg-surface">
                         <div class="max-w-6xl mx-auto text-center relative z-10">
