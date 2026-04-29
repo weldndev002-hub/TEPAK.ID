@@ -2024,8 +2024,12 @@ app.post(
 
     const currentFee = pConfig?.platform_fee || 5;
     const pgFee = pConfig?.pg_fee || 0;
-    // net_amount = amount - (platform_fee% of amount) - pg_fee (flat)
-    const netAmount = Math.floor(body.amount * (1 - (currentFee / 100))) - pgFee;
+    
+    // User wants price + 5% as total amount paid by customer
+    // body.amount is the base product price sent from frontend
+    const platformFeeAmount = Math.round(body.amount * (currentFee / 100));
+    const totalAmount = body.amount + platformFeeAmount + pgFee;
+    const netAmount = body.amount; // Merchant gets the full base price
 
     // 3. Create Order (Status Pending)
     const invoiceId = `TPK-${Math.floor(Math.random() * 1000000)}`;
@@ -2036,10 +2040,10 @@ app.post(
         customer_id: customer.id,
         product_id: body.product_id,
         merchant_id: body.merchant_id,
-        amount: body.amount,
+        amount: totalAmount,
         platform_fee: currentFee,
         pg_fee: pgFee,
-        net_amount: Math.max(netAmount, 0),
+        net_amount: netAmount,
         status: 'pending', // Awalnya pending
         payment_method: body.payment_method
       })
@@ -2068,7 +2072,7 @@ app.post(
       const paymentResponse = await duitkuService.createPayment({
         merchantCode,
         merchantKey,
-        paymentAmount: body.amount,
+        paymentAmount: totalAmount,
         orderId: invoiceId,
         productDetails: `Pesanan ${invoiceId}`,
         customerEmail: body.buyer_email,

@@ -175,7 +175,8 @@ export const OrderDetailDashboard = () => {
                                     </div>
                                     {Number(order.platform_fee) > 0 && (
                                         <div className="flex justify-between text-xs font-bold text-rose-500 py-1">
-                                            <span>Biaya Platform</span><span>- {formatCurrency(Number(order.platform_fee))}</span>
+                                            <span>Biaya Platform ({order.platform_fee}%)</span>
+                                            <span>- {formatCurrency(Math.max(0, Number(order.amount) - Number(order.net_amount || order.amount) - Number(order.pg_fee)))}</span>
                                         </div>
                                     )}
                                     {Number(order.pg_fee) > 0 && (
