@@ -148,7 +148,7 @@ const PlanInfoContent = () => {
                                     <TicketIcon className={`w-6 h-6 ${plan !== 'free' ? 'text-white' : 'text-primary'}`} />
                                 </div>
                                 <Badge className={`${plan !== 'free' ? 'bg-white text-primary' : 'bg-slate-100 text-slate-500'} border-none font-black text-[10px] uppercase tracking-widest px-4 py-1`}>
-                                    {plan.toUpperCase()}
+                                    {currentPlanInfo ? currentPlanInfo.name.toUpperCase() : (plan === 'free' ? 'FREE' : 'PRO')}
                                 </Badge>
                             </div>
                             <h3 className="text-2xl font-black uppercase tracking-tight mb-2">
@@ -156,7 +156,7 @@ const PlanInfoContent = () => {
                             </h3>
                             <p className={plan !== 'free' ? "text-white/70 font-medium text-sm" : "text-slate-400 font-medium text-sm"}>
                                 {plan !== 'free'
-                                    ? `Anda sedang menikmati paket ${currentPlanInfo?.name || plan.toUpperCase()} dengan fitur premium.`
+                                    ? `Anda sedang menikmati ${currentPlanInfo?.name || 'Paket Premium'} dengan fitur premium.`
                                     : "Tingkatkan paket Anda untuk fitur kustom domain dan analitik lengkap."}
                             </p>
                         </div>
