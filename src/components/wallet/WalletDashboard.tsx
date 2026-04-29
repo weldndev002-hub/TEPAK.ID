@@ -265,11 +265,30 @@ const WalletDashboardContent = () => {
                                                         <span className="text-[9px] text-amber-600 font-medium uppercase tracking-wider">Menunggu Admin</span>
                                                     </div>
                                                 ) : wd.status === 'processing' ? (
-                                                    <Badge variant="pending">
-                                                        <span className="flex items-center gap-1"><ArrowPathIcon className="w-3 h-3" /> Diproses</span>
-                                                    </Badge>
+                                                    <div className="flex flex-col gap-1">
+                                                        <Badge variant="pending">
+                                                            <span className="flex items-center gap-1"><ArrowPathIcon className="w-3.5 h-3.5" /> Diproses</span>
+                                                        </Badge>
+                                                        {wd.notes && (
+                                                            <span className="text-[9px] text-amber-600 font-medium uppercase tracking-wider truncate max-w-[120px] block" title={wd.notes}>
+                                                                {wd.notes.substring(0, 30)}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 ) : wd.status === 'completed' ? (
-                                                    <Badge variant="success">Berhasil</Badge>
+                                                    <div className="flex flex-col gap-1">
+                                                        <Badge variant="success">Berhasil</Badge>
+                                                        {wd.proof_url && (
+                                                            <a 
+                                                                href={wd.proof_url} 
+                                                                target="_blank" 
+                                                                rel="noopener noreferrer"
+                                                                className="text-[9px] text-emerald-600 font-black uppercase tracking-widest hover:underline flex items-center gap-1"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[10px]">image</span> Bukti Transfer
+                                                            </a>
+                                                        )}
+                                                    </div>
                                                 ) : wd.status === 'rejected' ? (
                                                     <div className="flex flex-col gap-1">
                                                         <Badge variant="failed">Ditolak</Badge>

@@ -67,7 +67,7 @@ export const PayoutsDashboard = () => {
     const [loading, setLoading] = React.useState(true);
     const [selectedPayout, setSelectedPayout] = React.useState<any>(null);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
-    const [activeTab, setActiveTab] = React.useState<'pending' | 'completed' | 'rejected'>('pending');
+    const [activeTab, setActiveTab] = React.useState<'pending' | 'processing' | 'completed' | 'rejected'>('pending');
 
     // Action States
     const [proofFile, setProofFile] = React.useState<File | null>(null);
@@ -243,9 +243,15 @@ export const PayoutsDashboard = () => {
             <div className="flex items-center gap-8 mb-8 border-b border-slate-100">
                 <button
                     onClick={() => setActiveTab('pending')}
-                    className={`pb-4 text-sm font-bold transition-all px-2 ${activeTab === 'pending' ? 'text-[#465f89] border-b-2 border-[#465f89]' : 'text-slate-400 hover:text-[#005ab4]'}`}
+                    className={`pb-4 text-sm font-bold transition-all px-2 ${activeTab === 'pending' ? 'text-amber-500 border-b-2 border-amber-500' : 'text-slate-400 hover:text-amber-500'}`}
                 >
                     Pending ({payouts.filter(p => p.status === 'pending').length})
+                </button>
+                <button
+                    onClick={() => setActiveTab('processing')}
+                    className={`pb-4 text-sm font-bold transition-all px-2 ${activeTab === 'processing' ? 'text-[#465f89] border-b-2 border-[#465f89]' : 'text-slate-400 hover:text-[#465f89]'}`}
+                >
+                    Processing ({payouts.filter(p => p.status === 'processing').length})
                 </button>
                 <button
                     onClick={() => setActiveTab('completed')}
@@ -313,7 +319,7 @@ export const PayoutsDashboard = () => {
                                     </TableCell>
                                     <TableCell className="px-6 py-6">
                                         <div className="flex justify-end gap-2">
-                                            {payout.status === 'pending' ? (
+                                            {payout.status === 'pending' || payout.status === 'processing' ? (
                                                 <>
                                                     <Button onClick={() => openDetails(payout)} variant="ghost" className="px-4 py-2 text-rose-500 hover:bg-rose-50 text-[10px] font-black uppercase tracking-widest rounded-xl border border-rose-100">Review</Button>
                                                     <Button onClick={() => openDetails(payout)} variant="primary" className="px-4 py-2 bg-[#465f89] text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-[#465f89]/20">Process</Button>
@@ -425,7 +431,7 @@ export const PayoutsDashboard = () => {
                                 </div>
                             </div>
 
-                            {selectedPayout.status === 'pending' && (
+                                            {(selectedPayout.status === 'pending' || selectedPayout.status === 'processing') && (
                                 <>
                                     {/* Upload Proof of Transfer */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
@@ -458,10 +464,10 @@ export const PayoutsDashboard = () => {
                                             <p className="text-[9px] text-slate-400 italic px-1">*Wajib diisi sebelum Approve & Process.</p>
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-rose-400 uppercase tracking-widest px-1">Alasan Penolakan</label>
+                                            <label className="text-[10px] font-black text-rose-400 uppercase tracking-widest px-1">Catatan / Alasan Penolakan</label>
                                             <textarea
-                                                className="w-full bg-rose-50/30 border border-rose-100 rounded-xl py-3 px-4 text-xs font-medium focus:ring-2 focus:ring-rose-500/10 outline-none transition-all h-[120px] resize-none"
-                                                placeholder="No. Rekening tidak terdaftar / Salah bank..."
+                                                className="w-full bg-slate-50 border border-slate-100 rounded-xl py-3 px-4 text-xs font-medium focus:ring-2 focus:ring-primary/10 outline-none transition-all h-[120px] resize-none"
+                                                placeholder={selectedPayout.status === 'pending' ? "Misal: Sedang dicek no rekeningnya..." : "No. Rekening tidak terdaftar / Salah bank..."}
                                                 value={rejectReason}
                                                 onChange={(e) => setRejectReason(e.target.value)}
                                             />
@@ -481,7 +487,7 @@ export const PayoutsDashboard = () => {
                                 </>
                             )}
 
-                            {selectedPayout.status !== 'pending' && (
+                            {selectedPayout.status !== 'pending' && selectedPayout.status !== 'processing' && (
                                 <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
                                     <div>
                                         <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Processing Notes</p>
@@ -497,7 +503,7 @@ export const PayoutsDashboard = () => {
 
                         {/* Modal Footer */}
                         <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                            {selectedPayout.status === 'pending' ? (
+                            {selectedPayout.status === 'pending' || selectedPayout.status === 'processing' ? (
                                 <>
                                     <button
                                         className="px-6 py-2.5 rounded-xl font-black text-rose-500 hover:bg-rose-50 transition-all border border-transparent hover:border-rose-100 text-[10px] uppercase tracking-widest"
@@ -508,6 +514,17 @@ export const PayoutsDashboard = () => {
                                     </button>
                                     <div className="flex gap-3">
                                         <button className="px-6 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setIsModalOpen(false)}>Close</button>
+                                        
+                                        {selectedPayout.status === 'pending' && (
+                                            <button
+                                                className="px-6 py-2.5 rounded-xl bg-amber-100 text-amber-700 font-black hover:bg-amber-200 transition-all text-[10px] uppercase tracking-widest"
+                                                onClick={() => executeUpdate(selectedPayout.id, 'processing', rejectReason || 'Sedang diproses admin')}
+                                                disabled={processing}
+                                            >
+                                                {processing ? '...' : 'Mark Processing'}
+                                            </button>
+                                        )}
+
                                         <button
                                             className="px-8 py-2.5 rounded-xl bg-[#465f89] text-white font-black shadow-lg shadow-[#465f89]/20 hover:scale-[1.02] active:scale-95 transition-all text-[10px] uppercase tracking-widest"
                                             onClick={handleApproveClick}

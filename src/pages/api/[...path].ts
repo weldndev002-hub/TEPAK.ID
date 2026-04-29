@@ -3985,13 +3985,32 @@ app.post('/admin/payouts/update-status', async (c) => {
       .single();
 
     if (fetchErr || !withdrawal) throw new Error('Withdrawal record not found');
-    if (withdrawal.status !== 'pending') throw new Error('Withdrawal is already processed');
+    if (withdrawal.status === 'completed' || withdrawal.status === 'rejected') {
+      throw new Error('Withdrawal is already finalized');
+    }
 
     const creatorId = withdrawal.merchant_id;
     const amount = Number(withdrawal.amount);
 
     // 2. Process status change
-    if (status === 'completed') {
+    if (status === 'processing') {
+      const { error: updateErr } = await adminSupabase
+        .from('withdrawals')
+        .update({
+          status: 'processing',
+          notes: notes || 'Pencairan sedang diproses oleh admin'
+        })
+        .eq('id', id);
+      if (updateErr) throw updateErr;
+
+      await adminSupabase.from('notifications').insert({
+        user_id: creatorId,
+        title: 'Withdrawal Processing',
+        message: `Pencairan dana Anda sedang diproses oleh admin. Mohon tunggu.`,
+        type: 'info'
+      });
+
+    } else if (status === 'completed') {
       const { error: updateErr } = await adminSupabase
         .from('withdrawals')
         .update({

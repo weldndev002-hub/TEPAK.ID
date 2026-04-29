@@ -8,6 +8,9 @@ const supabase = Astro.locals.supabase;
 // Check if user is already logged in server-side
 const user = await Astro.locals.getUser();
 if (user) {
+    if (Astro.locals.isAdmin) {
+        return Astro.redirect('/admin');
+    }
     return Astro.redirect('/dashboard');
 }
 

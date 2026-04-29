@@ -25,13 +25,28 @@ export const LoginForm: React.FC<LoginFormProps> = ({ envUrl, envKey }) => {
                 if (client) {
                     // Listen for Auth changes. This handles cases where Supabase redirects to /login 
                     // with an implicit flow token hash instead of /auth/callback.
-                    const { data } = client.auth.onAuthStateChange((event: string, session: any) => {
+                    const { data } = client.auth.onAuthStateChange(async (event: string, session: any) => {
                         if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
-                            console.log('[LoginForm] Valid session detected via auth state change, redirecting...');
-                            setIsSuccess(true);
-                            setTimeout(() => {
+                            console.log('[LoginForm] Valid session detected via auth state change, checking profile...');
+                            
+                            try {
+                                const { data: profile } = await client
+                                    .from('profiles')
+                                    .select('role')
+                                    .eq('id', session.user.id)
+                                    .single();
+                                
+                                setIsSuccess(true);
+                                let targetPath = profile?.role === 'admin' ? '/admin' : '/dashboard';
+                                console.log('[LoginForm] Auth state redirecting to:', targetPath);
+                                setTimeout(() => {
+                                    window.location.href = targetPath;
+                                }, 500);
+                            } catch (e) {
+                                console.error('[LoginForm] Profile fetch failed in auth state change:', e);
+                                // Fallback to dashboard
                                 window.location.href = '/dashboard';
-                            }, 500);
+                            }
                         }
                     });
                     subscription = data.subscription;

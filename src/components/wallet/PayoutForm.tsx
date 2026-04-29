@@ -10,8 +10,7 @@ export interface PayoutFormProps {
 interface WithdrawResult {
     success: boolean;
     withdrawalId: string;
-    disburseId: number;
-    status: 'completed' | 'processing' | 'failed';
+    status: 'completed' | 'pending' | 'failed';
     accountName: string;
     amount: number;
     fee: number;
@@ -273,7 +272,7 @@ export const PayoutForm: React.FC<PayoutFormProps> = ({ className }) => {
                                         </div>
                                     </div>
                                     <p className="text-[10px] text-slate-400 font-medium mt-3 leading-relaxed">
-                                        Admin akan memproses transfer secara manual. Status akan diperbarui setelah transfer selesai.
+                                        Admin akan memproses transfer secara manual. Status akan diperbarui setelah bukti transfer diunggah.
                                     </p>
                                 </>
                             ) : successModal.status === 'processing' ? (
@@ -281,28 +280,28 @@ export const PayoutForm: React.FC<PayoutFormProps> = ({ className }) => {
                                     <div className="w-16 h-16 rounded-full flex items-center justify-center bg-amber-100 mx-auto mb-4">
                                         <ClockIcon className="w-9 h-9 text-amber-500" />
                                     </div>
-                                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Sedang Diproses</h3>
+                                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Permintaan Sedang Diproses</h3>
                                     <p className="text-sm text-slate-500 font-medium leading-relaxed">
                                         Penarikan sebesar <strong className="text-slate-900">Rp {successModal.amount.toLocaleString('id-ID')}</strong> sedang diproses ke<br />
                                         <strong className="text-amber-600">{successModal.accountName}</strong>
                                     </p>
                                     <p className="text-[10px] text-slate-400 font-medium mt-3 leading-relaxed">
-                                        Transfer sedang diproses oleh bank. Status akan diperbarui secara otomatis.
+                                        Admin sedang memproses transfer Anda secara manual. Status akan diperbarui setelah bukti transfer diunggah.
                                     </p>
                                     <div className="mt-4 p-3 bg-slate-50 rounded-xl text-left space-y-1">
-                                        <div className="flex justify-between text-xs">
-                                            <span className="text-slate-400">Nominal Penarikan</span>
-                                            <span className="font-bold text-slate-700">Rp {successModal.amount.toLocaleString('id-ID')}</span>
-                                        </div>
-                                        <div className="flex justify-between text-xs">
-                                            <span className="text-slate-400">Biaya Transfer</span>
-                                            <span className="font-bold text-rose-500">- Rp {(successModal.fee || 0).toLocaleString('id-ID')}</span>
-                                        </div>
-                                        <div className="flex justify-between text-xs border-t border-slate-200 pt-1 mt-1">
-                                            <span className="text-slate-900 font-black">Dana Diterima</span>
-                                            <span className="font-black text-amber-600">Rp {(successModal.netTransfer || (successModal.amount - (successModal.fee || 0))).toLocaleString('id-ID')}</span>
-                                        </div>
-                                    </div>
+                                         <div className="flex justify-between text-xs">
+                                             <span className="text-slate-400">Nominal Penarikan</span>
+                                             <span className="font-bold text-slate-700">Rp {successModal.amount.toLocaleString('id-ID')}</span>
+                                         </div>
+                                         <div className="flex justify-between text-xs">
+                                             <span className="text-slate-400">Biaya Transfer</span>
+                                             <span className="font-bold text-rose-500">- Rp {(successModal.fee || 0).toLocaleString('id-ID')}</span>
+                                         </div>
+                                         <div className="flex justify-between text-xs border-t border-slate-200 pt-1 mt-1">
+                                             <span className="text-slate-900 font-black">Dana Diterima</span>
+                                             <span className="font-black text-amber-600">Rp {(successModal.netTransfer || (successModal.amount - (successModal.fee || 0))).toLocaleString('id-ID')}</span>
+                                         </div>
+                                     </div>
                                 </>
                             ) : (
                                 <>
