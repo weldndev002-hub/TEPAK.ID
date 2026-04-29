@@ -11,18 +11,35 @@ interface PaymentModalProps {
     billingPeriod?: 'monthly' | 'yearly';
 }
 
-export const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, planId = 'pro', planName = 'PRO', billingPeriod = 'monthly' }) => {
+export const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, planId: initialPlanId, planName: initialPlanName, billingPeriod = 'monthly' }) => {
     const { upgradeToPlan, isLoading } = useSubscription();
     const [step, setStep] = useState<'checkout' | 'processing' | 'success'>('checkout');
-    const [proPrice, setProPrice] = useState<number>(99000);
+    const [proPrice, setProPrice] = useState<number>(0);
     const [selectedMethod, setSelectedMethod] = useState<string>('SP');
+    const [planId, setPlanId] = useState<string | undefined>(initialPlanId);
+    const [planName, setPlanName] = useState<string>(initialPlanName || 'Premium');
 
     React.useEffect(() => {
         if (isOpen) {
             fetch('/api/plans')
                 .then(res => res.json())
                 .then(data => {
-                    const plan = data.find((p: any) => p.id === planId);
+                    let plan = null;
+                    if (planId && planId !== 'pro') {
+                        plan = data.find((p: any) => p.id === planId);
+                    }
+                    
+                    // Jika planId belum ada atau planId='pro' (default lama yang invalid), cari plan berbayar pertama
+                    if (!plan && data && data.length > 0) {
+                        plan = data.find((p: any) => Number(p.price_monthly) > 0) || data[0];
+                        if (plan) {
+                            setPlanId(plan.id);
+                            setPlanName(plan.name);
+                        }
+                    } else if (plan && !initialPlanName) {
+                        setPlanName(plan.name);
+                    }
+
                     if (plan) {
                         const price = billingPeriod === 'yearly' ? plan.price_yearly : plan.price_monthly;
                         setProPrice(Number(price));
@@ -30,13 +47,15 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, pla
                 })
                 .catch(err => console.error('Failed to fetch plan price', err));
         }
-    }, [isOpen, planId, billingPeriod]);
+    }, [isOpen, planId, billingPeriod, initialPlanName]);
+
 
     if (!isOpen) return null;
 
     const periodLabel = billingPeriod === 'yearly' ? '1 Year' : '1 Month';
 
     const handlePay = async () => {
+        if (!planId) return;
         setStep('processing');
         try {
             await upgradeToPlan(planId, billingPeriod, selectedMethod);

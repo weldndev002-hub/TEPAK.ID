@@ -2305,8 +2305,12 @@ app.post('/subscription/upgrade', async (c) => {
     }
 
     const selectedMethod = body.method || 'SP'; // Default ShopeePay untuk Sandbox jika tidak pilih
-    const planId = body.planId || 'pro'; // Default PRO untuk backward compatibility
+    const planId = body.planId;
     const billingPeriod = body.billingPeriod || 'monthly'; // 'monthly' atau 'yearly'
+
+    if (!planId) {
+      throw new Error('ID Paket (planId) wajib dipilih untuk melakukan upgrade.');
+    }
 
     if (!merchantCode || !merchantKey) {
       throw new Error(`Konfigurasi Duitku tidak ditemukan. Code: ${!!merchantCode}, Key: ${!!merchantKey}`);
