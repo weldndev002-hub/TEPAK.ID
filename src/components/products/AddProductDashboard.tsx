@@ -61,6 +61,8 @@ const AddProductDashboardContent = () => {
     const [isPublishing, setIsPublishing] = useState(false);
     const [publishConfirm, setPublishConfirm] = useState(false);
     const [previewImages, setPreviewImages] = useState<{ id: string; file: File; url: string }[]>([]);
+    const [downloadLimitVal, setDownloadLimitVal] = useState<string>('');
+    const [linkExpiry, setLinkExpiry] = useState<string>('forever');
 
     if (subLoading) {
         return (
@@ -221,6 +223,9 @@ const AddProductDashboardContent = () => {
                     price: Number(price),
                     type: category || 'digital',
                     status: status ? 'published' : 'draft',
+                    is_public: visibility,
+                    download_limit: limitDownload ? Number(downloadLimitVal) : null,
+                    link_expiry: linkExpiry,
                     cover_url,
                     file_url,
                     preview_urls: previewUrls
@@ -527,14 +532,29 @@ const AddProductDashboardContent = () => {
                                         </div>
                                         <Toggle checked={limitDownload} onChange={(e) => setLimitDownload(e.target.checked)} />
                                     </div>
+                                    {limitDownload && (
+                                        <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Jumlah Maksimal Unduhan</label>
+                                            <Input 
+                                                type="number" 
+                                                placeholder="e.g. 5" 
+                                                value={downloadLimitVal}
+                                                onChange={(e) => setDownloadLimitVal(e.target.value)}
+                                            />
+                                        </div>
+                                    )}
                                     <hr className="border-slate-100" />
                                     <div>
                                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Kedaluwarsa Link Download</label>
-                                        <Select className="font-bold">
-                                            <option>Selamanya (Tanpa Batas)</option>
-                                            <option>24 Jam</option>
-                                            <option>7 Hari</option>
-                                            <option>30 Hari</option>
+                                        <Select 
+                                            className="font-bold"
+                                            value={linkExpiry}
+                                            onChange={(e) => setLinkExpiry(e.target.value)}
+                                        >
+                                            <option value="forever">Selamanya (Tanpa Batas)</option>
+                                            <option value="24h">24 Jam</option>
+                                            <option value="7d">7 Hari</option>
+                                            <option value="30d">30 Hari</option>
                                         </Select>
                                     </div>
                                 </div>

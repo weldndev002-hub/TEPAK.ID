@@ -468,42 +468,53 @@ const getAuthContext = async (c: any) => {
     });
 
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (user) return { supabase, user };
-
-      if (authError) {
-        console.warn('[getAuthContext] getUser error:', authError.message);
-      }
+      const { data: authData } = await supabase.auth.getUser();
+      let authenticatedUser = authData?.user;
 
       // Fallback: If getUser failed but we have cookies, try to extract the token manually
-      // parseCookieHeader returns an ARRAY of {name, value}, NOT a plain object
-      const authTokenCookie = parsedCookies.find(cookie => cookie.name.includes('auth-token'));
-      const token = authTokenCookie?.value
-        || parsedCookies.find(c => c.name === 'sb_access_token')?.value
-        || parsedCookies.find(c => c.name === 'sb-access-token')?.value;
+      if (!authenticatedUser) {
+        const authTokenCookie = parsedCookies.find(cookie => cookie.name.includes('auth-token'));
+        const token = authTokenCookie?.value
+          || parsedCookies.find(c => c.name === 'sb_access_token')?.value
+          || parsedCookies.find(c => c.name === 'sb-access-token')?.value;
 
-      if (token) {
-        console.log('[getAuthContext] Found token in cookies, attempting direct getUser(token)...');
-        const { data: { user: retryUser }, error: retryError } = await supabase.auth.getUser(token);
-        if (retryUser) return { supabase, user: retryUser };
-
-        // SUPER FALLBACK: Try to decode JWT manually for session existence check
-        // This is "Nuclear" mode: we trust the client has a valid cookie even if Supabase API is flaky
-        try {
-          const parts = token.split('.');
-          if (parts.length === 3) {
-            // Use a safer way to decode base64 if possible
-            const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-            const payload = JSON.parse(atob(base64));
-            if (payload && payload.sub) {
-              console.log('[getAuthContext] Nuclear Success: Decoded user ID from JWT:', payload.sub);
-              return { supabase, user: { id: payload.sub, email: payload.email } as any };
+        if (token) {
+          try {
+            const { data: retryData } = await supabase.auth.getUser(token);
+            if (retryData?.user) {
+              authenticatedUser = retryData.user;
+            } else {
+              // SUPER FALLBACK: Try to decode JWT manually for session existence check
+              const parts = token.split('.');
+              if (parts.length === 3) {
+                const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+                const payload = JSON.parse(atob(base64));
+                if (payload && payload.sub) {
+                  authenticatedUser = { id: payload.sub, email: payload.email } as any;
+                }
+              }
             }
-          }
-        } catch (jwtErr) {
-          // Log only a concise warning instead of a full crash log
-          console.warn('[getAuthContext] Nuclear Fallback: Token is invalid or expired.');
+          } catch (jwtErr) {}
         }
+      }
+
+      if (authenticatedUser) {
+        // SECURITY: Check if user is banned
+        // Use service role if possible to bypass RLS for this specific check, 
+        // but here we use the admin client which we know has full access
+        const adminSupabase = await getAdminClient(cfEnv);
+        const { data: profile } = await adminSupabase
+          .from('profiles')
+          .select('is_banned')
+          .eq('id', authenticatedUser.id)
+          .single();
+
+        if (profile?.is_banned) {
+          console.warn(`[getAuthContext] Banned user attempted access: ${authenticatedUser.id}`);
+          return { supabase, user: null };
+        }
+
+        return { supabase, user: authenticatedUser };
       }
     } catch (fErr: any) {
       console.error('[getAuthContext] Auth fetch failed (Internal Error):', fErr.message);
@@ -1563,6 +1574,9 @@ app.post(
       price: z.number().min(0),
       type: z.string().optional().default('digital'),
       status: z.string().optional().default('draft'),
+      is_public: z.boolean().optional().default(true),
+      download_limit: z.number().nullable().optional(),
+      link_expiry: z.string().optional().default('forever'),
       cover_url: z.string().optional(),
       file_url: z.string().optional(),
       preview_urls: z.array(z.string()).optional().default([]),
@@ -1628,6 +1642,9 @@ app.put(
       price: z.number().min(0).optional(),
       type: z.string().optional(),
       status: z.string().optional(),
+      is_public: z.boolean().optional(),
+      download_limit: z.number().nullable().optional(),
+      link_expiry: z.string().optional(),
       cover_url: z.string().optional(),
       file_url: z.string().optional(),
       preview_urls: z.array(z.string()).optional(),
@@ -3051,6 +3068,7 @@ app.put(
           data: z.any().optional()
         })
       ).optional(),
+      theme: z.string().optional(),
     })
   ),
   async (c) => {
@@ -3087,24 +3105,77 @@ app.put(
       domain_name: body.domain_name,
       seo_title: body.seo_title,
       seo_description: body.seo_description,
+      theme: body.theme,
       updated_at: new Date().toISOString()
     };
 
     // 1. Update Profile
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update(Object.fromEntries(Object.entries(profileFields).filter(([_, v]) => v !== undefined)))
-      .eq('id', user.id);
+    try {
+      const updateData = Object.fromEntries(Object.entries(profileFields).filter(([_, v]) => v !== undefined));
+      console.log(`[PUT /profile/me] Attempting update for user ${user.id} with keys:`, Object.keys(updateData));
+      
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('id', user.id);
 
-    if (profileError) return c.json({ error: profileError.message }, 500);
+      if (profileError) {
+        console.error('[PUT /profile/me] Profile Update Error:', profileError);
+        
+        // Handle common schema errors gracefully
+        if (profileError.code === '23505') {
+           return c.json({ error: 'Username ini sudah digunakan oleh orang lain. Silakan pilih username lain.', code: 'DUPLICATE_USERNAME' }, 400);
+        } else if (profileError.code === '42703' || profileError.message.includes('column')) {
+           const missingColumn = profileError.message.match(/column "([^"]+)"/)?.[1] || 'unknown';
+           console.warn(`[PUT /profile/me] Column "${missingColumn}" appears to be missing. Retrying without suspected columns...`);
+           
+           // List of columns that might be missing in older schemas
+           const suspectedColumns = ['blocks', 'instagram_url', 'tiktok_url', 'twitter_url', 'youtube_url', 'phone', 'address_text', 'city', 'postcode'];
+           const resilientData = Object.fromEntries(
+             Object.entries(updateData).filter(([k]) => !suspectedColumns.includes(k) || k === 'full_name' || k === 'username' || k === 'bio' || k === 'avatar_url' || k === 'updated_at')
+           );
+           
+           console.log('[PUT /profile/me] Retrying with resilient data keys:', Object.keys(resilientData));
+           const { error: retryError } = await supabase
+             .from('profiles')
+             .update(resilientData)
+             .eq('id', user.id);
+           
+           if (retryError) {
+             console.error('[PUT /profile/me] Retry failed:', retryError);
+             return c.json({ error: retryError.message, code: retryError.code }, 500);
+           }
+        } else {
+           return c.json({ error: profileError.message, code: profileError.code }, 500);
+        }
+      }
+    } catch (err: any) {
+      console.error('[PUT /profile/me] Fatal exception during profile update:', err);
+      return c.json({ error: err.message }, 500);
+    }
 
     // 2. Update Settings
-    const { error: settingsError } = await supabase
-      .from('user_settings')
-      .update(Object.fromEntries(Object.entries(settingsFields).filter(([_, v]) => v !== undefined)))
-      .eq('user_id', user.id);
+    try {
+      const settingsUpdateData = Object.fromEntries(Object.entries(settingsFields).filter(([_, v]) => v !== undefined));
+      if (Object.keys(settingsUpdateData).length > 0) {
+        console.log(`[PUT /profile/me] Attempting user_settings update for user ${user.id} with keys:`, Object.keys(settingsUpdateData));
+        const { error: settingsError } = await supabase
+          .from('user_settings')
+          .update(settingsUpdateData)
+          .eq('user_id', user.id);
 
-    if (settingsError) return c.json({ error: settingsError.message }, 500);
+        if (settingsError) {
+          console.error('[PUT /profile/me] Settings Update Error:', settingsError);
+          if (settingsError.code === '23505') {
+            return c.json({ error: 'Subdomain/Domain ini sudah digunakan oleh orang lain. Silakan pilih nama lain.', code: 'DUPLICATE_DOMAIN' }, 400);
+          }
+          return c.json({ error: settingsError.message, code: settingsError.code }, 500);
+        }
+      }
+    } catch (err: any) {
+      console.error('[PUT /profile/me] Fatal exception during settings update:', err);
+      return c.json({ error: err.message }, 500);
+    }
 
     return c.json({ success: true });
   }

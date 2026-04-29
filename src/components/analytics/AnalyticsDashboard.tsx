@@ -49,8 +49,10 @@ const AnalyticsDashboardContent = () => {
 
     // Fetch data on mount and range change
     useEffect(() => {
-        handleRefresh();
-    }, [range, dateRange]);
+        if (!subLoading && hasFeature('Analytics')) {
+            handleRefresh();
+        }
+    }, [range, dateRange.start, dateRange.end, subLoading, hasFeature]);
 
     // Simulated Analytics Data
     const [data, setData] = useState({
@@ -170,9 +172,7 @@ const AnalyticsDashboardContent = () => {
         // We will call handleRefresh in a useEffect that watches dateRange
     };
 
-    useEffect(() => {
-        handleRefresh();
-    }, [range, dateRange.start, dateRange.end]);
+
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">

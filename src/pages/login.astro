@@ -128,12 +128,31 @@ const debugData = isDebug
         };
     </script>
 
+    {/* ACCOUNT BANNED ERROR BANNER */}
+    {
+        callbackError === 'account_banned' && (
+            <div class="fixed top-0 left-0 right-0 z-[300] bg-rose-500 text-white px-6 py-4 text-center animate-in slide-in-from-top duration-500">
+                <div class="max-w-xl mx-auto flex items-center justify-center gap-3">
+                    <span class="material-symbols-outlined text-2xl">no_accounts</span>
+                    <div class="text-left">
+                        <p class="font-black text-sm uppercase tracking-tight leading-none mb-1">
+                            Akun Dinonaktifkan
+                        </p>
+                        <p class="text-[10px] font-medium opacity-90 uppercase tracking-widest">
+                            Akses ditangguhkan oleh Admin. Silakan hubungi dukungan pelanggan.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
     {/* OAUTH CALLBACK ERROR BANNER */}
     {
-        callbackError && (
+        callbackError && callbackError !== 'account_banned' && (
             <div class="fixed top-0 left-0 right-0 z-[300] bg-rose-500 text-white px-6 py-4 text-center">
                 <p class="font-bold text-sm">
-                    ⚠️ OAuth Error:{" "}
+                    ⚠️ Error:{" "}
                     <span class="font-mono">{callbackError}</span>
                     {callbackDetail && (
                         <span class="opacity-80 ml-2">({callbackDetail})</span>

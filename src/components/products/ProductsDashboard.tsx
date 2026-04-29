@@ -41,6 +41,7 @@ const ProductsDashboardContent = () => {
 
     const [products, setProducts] = React.useState<any[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
+    const [activeTab, setActiveTab] = React.useState('all');
     const [deleteModal, setDeleteModal] = React.useState(false);
     const [selectedProduct, setSelectedProduct] = React.useState<any>(null);
     const [toast, setToast] = React.useState<string | null>(null);
@@ -204,7 +205,11 @@ const ProductsDashboardContent = () => {
 
                 {/* Filter Tabs */}
                 <div className="mb-6">
-                    <FilterTabs tabs={filterTabsData} activeTab="all" />
+                    <FilterTabs 
+                        tabs={filterTabsData} 
+                        activeTab={activeTab} 
+                        onChange={(val) => setActiveTab(val)}
+                    />
                 </div>
 
                 {/* Product Table */}
@@ -224,12 +229,24 @@ const ProductsDashboardContent = () => {
                                 <TableRow>
                                     <TableCell colSpan={5} className="text-center py-20 text-slate-400 font-bold uppercase tracking-widest text-xs">Memuat Produk...</TableCell>
                                 </TableRow>
-                            ) : products.length === 0 ? (
+                            ) : products.filter(p => {
+                                if (activeTab === 'all') return true;
+                                if (activeTab === 'active') return p.status === 'published';
+                                if (activeTab === 'draft') return p.status === 'draft';
+                                return true;
+                            }).length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center py-20 text-slate-400 font-bold uppercase tracking-widest text-xs">Produk tidak ditemukan. Mulai dengan menambah satu!</TableCell>
+                                    <TableCell colSpan={5} className="text-center py-20 text-slate-400 font-bold uppercase tracking-widest text-xs">Produk tidak ditemukan.</TableCell>
                                 </TableRow>
                             ) : (
-                                products.map((product) => (
+                                products
+                                    .filter(p => {
+                                        if (activeTab === 'all') return true;
+                                        if (activeTab === 'active') return p.status === 'published';
+                                        if (activeTab === 'draft') return p.status === 'draft';
+                                        return true;
+                                    })
+                                    .map((product) => (
                                     <TableRow key={product.id} className="group">
                                         <TableCell>
                                             <div className="flex items-center gap-4">

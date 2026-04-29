@@ -32,13 +32,18 @@ export const CreatorAtelierEditor: React.FC<CreatorAtelierEditorProps> = (props)
 };
 
 const CreatorAtelierEditorContent: React.FC<CreatorAtelierEditorProps> = ({ initialBranding }) => {
-    const { hasFeature, planDetails, isLoading: subLoading } = useSubscription();
+    const { hasFeature, planDetails, isLoading: subLoading, refreshStatus } = useSubscription();
 
     // If config.allowed_blocks is explicitly set (even []), respect it.
     // Only fall back to all blocks if config is completely undefined (not yet configured in admin).
     const allowedBlocks: string[] | null = planDetails?.config?.allowed_blocks !== undefined
         ? (planDetails.config.allowed_blocks as string[])
         : null; // null = allow all (no restriction configured)
+
+    React.useEffect(() => {
+        // Force refresh subscription status to get latest plan config
+        refreshStatus();
+    }, []);
 
     React.useEffect(() => {
         // Block access if feature is disabled in Admin
@@ -81,6 +86,7 @@ const CreatorAtelierEditorContent: React.FC<CreatorAtelierEditorProps> = ({ init
                     if (data.full_name) setFullName(data.full_name);
                     if (data.avatar_url) setAvatarUrl(data.avatar_url);
                     if (data.blocks && Array.isArray(data.blocks) && data.blocks.length > 0) setBlocks(data.blocks);
+                    if (data.user_settings?.theme) setSelectedTheme(data.user_settings.theme);
                 } else if (initialBranding) {
                     // Fallback to initial branding if API fails
                     if (initialBranding.fullName) setFullName(initialBranding.fullName);
@@ -120,7 +126,8 @@ const CreatorAtelierEditorContent: React.FC<CreatorAtelierEditorProps> = ({ init
                     domain_name: subdomain,
                     full_name: fullName,
                     avatar_url: avatarUrl,
-                    blocks: blocks
+                    blocks: blocks,
+                    theme: selectedTheme
                 })
             });
             if (res.ok) {
@@ -374,7 +381,7 @@ const CreatorAtelierEditorContent: React.FC<CreatorAtelierEditorProps> = ({ init
                             <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px] opacity-40"></div>
                             <div className="relative scale-90 xxl:scale-100 transition-transform duration-500">
                                 <PhoneFrame 
-                                    theme={selectedTheme === 'atelier-dark' ? 'bold' : 'minimal'}
+                                    theme={selectedTheme as any}
                                     profileName={fullName}
                                     profileBio={bio}
                                     profileImage={avatarUrl}

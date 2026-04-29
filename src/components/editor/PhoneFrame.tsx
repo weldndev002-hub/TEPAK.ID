@@ -22,15 +22,27 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({
     profileBio,
     profileImage
 }) => {
+  const isDark = theme === 'atelier-dark' || theme === 'bold';
+  const isSunrise = theme === 'sunrise-glow';
+  const isMinimal = theme === 'clean-minimal' || theme === 'minimal';
+
   return (
     <div className={cn(
-      "w-[340px] h-[680px] bg-white rounded-[56px] border-[12px] border-slate-900 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.25)] relative overflow-hidden ring-1 ring-slate-800 transition-all duration-1000",
-      theme === 'bold' ? "bg-slate-900 text-white" : 
-      theme === 'warm' ? "bg-orange-50 text-orange-950" : 
+      "w-[340px] h-[680px] rounded-[56px] border-[12px] border-slate-900 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.25)] relative overflow-hidden ring-1 ring-slate-800 transition-all duration-1000",
+      isDark ? "bg-slate-900 text-white" : 
+      isSunrise ? "bg-gradient-to-br from-amber-50 to-rose-100 text-slate-900" : 
       "bg-white text-slate-800",
-      "",
       className
     )}>
+      {isSunrise && (
+        <>
+            <div className="absolute top-[-10%] right-[-5%] w-[50%] h-[50%] bg-rose-200/40 blur-[60px] rounded-full"></div>
+            <div className="absolute bottom-[-5%] left-[-5%] w-[40%] h-[40%] bg-amber-200/30 blur-[60px] rounded-full"></div>
+        </>
+      )}
+      {isDark && (
+        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-primary/[0.08] blur-[80px] rounded-full"></div>
+      )}
       {/* Notch */}
       <div className="absolute top-0 w-36 h-7 bg-slate-900 left-1/2 -translate-x-1/2 rounded-b-[1.75rem] z-20 flex items-center justify-center">
         <div className="w-12 h-1 bg-slate-800 rounded-full"></div>

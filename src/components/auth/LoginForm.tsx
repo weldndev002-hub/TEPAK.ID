@@ -32,10 +32,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({ envUrl, envKey }) => {
                             try {
                                 const { data: profile } = await client
                                     .from('profiles')
-                                    .select('role')
+                                    .select('role, is_banned')
                                     .eq('id', session.user.id)
                                     .single();
                                 
+                                if (profile?.is_banned) {
+                                    console.warn('[LoginForm] Account is banned, redirecting to /banned');
+                                    await client.auth.signOut();
+                                    window.location.href = '/banned';
+                                    return;
+                                }
+
                                 setIsSuccess(true);
                                 let targetPath = profile?.role === 'admin' ? '/admin' : '/dashboard';
                                 console.log('[LoginForm] Auth state redirecting to:', targetPath);
@@ -141,8 +148,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ envUrl, envKey }) => {
                         
                         if (profile?.is_banned) {
                             await supabase.auth.signOut();
-                            setEmailError('Akun Anda telah dinonaktifkan. Silakan hubungi admin.');
-                            setIsLoading(false);
+                            window.location.href = '/banned';
                             return;
                         }
 

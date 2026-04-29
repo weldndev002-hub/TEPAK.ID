@@ -90,6 +90,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (user && supabase) {
       try {
         const { data: profile } = await supabase.from('profiles').select('role, is_banned').eq('id', user.id).single();
+        
+        // Handle Banned Users
+        if (profile?.is_banned && !url.pathname.startsWith('/banned')) {
+          console.warn(`[Middleware] Banned user detected: ${user.id}, redirecting to /banned`);
+          
+          return redirect('/banned');
+        }
+
         if (profile?.role === 'admin' || isMasterAdmin) isAdmin = true;
       } catch (e) {}
     }
