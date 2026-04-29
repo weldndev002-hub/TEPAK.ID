@@ -2332,8 +2332,8 @@ app.post('/subscription/upgrade', async (c) => {
 
     // Tentukan harga berdasarkan billing period
     const amount = billingPeriod === 'yearly'
-      ? Number(selectedPlan.price_yearly)
-      : Number(selectedPlan.price_monthly);
+      ? Math.floor(Number(selectedPlan.price_yearly))
+      : Math.floor(Number(selectedPlan.price_monthly));
 
     if (!amount || amount <= 0) {
       throw new Error(`Harga paket "${selectedPlan.name}" untuk periode ${billingPeriod} tidak valid (${amount}).`);

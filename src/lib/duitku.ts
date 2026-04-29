@@ -129,12 +129,18 @@ export class DuitkuService {
         // Gunakan method dari payload, jika kosong gunakan 'SP' (ShopeePay) karena paling stabil di Sandbox Anda
         const selectedMethod = payload.paymentMethod || (this.isSandbox ? 'SP' : 'QRIS');
 
+        const safeVaName = (payload.customerName || 'Customer')
+            .replace(/[^a-zA-Z0-9 ]/g, '')
+            .substring(0, 20)
+            .trim();
+
         const requestBodyV2: any = {
             merchantCode: this.merchantCode,
             paymentAmount: payload.paymentAmount,
             merchantOrderId: orderId,
             productDetails: payload.productDetails,
             customerName: payload.customerName,
+            customerVaName: safeVaName,
             email: payload.customerEmail,
             phoneNumber: payload.customerPhone || '08123456789',
             callbackUrl: payload.callbackUrl,

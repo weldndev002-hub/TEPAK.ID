@@ -118,7 +118,10 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
                 })
             });
 
-            if (!res.ok) throw new Error('Gagal melakukan upgrade');
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.message || 'Gagal melakukan upgrade');
+            }
 
             const data = await res.json();
 
