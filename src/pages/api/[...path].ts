@@ -957,7 +957,7 @@ app.post('/disbursement/withdraw', async (c) => {
       .eq('id', withdrawalId);
 
     if (isFailed) {
-      // Refund via RPC
+      // Refund via RPC — move pending back to available
       await supabase.rpc('update_wallet_payout_reject', {
         p_merchant_id: user.id,
         p_amount: Number(amount)
@@ -969,6 +969,18 @@ app.post('/disbursement/withdraw', async (c) => {
         withdrawalId,
         disburseId: inquiry.disburseId
       }, 500);
+    }
+
+    // --- Step 5: Clear pending_balance if transfer completed immediately ---
+    if (transferStatus === 'completed') {
+      console.log(`[Disbursement Withdraw] Transfer completed immediately — clearing pending_balance for ${user.id}`);
+      const { error: successRpcError } = await supabase.rpc('update_wallet_payout_success', {
+        p_merchant_id: user.id,
+        p_amount: Number(amount)
+      });
+      if (successRpcError) {
+        console.error('[Disbursement Withdraw] Failed to clear pending_balance:', successRpcError);
+      }
     }
 
     console.log(`[Disbursement Withdraw] Transfer ${transferStatus}: disburseId=${inquiry.disburseId}`);
@@ -2820,11 +2832,15 @@ app.post('/webhooks/duitku-disbursement', async (c) => {
     if (responseCode === '00') {
       if (withdrawal) {
         await supabase.from('withdrawals').update({ status: 'completed', processed_at: new Date().toISOString(), notes: withdrawal.notes + ' | COMPLETED via webhook' }).eq('id', withdrawal.id);
-        console.log('[Disbursement Webhook] Withdrawal ' + withdrawal.id + ' completed');
+        // Clear pending_balance — the money has been successfully transferred out
+        const { error: successRpcError } = await supabase.rpc('update_wallet_payout_success', { p_merchant_id: withdrawal.merchant_id, p_amount: Number(withdrawal.amount) });
+        if (successRpcError) console.error('[Disbursement Webhook] Failed to clear pending_balance:', successRpcError);
+        console.log('[Disbursement Webhook] Withdrawal ' + withdrawal.id + ' completed, pending_balance cleared');
       }
     } else {
       if (withdrawal) {
         await supabase.from('withdrawals').update({ status: 'rejected', processed_at: new Date().toISOString(), notes: withdrawal.notes + ' | FAILED: ' + responseDesc }).eq('id', withdrawal.id);
+        // Refund pending_balance back to available_balance
         const { error: refundError } = await supabase.rpc('update_wallet_payout_reject', { p_merchant_id: withdrawal.merchant_id, p_amount: Number(withdrawal.amount) });
         if (refundError) console.error('[Disbursement Webhook] Refund Error:', refundError);
       }

@@ -39,40 +39,57 @@ const WalletDashboardContent = () => {
     const [toast, setToast] = useState<string | null>(null);
     const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 4000); };
 
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const [statsRes, withdrawalsRes, ordersRes, bankRes] = await Promise.all([
-                    fetch('/api/wallet/stats'),
-                    fetch('/api/withdrawals'),
-                    fetch('/api/orders'),
-                    fetch('/api/bank-accounts')
-                ]);
+    const fetchData = async (showLoading = true) => {
+        if (showLoading) setLoading(true);
+        setError(null);
+        try {
+            const [statsRes, withdrawalsRes, ordersRes, bankRes] = await Promise.all([
+                fetch('/api/wallet/stats'),
+                fetch('/api/withdrawals'),
+                fetch('/api/orders'),
+                fetch('/api/bank-accounts')
+            ]);
 
-                if (statsRes.ok) {
-                    const statsData = await statsRes.json();
-                    setBalanceData(statsData);
-                }
-                if (withdrawalsRes.ok) setWithdrawals(await withdrawalsRes.json());
-                if (ordersRes.ok) setRecentOrders((await ordersRes.json()).slice(0, 5));
-
-                if (bankRes.ok) {
-                    const bankData = await bankRes.json();
-                    if (!bankData.exists) {
-                        setIsBankInfoComplete(false);
-                    }
-                }
-            } catch (err) {
-                console.error('Wallet Fetch Error:', err);
-                setError("Gagal mengambil data saldo, silakan coba lagi nanti.");
-            } finally {
-                setLoading(false);
+            if (statsRes.ok) {
+                const statsData = await statsRes.json();
+                setBalanceData(statsData);
             }
-        };
+            if (withdrawalsRes.ok) setWithdrawals(await withdrawalsRes.json());
+            if (ordersRes.ok) setRecentOrders((await ordersRes.json()).slice(0, 5));
 
+            if (bankRes.ok) {
+                const bankData = await bankRes.json();
+                if (!bankData.exists) {
+                    setIsBankInfoComplete(false);
+                }
+            }
+        } catch (err) {
+            console.error('Wallet Fetch Error:', err);
+            setError("Gagal mengambil data saldo, silakan coba lagi nanti.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchData();
+    }, []);
+
+    // Auto-refresh balance when page regains focus (e.g., after admin approval, returning from withdraw page)
+    useEffect(() => {
+        const handleFocus = () => {
+            fetchData(false); // silent refresh without loading spinner
+        };
+        window.addEventListener('focus', handleFocus);
+        return () => window.removeEventListener('focus', handleFocus);
+    }, []);
+
+    // Periodic refresh every 30 seconds to catch admin approval updates
+    useEffect(() => {
+        const interval = setInterval(() => {
+            fetchData(false);
+        }, 30000);
+        return () => clearInterval(interval);
     }, []);
 
     const minWithdrawal = balanceData.min_withdrawal || 50000;

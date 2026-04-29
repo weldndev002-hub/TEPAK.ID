@@ -318,16 +318,19 @@ export const PayoutForm: React.FC<PayoutFormProps> = ({ className }) => {
                         </div>
                         <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex justify-center">
                             <button
-                                className={`px-8 py-2.5 rounded-xl font-black text-white shadow-lg transition-all text-[10px] uppercase tracking-widest ${
-                                    successModal.status === 'completed'
+                                className={`px-8 py-2.5 rounded-xl font-black text-white shadow-lg transition-all text-[10px] uppercase tracking-widest ${successModal.status === 'completed'
                                         ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20'
                                         : successModal.status === 'pending'
-                                        ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20'
-                                        : successModal.status === 'processing'
-                                        ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20'
-                                        : 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/20'
-                                }`}
-                                onClick={() => setSuccessModal(null)}
+                                            ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20'
+                                            : successModal.status === 'processing'
+                                                ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20'
+                                                : 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/20'
+                                    }`}
+                                onClick={() => {
+                                    setSuccessModal(null);
+                                    // Redirect to wallet page to see updated balance
+                                    window.location.href = '/wallet';
+                                }}
                             >
                                 OK, Mengerti
                             </button>
