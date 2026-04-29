@@ -15,7 +15,9 @@ import {
     FaceFrownIcon,
     CheckCircleIcon
 } from '@heroicons/react/24/outline';
+import { toast } from 'sonner';
 import { Input } from '../ui/Input';
+
 import { useSubscription, SubscriptionProvider } from '../../context/SubscriptionContext';
 
 export const CustomersDashboard = () => {
@@ -88,10 +90,7 @@ const CustomersDashboardContent = () => {
         return null; // Will redirect via useEffect
     }
 
-    const showToast = (msg: string) => {
-        setToast(msg);
-        setTimeout(() => setToast(null), 4000);
-    };
+
 
     const formatCurrency = (val: number) => {
         return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val);
@@ -109,15 +108,16 @@ const CustomersDashboardContent = () => {
         try {
             const res = await fetch(`/api/customers/${id}`, { method: 'DELETE' });
             if (res.ok) {
-                showToast(`Pelanggan ${name} berhasil dihapus`);
+                toast.success(`Pelanggan ${name} berhasil dihapus`);
                 setAllCustomers(allCustomers.filter(c => c.id !== id));
             } else {
-                alert('Gagal menghapus pelanggan');
+                toast.error('Gagal menghapus pelanggan');
             }
         } catch (error) {
             console.error('Error deleting customer:', error);
-            alert('Terjadi kesalahan saat menghapus pelanggan');
+            toast.error('Terjadi kesalahan saat menghapus pelanggan');
         } finally {
+
             setIsDeleting(null);
         }
     };
@@ -159,13 +159,7 @@ const CustomersDashboardContent = () => {
 
     return (
         <div className="flex-1 px-8 pt-24 pb-12 min-h-screen bg-slate-50 relative">
-            {/* Toast Notification */}
-            {toast && (
-                <div className="fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl text-sm font-bold bg-emerald-500 text-white animate-in slide-in-from-right duration-300">
-                    <CheckCircleIcon className="w-5 h-5 shrink-0" />
-                    {toast}
-                </div>
-            )}
+
             {/* Header Action Area */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10">
                 <div>

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -35,8 +37,37 @@ const formatCountdown = (expiryDate: string | null) => {
     return `${days}h ${hours}j ${minutes}m ${seconds}s`;
 };
 
+const PlanSkeleton = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {[1, 2, 3].map((i) => (
+            <div key={i} className="h-[600px] bg-white rounded-[2.5rem] border border-slate-100 shadow-sm animate-pulse flex flex-col p-10 overflow-hidden relative">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-8 bg-slate-100 rounded-full"></div>
+                <div className="mb-10">
+                    <div className="w-48 h-10 bg-slate-100 rounded-xl mb-4"></div>
+                    <div className="w-full h-4 bg-slate-50 rounded-full mb-2"></div>
+                    <div className="w-2/3 h-4 bg-slate-50 rounded-full"></div>
+                </div>
+                <div className="mb-10">
+                    <div className="w-40 h-12 bg-slate-100 rounded-xl"></div>
+                </div>
+                <div className="flex-1 space-y-5 mb-12">
+                    <div className="w-24 h-3 bg-slate-100 rounded-full mb-4"></div>
+                    {[1, 2, 3, 4].map(j => (
+                        <div key={j} className="flex items-center gap-3">
+                            <div className="w-5 h-5 rounded-full bg-slate-100"></div>
+                            <div className="w-full h-3 bg-slate-50 rounded-full"></div>
+                        </div>
+                    ))}
+                </div>
+                <div className="w-full h-14 bg-slate-100 rounded-2xl mt-auto"></div>
+            </div>
+        ))}
+    </div>
+);
+
 const PlanInfoContent = () => {
-    const { plan, expiryDate, billingPeriod, autoRenewal, upgradeToPlan, cancelSubscription, isLoading } = useSubscription();
+
+    const { plan, expiryDate, billingPeriod, autoRenewal, upgradeToPlan, cancelSubscription, isLoading, transactions } = useSubscription();
     const [countdown, setCountdown] = useState<string | null>(null);
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [isCancelling, setIsCancelling] = useState(false);
@@ -56,8 +87,9 @@ const PlanInfoContent = () => {
             setInvoiceData(data);
             setShowInvoiceModal(true);
         } catch (err) {
-            alert('Gagal mengambil data invoice. Silakan coba lagi nanti.');
+            toast.error('Gagal mengambil data invoice. Silakan coba lagi nanti.');
         } finally {
+
             setIsFetchingInvoice(false);
         }
     };
@@ -65,6 +97,37 @@ const PlanInfoContent = () => {
     const [selectedPlanId, setSelectedPlanId] = useState<string>('');
     const [allPlans, setAllPlans] = useState<any[]>([]);
     const [plansLoading, setPlansLoading] = useState(true);
+    const [plansError, setPlansError] = useState<string | null>(null);
+
+    const fetchAllPlans = async () => {
+        try {
+            setPlansLoading(true);
+            setPlansError(null);
+            const res = await fetch('/api/plans');
+            if (res.ok) {
+                const data = await res.json();
+                setAllPlans(data || []);
+                // Set default selected plan ke plan berbayar pertama yang lebih tinggi dari plan saat ini
+                const paidPlans = (data || []).filter((p: any) => p.price_monthly > 0);
+                const currentPlanData = (data || []).find((p: any) => p.id === plan);
+                const currentPrice = Number(currentPlanData?.price_monthly || 0);
+                const higherPlan = paidPlans.find((p: any) => Number(p.price_monthly) > currentPrice);
+                if (higherPlan) {
+                    setSelectedPlanId(higherPlan.id);
+                } else if (paidPlans.length > 0) {
+                    // Jika tidak ada plan yang lebih tinggi, default ke plan berbayar pertama
+                    setSelectedPlanId(paidPlans[0].id);
+                }
+            } else {
+                throw new Error('API Error');
+            }
+        } catch (err) {
+            console.error('Failed to fetch plans:', err);
+            setPlansError('Gagal memuat data, silakan coba lagi');
+        } finally {
+            setPlansLoading(false);
+        }
+    };
 
     useEffect(() => {
         if (expiryDate && plan !== 'free') {
@@ -75,35 +138,11 @@ const PlanInfoContent = () => {
         }
     }, [expiryDate, plan]);
 
-    // Fetch all available plans
     useEffect(() => {
-        const fetchAllPlans = async () => {
-            try {
-                setPlansLoading(true);
-                const res = await fetch('/api/plans');
-                if (res.ok) {
-                    const data = await res.json();
-                    setAllPlans(data || []);
-                    // Set default selected plan ke plan berbayar pertama yang lebih tinggi dari plan saat ini
-                    const paidPlans = (data || []).filter((p: any) => p.price_monthly > 0);
-                    const currentPlanData = (data || []).find((p: any) => p.id === plan);
-                    const currentPrice = Number(currentPlanData?.price_monthly || 0);
-                    const higherPlan = paidPlans.find((p: any) => Number(p.price_monthly) > currentPrice);
-                    if (higherPlan) {
-                        setSelectedPlanId(higherPlan.id);
-                    } else if (paidPlans.length > 0) {
-                        // Jika tidak ada plan yang lebih tinggi, default ke plan berbayar pertama
-                        setSelectedPlanId(paidPlans[0].id);
-                    }
-                }
-            } catch (err) {
-                console.error('Failed to fetch plans:', err);
-            } finally {
-                setPlansLoading(false);
-            }
-        };
         fetchAllPlans();
     }, [plan]);
+
+
 
     const formattedExpiry = expiryDate
         ? new Date(expiryDate).toLocaleDateString('id-ID', {
@@ -136,11 +175,24 @@ const PlanInfoContent = () => {
 
     if (isLoading && !plan) {
         return (
-            <div className="flex items-center justify-center py-20">
-                <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <div className="max-w-5xl mx-auto space-y-10 animate-pulse">
+                <header className="flex flex-col gap-1">
+                    <div className="w-24 h-3 bg-slate-100 rounded-full mb-1"></div>
+                    <div className="w-64 h-8 bg-slate-100 rounded-xl mb-1"></div>
+                    <div className="w-96 h-4 bg-slate-50 rounded-full"></div>
+                </header>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="h-[300px] bg-slate-50 rounded-[2.5rem] border border-slate-100"></div>
+                    <div className="h-[300px] bg-slate-50 rounded-[2.5rem] border border-slate-100"></div>
+                </div>
+                <div className="mt-16">
+                    <div className="w-48 h-8 bg-slate-100 rounded-xl mb-10"></div>
+                    <PlanSkeleton />
+                </div>
             </div>
         );
     }
+
 
     return (
         <div className="max-w-5xl mx-auto space-y-10">
@@ -476,10 +528,25 @@ const PlanInfoContent = () => {
                 </header>
 
                 {plansLoading ? (
-                    <div className="flex items-center justify-center py-20">
-                        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                    </div>
+                    <PlanSkeleton />
+                ) : plansError ? (
+                    <Card className="bg-rose-50 border-none p-12 text-center rounded-[2.5rem]">
+                        <div className="flex flex-col items-center gap-4">
+                            <div className="w-12 h-12 bg-rose-100 rounded-2xl flex items-center justify-center text-rose-500 mb-2">
+                                <ExclamationTriangleIcon className="w-6 h-6" />
+                            </div>
+                            <p className="text-rose-900 font-black uppercase tracking-tight text-lg">{plansError}</p>
+                            <p className="text-rose-500/70 font-medium text-sm max-w-xs mx-auto">Kami mengalami kesulitan menghubungi server. Mohon periksa koneksi Anda.</p>
+                            <Button 
+                                onClick={fetchAllPlans}
+                                className="mt-4 bg-rose-500 text-white hover:bg-rose-600 px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all"
+                            >
+                                Coba Lagi
+                            </Button>
+                        </div>
+                    </Card>
                 ) : allPlans.length > 0 ? (
+
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {allPlans.map((availablePlan) => {
                             const isCurrentPlan = plan === availablePlan.id;
@@ -633,7 +700,81 @@ const PlanInfoContent = () => {
                 )}
             </div>
 
+            {/* Billing History Section */}
+            <div className="mt-16 pt-16 border-t border-slate-100">
+                <header className="flex flex-col gap-1 mb-10">
+                    <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Billing History</span>
+                    <h2 className="text-3xl font-black tracking-tight text-slate-900 uppercase italic">Riwayat Pembayaran</h2>
+                    <p className="text-slate-500 font-medium mt-2">Pantau status pembayaran dan akses faktur transaksi Anda.</p>
+                </header>
+
+                <div className="bg-white rounded-[2.5rem] border border-slate-100 overflow-hidden shadow-sm shadow-[0px_20px_40px_rgba(16,27,50,0.02)]">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-slate-50/50 border-b border-slate-100">
+                                    <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">ID Transaksi</th>
+                                    <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Paket</th>
+                                    <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Jumlah</th>
+                                    <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                    <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tanggal</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {transactions && transactions.length > 0 ? (
+                                    transactions.map((tx: any) => (
+                                        <tr key={tx.id} className="hover:bg-slate-50/30 transition-colors group">
+                                            <td className="px-10 py-6">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[11px] font-black text-slate-900 font-mono uppercase tracking-tight">{tx.invoice_id}</span>
+                                                    <span className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">{tx.payment_method || 'DUITKU'}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-10 py-6">
+                                                <div className="flex items-center gap-2">
+                                                    <TicketIcon className="w-4 h-4 text-primary/40" />
+                                                    <span className="text-xs font-black text-slate-900 uppercase italic">{tx.plan_id}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-10 py-6">
+                                                <span className="text-xs font-black text-slate-900">Rp {Number(tx.amount).toLocaleString('id-ID')}</span>
+                                            </td>
+                                            <td className="px-10 py-6">
+                                                <Badge className={`border-none font-black text-[9px] uppercase tracking-widest px-4 py-1.5 rounded-lg ${
+                                                    tx.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-600' :
+                                                    tx.status === 'PENDING' ? 'bg-amber-500/10 text-amber-600' :
+                                                    'bg-rose-500/10 text-rose-600'
+                                                }`}>
+                                                    {tx.status}
+                                                </Badge>
+                                            </td>
+                                            <td className="px-10 py-6">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                                    {new Date(tx.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={5} className="px-10 py-20 text-center">
+                                            <div className="flex flex-col items-center gap-3">
+                                                <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300">
+                                                    <DocumentTextIcon className="w-6 h-6" />
+                                                </div>
+                                                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Belum ada riwayat pembayaran</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             {/* Invoice Detail Modal */}
+
             <InvoiceModal
                 isOpen={showInvoiceModal}
                 onClose={() => setShowInvoiceModal(false)}

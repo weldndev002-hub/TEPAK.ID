@@ -55,6 +55,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
     
     let supabase: any = null;
     try {
+      const cookieHeader = request.headers.get('Cookie') || '';
+      const cookieNames = cookieHeader.split(';').map(c => c.split('=')[0].trim());
+      console.log(`[Middleware] Path: ${url.pathname}, Cookies found: ${cookieNames.join(', ') || 'NONE'}`);
+      
       supabase = getServerClient(cookies, request, runtimeEnv);
     } catch (e) {
       console.error('[Middleware] Supabase Init Failed:', e);
@@ -149,6 +153,47 @@ export const onRequest = defineMiddleware(async (context, next) => {
                 console.log(`[Middleware] Custom Domain detected: ${hostname} -> user ${settings.user_id}`);
             }
         }
+    }
+
+    // ==========================================
+    // AUTHENTICATION PROTECTION
+    // ==========================================
+    const publicAuthRoutes = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email'];
+    const isAuthRoute = publicAuthRoutes.includes(url.pathname);
+
+    const protectedRoutes = [
+      '/dashboard',
+      '/orders',
+      '/products',
+      '/customers',
+      '/wallet',
+      '/settings',
+      '/profile',
+      '/withdraw',
+      '/domain-settings',
+      '/seo-settings',
+      '/admin',
+      '/withdrawal-details',
+      '/bank-info',
+      '/plan-info',
+      '/add-product',
+      '/edit-product'
+    ];
+
+    const isProtectedRoute = protectedRoutes.some(route => 
+      url.pathname === route || url.pathname.startsWith(route + '/')
+    );
+
+    // 1. Jika sudah login dan mencoba akses halaman login/signup -> Lempar ke dashboard
+    if (isAuthRoute && user) {
+      console.log(`[Middleware] User ${user.email} already logged in, redirecting from ${url.pathname} to /dashboard`);
+      return redirect('/dashboard');
+    }
+
+    // 2. Jika belum login dan akses rute terproteksi -> Lempar ke login
+    if (isProtectedRoute && !user) {
+      console.log(`[Middleware] Unauthorized access to ${url.pathname}, redirecting to /login`);
+      return redirect(`/login?redirect=${encodeURIComponent(url.pathname)}`);
     }
 
     // Maintenance logic

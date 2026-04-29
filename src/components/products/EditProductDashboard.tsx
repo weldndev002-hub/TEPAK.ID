@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { toast } from 'sonner';
+
 import { supabase } from '../../lib/supabase';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
@@ -114,10 +116,7 @@ const EditProductDashboardContent = () => {
         }
     }, []);
 
-    const showToast = (msg: string) => {
-        setToast(msg);
-        setTimeout(() => setToast(null), 4000);
-    };
+
 
     if (subLoading) {
         return (
@@ -247,7 +246,8 @@ const EditProductDashboardContent = () => {
             }
 
             setIsDirty(false);
-            showToast("Perubahan produk berhasil disimpan!");
+            toast.success("Perubahan produk berhasil disimpan!");
+
             setTimeout(() => {
                 window.location.href = '/products';
             }, 1000);
@@ -302,13 +302,7 @@ const EditProductDashboardContent = () => {
 
     return (
         <div className="flex-1 flex flex-col min-h-screen bg-[#F8FAFC] relative">
-            {/* Toast Notification */}
-            {toast && (
-                <div className="fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl text-sm font-bold bg-emerald-500 text-white animate-in slide-in-from-right duration-300">
-                    <CheckCircleIcon className="w-5 h-5 shrink-0" />
-                    {toast}
-                </div>
-            )}
+
             {/* TopNavBar Replacement Local Context */}
             <header className="sticky top-0 z-40 bg-white/70 backdrop-blur-md flex justify-between items-center w-full px-8 py-4 shadow-[0px_20px_40px_rgba(16,27,50,0.06)] border-b border-slate-200">
                 <div className="flex items-center gap-4">
@@ -337,8 +331,9 @@ const EditProductDashboardContent = () => {
                                     await fetch(`/api/products/${id}`, { method: 'DELETE' });
                                     window.location.href = '/products';
                                 } catch (err) {
-                                    alert('Gagal menghapus produk');
+                                    toast.error('Gagal menghapus produk');
                                 }
+
                             }
                         }}
                         className="p-2.5 text-red-500 hover:bg-red-50 border border-red-100 rounded-xl transition-colors"
@@ -744,8 +739,9 @@ const EditProductDashboardContent = () => {
                                     setFileName('');
                                     setShowFileDeleteModal(false);
                                     setIsDirty(true);
-                                    showToast("File produk berhasil dihapus.");
+                                    toast.success("File produk berhasil dihapus.");
                                 }}
+
                             >
                                 Ya, Hapus File
                             </button>

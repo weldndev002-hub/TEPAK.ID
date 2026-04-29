@@ -99,17 +99,23 @@ export const OrderDetailDashboard = () => {
                         <h2 className="text-xl font-extrabold text-[#162138] tracking-tight">Pesanan #{order.invoice_id}</h2>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 no-print">
                     <button 
                         className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl font-bold text-sm text-slate-600 transition-all"
-                        onClick={() => showToast("Mempersiapkan invoice untuk dicetak...")}
+                        onClick={() => {
+                            showToast("Mempersiapkan invoice untuk dicetak...");
+                            setTimeout(() => window.print(), 500);
+                        }}
                     >
                         <PrinterIcon className="w-4 h-4" />
                         Cetak Invoice
                     </button>
                     <button 
                         className="flex items-center gap-2 px-5 py-2.5 bg-[#465f89] hover:bg-[#344d77] rounded-xl font-bold text-sm text-white shadow-lg shadow-blue-900/20 active:scale-95 transition-all"
-                        onClick={() => showToast("Mengekspor data pesanan ke PDF...")}
+                        onClick={() => {
+                            showToast("Mengekspor data pesanan ke PDF...");
+                            setTimeout(() => window.print(), 500);
+                        }}
                     >
                         <ArrowDownTrayIcon className="w-4 h-4" />
                         Ekspor PDF
@@ -303,6 +309,46 @@ export const OrderDetailDashboard = () => {
 
                 </div>
             </main>
+
+            <style dangerouslySetInnerHTML={{ __html: `
+                @media print {
+                    @page {
+                        margin: 20mm;
+                    }
+                    .no-print {
+                        display: none !important;
+                    }
+                    body {
+                        background-color: white !important;
+                    }
+                    .flex-1 {
+                        padding: 0 !important;
+                    }
+                    main {
+                        padding: 0 !important;
+                    }
+                    header {
+                        position: relative !important;
+                        box-shadow: none !important;
+                        border-bottom: 2px solid #f1f5f9 !important;
+                        margin-bottom: 2rem !important;
+                    }
+                    .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl, .shadow-[0px_20px_40px_rgba(16,27,50,0.04)] {
+                        box-shadow: none !important;
+                        border: 1px solid #f1f5f9 !important;
+                    }
+                    .rounded-3xl, .rounded-[3rem], .rounded-[2.5rem] {
+                        border-radius: 1rem !important;
+                    }
+                    .bg-[#F8FAFC] {
+                        background-color: white !important;
+                    }
+                    .bg-slate-50, .bg-blue-50/50, .bg-emerald-50, .bg-amber-50 {
+                        background-color: #f8fafc !important;
+                        border: 1px solid #f1f5f9 !important;
+                    }
+                }
+            ` }} />
         </div>
     );
 };

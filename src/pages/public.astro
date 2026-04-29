@@ -100,8 +100,10 @@ const profile = {
 // SEO Config
 const seo = {
     title: merchantData?.user_settings?.seo_title || `${profile.name} | tepak.id Ecosystem`,
-    description: merchantData?.user_settings?.seo_description || profile.bio
+    description: merchantData?.user_settings?.seo_description || profile.bio,
+    image: profile.avatar
 };
+
 
 // Dynamic Social Links from Profile
 // Brand Icons as SVGs
@@ -161,7 +163,8 @@ if (is_banned) {
 }
 ---
 
-<BaseLayout title={seo.title} description={seo.description}>
+<BaseLayout title={seo.title} description={seo.description} image={seo.image}>
+
     <AnalyticsTracker client:only="react" merchantId={merchant_id || "00000000-0000-0000-0000-000000000000"} />
     <div class="min-h-screen bg-[#F8F9FB] text-[#191C1E] font-['Funnel_Display',sans-serif] antialiased">
         

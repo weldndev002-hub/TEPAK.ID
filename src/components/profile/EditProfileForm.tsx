@@ -289,11 +289,17 @@ export const EditProfileForm = () => {
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-slate-50 rounded-2xl p-6 md:p-8 border border-slate-100/50">
                                     <div>
                                         <p className="text-xs font-black text-slate-900 mb-1 uppercase tracking-tight">Change Password</p>
-                                        <p className="text-[10px] text-slate-400 max-w-sm font-medium uppercase tracking-tight">It is recommended to use a strong and unique password to secure your account.</p>
+                                        <p className="text-[10px] text-slate-400 max-w-sm font-medium uppercase tracking-tight">
+                                            {profile.app_metadata?.provider === 'google' || profile.identities?.[0]?.provider === 'google' 
+                                                ? 'You are using Google Login. Password management is handled by Google.' 
+                                                : 'It is recommended to use a strong and unique password to secure your account.'}
+                                        </p>
                                     </div>
-                                    <a href="/reset-password" title="Go to password reset" className="w-full sm:w-auto">
-                                        <Button variant="outline" type="button" className="font-black text-[9px] uppercase tracking-widest px-6 py-3 rounded-xl bg-white w-full">Change Password</Button>
-                                    </a>
+                                    {!(profile.app_metadata?.provider === 'google' || profile.identities?.[0]?.provider === 'google') && (
+                                        <a href="/reset-password" title="Go to password reset" className="w-full sm:w-auto">
+                                            <Button variant="outline" type="button" className="font-black text-[9px] uppercase tracking-widest px-6 py-3 rounded-xl bg-white w-full">Change Password</Button>
+                                        </a>
+                                    )}
                                 </div>
 
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-slate-50 rounded-2xl p-6 md:p-8 border border-slate-100/50">

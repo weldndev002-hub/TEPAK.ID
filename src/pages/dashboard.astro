@@ -167,7 +167,9 @@ if (user) {
                     } else {
                         // Fallback: Copy to clipboard
                         await navigator.clipboard.writeText(window.location.href);
-                        alert('Link laporan berhasil disalin ke clipboard!');
+                        // @ts-ignore
+                        window.toast.success('Link laporan berhasil disalin ke clipboard!');
+
                     }
                 } catch (err) {
                     console.error('Error sharing:', err);

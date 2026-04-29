@@ -87,7 +87,7 @@ const currentTheme = ThemeConfig[themeId] || ThemeConfig['atelier-dark'];
                 <div class="w-24 h-24 bg-rose-50 text-rose-500 rounded-[2.5rem] flex items-center justify-center shadow-sm border border-rose-100">
                     <span class="material-symbols-outlined text-5xl">block</span>
                 </div>
-                <h2 class="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">Halaman Tidak Tersedia</h2>
+                <h2 class="text-4xl font-black text-slate-900 tracking-tighter">Halaman Tidak Tersedia</h2>
                 <p class="text-slate-500 font-medium max-w-md mx-auto leading-relaxed">Maaf, halaman ini telah dinonaktifkan oleh sistem keamanan kami.</p>
             </div>
         ) : (
@@ -105,9 +105,10 @@ const currentTheme = ThemeConfig[themeId] || ThemeConfig['atelier-dark'];
                         </div>
 
                         <div class="max-w-xl w-full px-4 md:px-0">
-                            <h1 class={`text-5xl md:text-7xl font-black tracking-tighter ${currentTheme.heroTitleClass} mb-6 leading-none uppercase italic`}>
+                            <h1 class={`text-5xl md:text-7xl font-black tracking-tighter ${currentTheme.heroTitleClass} mb-6 leading-none`}>
                                 {profile.name}
                             </h1>
+
                             <p class={`${currentTheme.heroBioClass} text-lg md:text-xl font-medium leading-relaxed mb-12 opacity-80 max-w-lg mx-auto`}>
                                 {profile.bio}
                             </p>
@@ -127,23 +128,25 @@ const currentTheme = ThemeConfig[themeId] || ThemeConfig['atelier-dark'];
                                         if (block.type === 'social') return null;
                                         if (block.type === 'text') return (
                                             <div class="py-3 px-2 text-center space-y-2">
-                                                {block.data?.title && <h4 class={`text-lg font-black ${currentTheme.cardTitleClass} tracking-tighter uppercase`}>{block.data.title}</h4>}
+                                                {block.data?.title && <h4 class={`text-lg font-black ${currentTheme.cardTitleClass} tracking-tighter`}>{block.data.title}</h4>}
+
                                                 {block.data?.content && <p class={`text-sm ${currentTheme.cardSubtitleClass} font-medium leading-relaxed italic`}>{block.data.content}</p>}
                                             </div>
                                         );
                                         if (block.type === 'image') return (
-                                            <div class="w-full space-y-2">
+                                            <div class={`w-full ${currentTheme.cardClass} p-3 rounded-[2rem] space-y-3`}>
                                                 {block.data?.imageUrl && (
-                                                    <div class="w-full aspect-video rounded-3xl overflow-hidden border border-slate-100 shadow-sm">
+                                                    <div class="w-full aspect-video rounded-2xl overflow-hidden shadow-sm">
                                                         <img src={block.data.imageUrl} class="w-full h-full object-cover" alt={block.data?.title || ''} />
                                                     </div>
                                                 )}
-                                                {block.data?.title && <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest text-center italic">{block.data.title}</p>}
+                                                {block.data?.title && <p class={`text-[11px] font-black ${currentTheme.cardSubtitleClass} tracking-widest text-center italic`}>{block.data.title}</p>}
                                             </div>
+
                                         );
                                         if (block.type === 'video' && block.data?.isYouTube && block.data?.videoId) return (
-                                            <div class="w-full space-y-2">
-                                                <div class="w-full aspect-video rounded-3xl overflow-hidden shadow-lg border border-white/10">
+                                             <div class={`w-full ${currentTheme.cardClass} p-3 rounded-[2rem] space-y-3`}>
+                                                <div class="w-full aspect-video rounded-2xl overflow-hidden shadow-lg border border-white/10">
                                                     <iframe
                                                         width="100%" height="100%"
                                                         src={`https://www.youtube.com/embed/${block.data.videoId}`}
@@ -153,8 +156,9 @@ const currentTheme = ThemeConfig[themeId] || ThemeConfig['atelier-dark'];
                                                         allowfullscreen
                                                     />
                                                 </div>
-                                                {block.title && <p class={`text-[11px] font-black ${currentTheme.cardSubtitleClass} uppercase tracking-widest text-center italic`}>{block.title}</p>}
+                                                {block.title && <p class={`text-[11px] font-black ${currentTheme.cardSubtitleClass} tracking-widest text-center italic`}>{block.title}</p>}
                                             </div>
+
                                         );
                                         return (
                                             <a
@@ -163,15 +167,28 @@ const currentTheme = ThemeConfig[themeId] || ThemeConfig['atelier-dark'];
                                                 rel="noopener noreferrer"
                                                 class={`flex items-center gap-4 w-full ${currentTheme.cardClass} px-5 py-4 rounded-2xl border transition-all group`}
                                             >
-                                                <div class="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                                                    <span class="material-symbols-outlined text-base">{block.type === 'link' ? 'link' : block.type === 'article' ? 'article' : 'info'}</span>
-                                                </div>
+                                                {block.data?.thumbnailUrl ? (
+                                                    <div class="w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-slate-100 shadow-sm">
+                                                        <img src={block.data.thumbnailUrl} class="w-full h-full object-cover" alt="" />
+                                                    </div>
+                                                ) : (
+                                                    <div class="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                                                        <span class="material-symbols-outlined text-base">{block.type === 'link' ? 'link' : block.type === 'article' ? 'article' : 'info'}</span>
+                                                    </div>
+                                                )}
                                                 <div class="flex-1 min-w-0 text-left">
-                                                    <p class={`text-sm font-black ${currentTheme.cardTitleClass} uppercase tracking-tight truncate`}>{block.title || block.data?.title}</p>
-                                                    {block.subtitle && <p class={`text-[11px] ${currentTheme.cardSubtitleClass} truncate mt-0.5`}>{block.subtitle}</p>}
+                                                    <p class={`text-sm font-black ${currentTheme.cardTitleClass} tracking-tight truncate`}>{block.title || block.data?.title}</p>
+
+                                                    {(block.subtitle || block.data?.description) && (
+                                                        <p class={`text-[11px] ${currentTheme.cardSubtitleClass} truncate mt-0.5`}>
+                                                            {block.subtitle || block.data?.description}
+                                                        </p>
+                                                    )}
+
                                                 </div>
                                                 <span class="material-symbols-outlined text-primary/40 group-hover:text-primary transition-colors text-base shrink-0">arrow_forward</span>
                                             </a>
+
                                         );
                                     })}
                                 </div>

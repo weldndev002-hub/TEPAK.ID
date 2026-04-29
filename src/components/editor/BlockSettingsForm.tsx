@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { toast } from 'sonner';
+
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
@@ -19,20 +21,78 @@ import {
 
 export interface BlockSettingsFormProps {
     blockType: string;
+    initialData?: any;
     onClose: () => void;
     onSave: (data: any) => void;
 }
 
-export const BlockSettingsForm: React.FC<BlockSettingsFormProps> = ({ blockType, onClose, onSave }) => {
-    const [formData, setFormData] = useState<any>({});
+
+export const BlockSettingsForm: React.FC<BlockSettingsFormProps> = ({ blockType, initialData, onClose, onSave }) => {
+    const [formData, setFormData] = useState<any>(initialData || {});
+
     const [error, setError] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [platformErrors, setPlatformErrors] = useState<Record<string, string>>({});
+    const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
+
+    const fetchMetadata = async (url: string) => {
+        if (!validateUrl(url)) {
+            toast.error("URL tidak valid");
+            return;
+        }
+        
+        console.log('Triggering fetchMetadata for:', url);
+        setIsFetchingMetadata(true);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+        try {
+            const res = await fetch(`/api/utils/fetch-metadata?url=${encodeURIComponent(url)}`, {
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            if (res.ok) {
+                const data = await res.json();
+                if (!data.title && !data.thumbnailUrl) {
+                    toast.info("Pratinjau tidak tersedia untuk link ini. Silakan isi manual.");
+                } else {
+                    toast.success("Detail link berhasil dimuat!");
+                }
+                setFormData((prev: any) => {
+
+                    const isDefaultTitle = !prev.title || prev.title.toLowerCase().includes('new link item');
+                    return {
+                        ...prev,
+                        title: isDefaultTitle ? data.title : prev.title,
+                        description: data.description,
+                        thumbnailUrl: data.image
+                    };
+                });
+            } else {
+                const errData = await res.json().catch(() => ({}));
+                console.error('API Error:', errData);
+                toast.error("Gagal menghubungi server pratinjau.");
+            }
+        } catch (err: any) {
+            console.error('Fetch error:', err);
+            if (err.name === 'AbortError') {
+                toast.error("Waktu tunggu habis (Request Timeout)");
+            } else {
+                toast.error("Terjadi kesalahan jaringan.");
+            }
+        } finally {
+            setIsFetchingMetadata(false);
+        }
+    };
+
+
 
     const validateUrl = (url: string) => {
         try {
-            new URL(url);
-            return true;
+            const parsed = new URL(url);
+            // Require a protocol and a hostname with at least one dot
+            return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && parsed.hostname.includes('.');
         } catch {
             return false;
         }
@@ -228,17 +288,53 @@ export const BlockSettingsForm: React.FC<BlockSettingsFormProps> = ({ blockType,
                         </div>
                         <div>
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] block mb-3">Destination URL</label>
-                            <Input
-                                placeholder="https://..."
-                                value={formData.url || ''}
-                                onChange={(e) => {
-                                    setFormData({ ...formData, url: e.target.value });
-                                    setError(null);
-                                }}
-                            />
-                            {error && (
-                                <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mt-2">{error}</p>
+                                <div className="flex gap-2">
+                                    <Input
+                                        placeholder="https://..."
+                                        value={formData.url || ''}
+                                        hasError={!!error}
+                                        className="flex-1"
+                                        onChange={(e) => {
+                                            setFormData({ ...formData, url: e.target.value });
+                                            setError(null);
+                                        }}
+                                        onBlur={(e) => {
+                                            let url = e.target.value.trim();
+                                            if (!url) return;
+                                            if (!url.startsWith('http')) {
+                                                url = `https://${url}`;
+                                            }
+                                            fetchMetadata(url);
+                                        }}
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        size="sm"
+                                        className="h-auto py-0 px-4 text-[9px] uppercase tracking-widest font-black shrink-0 border-slate-100"
+                                        onClick={() => {
+                                            let url = formData.url?.trim();
+                                            if (url) {
+                                                if (!url.startsWith('http')) url = `https://${url}`;
+                                                fetchMetadata(url);
+                                            }
+                                        }}
+                                        disabled={isFetchingMetadata || !formData.url}
+                                    >
+                                        Cek Link
+                                    </Button>
+                                </div>
+
+                            {isFetchingMetadata && (
+                                <div className="mt-2 flex items-center gap-2">
+                                    <div className="w-3 h-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Fetching page details...</p>
+                                </div>
                             )}
+                            {error && (
+                                <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mt-2 animate-shake">{error}</p>
+                            )}
+
                         </div>
                     </div>
                 );
@@ -559,7 +655,8 @@ export const BlockSettingsForm: React.FC<BlockSettingsFormProps> = ({ blockType,
                         <div>
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] block mb-3">Description</label>
                             <textarea
-                                className="w-full bg-slate-50 border border-slate-100 hover:border-slate-200 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 text-slate-800 rounded-2xl px-6 py-5 text-xs font-black uppercase tracking-tight outline-none transition-all resize-none min-h-[160px] shadow-inner"
+                                className="w-full bg-slate-50 border border-slate-100 hover:border-slate-200 focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 text-slate-800 rounded-2xl px-6 py-5 text-xs font-black tracking-tight outline-none transition-all resize-none min-h-[160px] shadow-inner"
+
                                 placeholder="Tell your story..."
                                 value={formData.content || ''}
                                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
@@ -573,11 +670,26 @@ export const BlockSettingsForm: React.FC<BlockSettingsFormProps> = ({ blockType,
                     <div className="space-y-6">
                         <div>
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] block mb-3">Headline</label>
-                            <Input placeholder="e.g. How to scale your freelance business" />
+                            <Input 
+                                placeholder="e.g. How to scale your freelance business" 
+                                value={formData.title || ''}
+                                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                            />
                         </div>
                         <div>
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] block mb-3">URL</label>
-                            <Input placeholder="https://medium.com/..." />
+                            <Input 
+                                placeholder="https://medium.com/..." 
+                                value={formData.url || ''}
+                                hasError={!!error}
+                                onChange={(e) => {
+                                    setFormData({ ...formData, url: e.target.value });
+                                    setError(null);
+                                }}
+                            />
+                            {error && (
+                                <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mt-2 animate-shake">{error}</p>
+                            )}
                         </div>
                     </div>
                 );

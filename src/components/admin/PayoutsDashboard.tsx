@@ -576,7 +576,7 @@ export const PayoutsDashboard = () => {
                     </div>
                 }
                 message={
-                    <>Anda akan <strong>menolak</strong> permintaan payout dari <strong>{selectedPayout?.profiles?.full_name}</strong>. Saldo sebesar <strong>Rp {Number(selectedPayout?.amount).toLocaleString('id-ID')}</strong> akan di-refund ke Virtual Balance kreator.</>
+                    <>Anda akan <strong>menolak</strong> permintaan payout dari <strong>{selectedPayout?.profiles?.full_name}</strong>. Saldo sebesar <strong>Rp {Number(selectedPayout?.amount).toLocaleString('id-ID')}</strong> akan di-refund ke Available Balance kreator.</>
                 }
             />
         </div>

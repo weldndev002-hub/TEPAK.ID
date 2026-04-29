@@ -69,6 +69,16 @@ export const SignupForm: React.FC<SignupFormProps> = ({ supabaseUrl, supabaseAno
         setIsLoading(true);
 
         try {
+            // Manual Check for Existing Email (User Enumeration for better UX)
+            const checkRes = await fetch(`/api/public/check-email?email=${encodeURIComponent(email)}`);
+            const checkData = await checkRes.json();
+            
+            if (checkData.exists) {
+                setEmailError('Email ini sudah terdaftar. Silakan login atau gunakan email lain.');
+                setIsLoading(false);
+                return;
+            }
+
             const { error, data } = await supabase.auth.signUp({
                 email: email,
                 password: password,

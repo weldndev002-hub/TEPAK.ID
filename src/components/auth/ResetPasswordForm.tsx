@@ -137,6 +137,16 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ supabaseUr
                 const { data: existingSession } = await supabase.auth.getSession();
                 if (existingSession?.session) {
                     console.log('[ResetPassword] Existing session found');
+                    
+                    // Check provider for already logged in users
+                    const user = existingSession.session.user;
+                    const provider = user.app_metadata.provider || user.identities?.[0]?.provider;
+                    if (provider === 'google' || provider === 'github') {
+                        setSessionError(`Anda masuk menggunakan ${provider}. Password dikelola oleh ${provider}.`);
+                        setSessionLoading(false);
+                        return;
+                    }
+
                     setSessionReady(true);
                     setSessionLoading(false);
                     return;

@@ -73,7 +73,67 @@ app.onError((err, c) => {
   }, 500);
 });
 
+// --- SECURITY & SANITIZATION HELPERS ---
+
+/**
+ * Helper to sanitize any string from HTML/Script tags.
+ * Strips all HTML tags and normalizes whitespace.
+ */
+const sanitizeString = (str: any): string => {
+  if (!str || typeof str !== 'string') return typeof str === 'string' ? '' : str;
+  
+  // 1. Remove all script tags and their content
+  let cleaned = str.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '');
+  
+  // 2. Strip ALL HTML tags for text-only fields (profile bio, block text, etc.)
+  cleaned = cleaned.replace(/<[^>]*>?/gm, '');
+  
+  // 3. Normalize whitespace
+  return cleaned.replace(/\s+/g, ' ').trim();
+};
+
+/**
+ * Helper function to sanitize a block object (backend side).
+ * Recursively cleans text content within blocks.
+ */
+const sanitizeTextBlockContent = (block: any): any => {
+  if (!block || typeof block !== 'object') return block;
+
+  // Deep copy to avoid mutating original
+  const sanitized = JSON.parse(JSON.stringify(block));
+
+  // Sanitize based on block type
+  if (sanitized.type === 'text' && sanitized.data) {
+    if (sanitized.data.title) sanitized.data.title = sanitizeString(sanitized.data.title);
+    if (sanitized.data.content) sanitized.data.content = sanitizeString(sanitized.data.content);
+  } else if (['link', 'article', 'video', 'image'].includes(sanitized.type)) {
+    // Top-level fields
+    if (sanitized.title) sanitized.title = sanitizeString(sanitized.title);
+    if (sanitized.subtitle) sanitized.subtitle = sanitizeString(sanitized.subtitle);
+    
+    // Data fields
+    if (sanitized.data) {
+      if (sanitized.data.title) sanitized.data.title = sanitizeString(sanitized.data.title);
+      if (sanitized.data.description) sanitized.data.description = sanitizeString(sanitized.data.description);
+      if (sanitized.data.content) sanitized.data.content = sanitizeString(sanitized.data.content);
+    }
+  }
+
+  return sanitized;
+};
+
+/**
+ * Zod refinement to detect script tags
+ */
+const noScriptRefinement = (val: string | undefined) => {
+  if (!val) return true;
+  return !/<script\b[^>]*>([\s\S]*?)<\/script>/i.test(val) && !/on\w+\s*=/i.test(val);
+};
+
+const XSS_ERROR_MESSAGE = "Teks mengandung skrip atau atribut berbahaya yang tidak diperbolehkan.";
+
 // --- DEBUG ROUTES ---
+
 app.get('/debug/env', async (c) => {
   let supabase_reachable = false;
   let fetch_error = null;
@@ -143,11 +203,12 @@ app.get('/settings/domain', async (c) => {
 
 // --- ONBOARDING ATOMIC ROUTE ---
 app.post('/onboarding/complete', zValidator('json', z.object({
-  domain_name: z.string().min(1),
-  full_name: z.string().optional(),
-  bio: z.string().optional(),
+  domain_name: z.string().min(1).regex(/^[a-z0-9-]+$/, 'Hanya boleh berisi huruf kecil, angka, dan tanda hubung'),
+  full_name: z.string().optional().refine(noScriptRefinement, XSS_ERROR_MESSAGE).transform(v => v ? sanitizeString(v) : v),
+  bio: z.string().optional().refine(noScriptRefinement, XSS_ERROR_MESSAGE).transform(v => v ? sanitizeString(v) : v),
   avatar_url: z.string().optional().nullable(),
   instagram_url: z.string().optional().nullable(),
+
   tiktok_url: z.string().optional().nullable(),
   youtube_url: z.string().optional().nullable(),
   theme: z.string().optional().default('atelier-dark')
@@ -184,11 +245,12 @@ app.post('/onboarding/complete', zValidator('json', z.object({
 
     // 2. Perform Profile Update
     step = 'profile-update';
-    console.log(`[Atomic Onboarding] [Step: ${step}] Updating profiles table...`);
+    console.log(`[Atomic Onboarding] [Step: ${step}] Updating profiles table with username=${body.domain_name}...`);
     const { data: profile, error: pErr } = await adminSupabase
       .from('profiles')
       .upsert({
         id: user.id,
+        username: body.domain_name, // Fix: Ensure username is set
         full_name: body.full_name,
         bio: body.bio,
         avatar_url: body.avatar_url,
@@ -539,11 +601,111 @@ app.use('*', async (c, next) => {
 });
 
 // --- PUBLIC UTILITY ROUTES ---
+app.get('/utils/fetch-metadata', async (c) => {
+  const url = c.req.query('url');
+  if (!url) return c.json({ error: 'URL is required' }, 400);
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9,id;q=0.8',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Referer': 'https://www.google.com/',
+      },
+    });
+
+    if (!response.ok) {
+        console.error(`[Fetch Metadata] HTTP Error: ${response.status} ${response.statusText} for ${url}`);
+        throw new Error(`Failed to fetch URL: ${response.statusText}`);
+    }
+
+
+    const html = await response.text();
+
+    // More robust metadata extraction
+
+    const getMeta = (name: string) => {
+      const metas = html.match(/<meta[^>]*>/gi) || [];
+      const target = name.toLowerCase();
+      const ogTarget = `og:${target}`;
+      const twitterTarget = `twitter:${target}`;
+
+      for (const meta of metas) {
+        const lowerMeta = meta.toLowerCase();
+        if (
+            lowerMeta.includes(`"${target}"`) || lowerMeta.includes(`'${target}'`) ||
+            lowerMeta.includes(`"${ogTarget}"`) || lowerMeta.includes(`'${ogTarget}'`) ||
+            lowerMeta.includes(`"${twitterTarget}"`) || lowerMeta.includes(`'${twitterTarget}'`)
+        ) {
+
+          const contentMatch = meta.match(/content=["']([^"']*)["']/i);
+          if (contentMatch) return contentMatch[1];
+        }
+      }
+      return null;
+    };
+
+
+
+    const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    const title = (getMeta('title') || titleMatch?.[1] || '').trim();
+
+
+    const description = (getMeta('description') || '').trim();
+    let image = (getMeta('image') || '').trim();
+
+    // Fallback for Shopee images if og:image is missing
+    if (!image && html.includes('shopee.co.id')) {
+        const shopeeImgRegex = /https:\/\/(?:down-id\.img\.susercontent\.com|cf\.shopee\.co\.id)\/file\/([a-z0-9_]+)/i;
+        const match = html.match(shopeeImgRegex);
+        if (match) image = match[0];
+    }
+
+
+    // Resolve relative image URLs
+    if (image && !image.startsWith('http')) {
+      try {
+        const baseUrl = new URL(url);
+        image = new URL(image, baseUrl.origin).toString();
+      } catch (e) {}
+    }
+
+    return c.json({ 
+      title, 
+      description, 
+      image 
+    });
+
+  } catch (err: any) {
+    console.error('[Fetch Metadata Error]', err);
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+// Check if email exists
+app.get('/public/check-email', async (c) => {
+  const email = c.req.query('email')?.toLowerCase();
+  if (!email) return c.json({ exists: false, error: 'Email wajib diisi' }, 400);
+
+  try {
+    const adminSupabase = await getAdminClient(cfEnv);
+    const { data, error } = await adminSupabase.auth.admin.listUsers();
+    if (error) throw error;
+    const userExists = data.users.some(u => u.email?.toLowerCase() === email);
+    return c.json({ exists: userExists });
+  } catch (err: any) {
+    console.error('[Check Email API Error]', err);
+    return c.json({ exists: false, error: err.message || 'Server Error' });
+  }
+});
+
 app.get('/public/check-domain', async (c) => {
   const domain = c.req.query('name')?.toLowerCase();
   if (!domain) return c.json({ available: false, error: 'Nama domain wajib diisi' }, 400);
 
-  // Regex validation
   const domainRegex = /^[a-zA-Z0-9-]+$/;
   if (!domainRegex.test(domain)) {
     return c.json({ available: false, error: 'Error format' }, 400);
@@ -551,7 +713,6 @@ app.get('/public/check-domain', async (c) => {
 
   try {
     const adminSupabase = await getAdminClient(cfEnv);
-
     const { data, error } = await adminSupabase
       .from('user_settings')
       .select('user_id')
@@ -560,7 +721,6 @@ app.get('/public/check-domain', async (c) => {
 
     if (error) throw error;
 
-    // Reserved domains
     const reserved = ['admin', 'tepak', 'orbit', 'studio', 'api', 'auth', 'login', 'register', 'dashboard'];
     if (reserved.includes(domain)) {
       return c.json({ available: false, error: 'Subdomain telah digunakan' });
@@ -1253,8 +1413,20 @@ app.delete('/profile', async (c) => {
     const adminClient = getSupabaseAdmin(cfEnv);
 
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id);
-
     if (deleteError) throw deleteError;
+    
+    // Clear cookies explicitly to avoid redirect loops or "ghost" sessions
+    const cookiesToClear = ['sb-access-token', 'sb-refresh-token', 'auth-token', 'sb_access_token'];
+    cookiesToClear.forEach(name => {
+      setCookie(c, name, '', {
+        path: '/',
+        maxAge: 0,
+        expires: new Date(0),
+        httpOnly: true,
+        secure: true,
+        sameSite: 'Lax'
+      });
+    });
 
     return c.json({ success: true });
   } catch (err: any) {
@@ -1476,8 +1648,23 @@ app.put('/profile', async (c) => {
     ];
     const updatePayload: Record<string, any> = {};
     for (const field of allowedFields) {
-      if (field in body) updatePayload[field] = body[field];
+      if (field in body) {
+        let value = body[field];
+        
+        // Sanitize string fields
+        if (typeof value === 'string' && ['full_name', 'bio', 'username', 'address_text', 'city'].includes(field)) {
+          value = sanitizeString(value);
+        }
+        
+        // Sanitize blocks array
+        if (field === 'blocks' && Array.isArray(value)) {
+          value = value.map(sanitizeTextBlockContent);
+        }
+        
+        updatePayload[field] = value;
+      }
     }
+
 
     if (Object.keys(updatePayload).length === 0) {
       return c.json({ error: 'No valid fields to update' }, 400);
@@ -2178,26 +2365,44 @@ app.post('/subscription/cancel', async (c) => {
 
 // 1.4 Get Latest Invoice
 app.get('/subscription/invoice', async (c) => {
-  const { supabase, user } = await getAuthContext(c);
+  const { user } = await getAuthContext(c);
   if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
   try {
-    // Ambil transaksi terakhir yang berhasil untuk langganan
-    const { data: invoice, error } = await supabase
-      .from('orders')
-      .select('*, subscription_plans(name, price)')
+    const { getSupabaseAdmin } = await import('../../lib/supabase');
+    const adminClient = getSupabaseAdmin(cfEnv);
+
+    // 1. Ambil riwayat terakhir yang sukses
+    const { data: history, error: hError } = await adminClient
+      .from('subscription_history')
+      .select('*')
       .eq('user_id', user.id)
-      .in('status', ['success', 'paid'])
+      .in('status', ['SUCCESS', 'success', 'Paid', 'PAID', 'paid'])
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
 
-    if (error || !invoice) {
-      return c.json({ error: 'Invoice tidak ditemukan.' }, 404);
+    if (hError || !history) {
+      console.warn('[Subscription Invoice] History not found:', hError?.message);
+      return c.json({ error: 'Invoice langganan tidak ditemukan.' }, 404);
     }
+
+    // 2. Ambil detail plan secara manual (karena join mungkin gagal jika relasi FK tidak diset)
+    const { data: planData } = await adminClient
+      .from('subscription_plans')
+      .select('name, price_monthly, price_yearly')
+      .eq('id', history.plan_id)
+      .single();
+
+    // Gabungkan data
+    const invoice = {
+      ...history,
+      subscription_plans: planData || { name: history.plan_id, price_monthly: history.amount }
+    };
 
     return c.json(invoice);
   } catch (err: any) {
+    console.error('[Subscription Invoice] Exception:', err.message);
     return c.json({ error: err.message }, 500);
   }
 });
@@ -2544,148 +2749,70 @@ app.post('/payments/duitku/webhook', async (c) => {
     const resultCode = (body.resultCode || body.statusCode || '') as string;
 
     console.log('[Webhook DuitKu] Processing Order:', merchantOrderId, 'Result:', resultCode);
-    console.log('[Webhook DuitKu] Full Body:', JSON.stringify(body, null, 2));
 
     // 1. KASUS LANGGANAN (SUB--)
     if (merchantOrderId.startsWith('SUB--')) {
       const parts = merchantOrderId.split('--');
       const targetUserId = parts[1];
 
-      console.log('[Webhook DuitKu] Subscription order detected');
-      console.log('[Webhook DuitKu] Target User ID:', targetUserId);
-      console.log('[Webhook DuitKu] Result Code:', resultCode);
-
-      // Ambil plan_id dan billing_period dari subscription_history (bukan dari orderId)
-      // karena orderId dibatasi 50 karakter oleh Duitku
+      // Ambil plan_id dan billing_period dari subscription_history
       const { data: histRecord } = await supabase
         .from('subscription_history')
         .select('plan_id, billing_period')
         .eq('invoice_id', merchantOrderId)
         .single();
 
-      // Validate that we have the plan info from history - don't fallback to 'pro' as it causes wrong plan assignment
       if (!histRecord?.plan_id) {
-        console.error(`[Webhook DuitKu] ❌ CRITICAL: No plan_id found in subscription_history for order ${merchantOrderId}`);
-        console.error(`[Webhook DuitKu] histRecord:`, histRecord);
-        return c.json({
-          error: 'Plan information not found in subscription history',
-          message: 'The subscription history record is missing plan_id. Please contact support.'
-        }, 500);
+        console.error(`[Webhook DuitKu] ❌ No plan_id found for ${merchantOrderId}`);
+        return c.json({ error: 'Plan information not found' }, 500);
       }
 
       const planIdFromHistory = histRecord.plan_id;
       const billingPeriodFromHistory = histRecord?.billing_period || 'monthly';
 
-      console.log('[Webhook DuitKu] Plan ID (from history):', planIdFromHistory);
-      console.log('[Webhook DuitKu] Billing Period (from history):', billingPeriodFromHistory);
-
       if (resultCode === '00' && targetUserId) {
-        console.log(`[Webhook DuitKu] ✅ UPGRADING USER ${targetUserId} TO ${planIdFromHistory.toUpperCase()}...`);
-
-        // Fetch plan info untuk nama paket yang akurat
-        const { data: planInfo } = await supabase
-          .from('subscription_plans')
-          .select('id, name')
-          .eq('id', planIdFromHistory)
-          .single();
-
-        // Tentukan durasi berdasarkan billing period
+        // SUCCESS PATH
         const expiryDate = new Date();
         if (billingPeriodFromHistory === 'yearly') {
           expiryDate.setFullYear(expiryDate.getFullYear() + 1);
         } else {
           expiryDate.setDate(expiryDate.getDate() + 30);
         }
-        const expireIso = expiryDate.toISOString();
 
-        // 2. Update Subscription History
-        const { error: histError } = await supabase
+        // Update History to SUCCESS
+        await supabase
           .from('subscription_history')
-          .update({
-            status: 'SUCCESS',
-            updated_at: new Date().toISOString()
-          })
+          .update({ status: 'SUCCESS', updated_at: new Date().toISOString() })
           .eq('invoice_id', merchantOrderId);
 
-        if (histError) {
-          console.error('[Webhook DuitKu] ❌ Failed to update history SUCCESS:', histError);
-          return c.json({ error: 'Gagal update subscription_history', details: histError }, 500);
-        }
-        console.log('[Webhook DuitKu] ✅ History updated to SUCCESS');
-
-        // 3. Update User Settings — gunakan plan_id yang sebenarnya dari history
-        const updateData: any = {
-          plan_status: planIdFromHistory,
-          plan_expiry: expireIso,
-          auto_renewal: true,
-          billing_period: billingPeriodFromHistory,
-          updated_at: new Date().toISOString()
-        };
-
-        console.log('[Webhook DuitKu] Updating user_settings with:', updateData);
-
-        const { error: subError, data: subData } = await supabase
+        // Update User Settings (Apply Plan)
+        await supabase
           .from('user_settings')
-          .update(updateData)
-          .eq('user_id', targetUserId)
-          .select();
+          .update({
+            plan_status: planIdFromHistory,
+            plan_expiry: expiryDate.toISOString(),
+            billing_period: billingPeriodFromHistory,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', targetUserId);
 
-        if (subError) {
-          console.error('[Webhook DuitKu] ❌ Database Update Error (Sub):', subError);
-          console.error('[Webhook DuitKu] Error Code:', subError.code);
-          console.error('[Webhook DuitKu] Error Message:', subError.message);
-          return c.json({
-            error: 'Gagal update database langganan',
-            code: subError.code,
-            message: subError.message,
-            details: subError
-          }, 500);
-        }
-
-        console.log(`[Webhook DuitKu] ✅ BERHASIL! User ${targetUserId} sekarang ${planIdFromHistory.toUpperCase()}.`);
-        console.log('[Webhook DuitKu] Updated data:', subData);
-
-        return c.json({
-          success: true,
-          message: `Subscription upgraded to ${planInfo?.name || planIdFromHistory} successfully`,
-          user_id: targetUserId,
-          plan_id: planIdFromHistory,
-          plan_expiry: expireIso
-        });
-      } else if (targetUserId && resultCode !== '00') {
-        // Failed/Cancelled status tracking for SUB--
-        console.log(`[Webhook DuitKu] ⚠️  Subscription payment not successful. Code: ${resultCode}`);
-
+        console.log(`[Webhook DuitKu] ✅ User ${targetUserId} upgraded to ${planIdFromHistory}`);
+      } else {
+        // FAILED/CANCELED PATH
         const statusMap: Record<string, string> = {
           '01': 'PENDING',
           '02': 'CANCELED',
-          '03': 'EXPIRED',
         };
-        const subsStatus = statusMap[resultCode] || 'FAILED';
-
-        const { error: updateError } = await supabase
+        const subsStatus = statusMap[resultCode] || 'CANCELED';
+        
+        await supabase
           .from('subscription_history')
-          .update({
-            status: subsStatus,
-            updated_at: new Date().toISOString()
-          })
+          .update({ status: subsStatus, updated_at: new Date().toISOString() })
           .eq('invoice_id', merchantOrderId);
-
-        if (updateError) {
-          console.error('[Webhook DuitKu] Failed to update history to', subsStatus, ':', updateError);
-        }
-
-        return c.json({
-          success: false,
-          status: subsStatus,
-          message: `Payment ${subsStatus.toLowerCase()}`
-        });
-      } else {
-        console.warn('[Webhook DuitKu] ⚠️  Invalid subscription order data');
-        console.warn('  - resultCode:', resultCode);
-        console.warn('  - targetUserId:', targetUserId);
-        return c.json({ error: 'Invalid subscription order data' }, 400);
+          
+        console.log(`[Webhook DuitKu] ❌ Payment failed for ${merchantOrderId} with status ${subsStatus}`);
       }
+      return c.json({ success: true });
     }
 
     // 2. KASUS PESANAN PRODUK (Invoice Biasa)
@@ -2977,69 +3104,6 @@ app.get('/profile/me', async (c) => {
   return c.json(profile);
 });
 
-// Helper function to sanitize text block content (backend side)
-const sanitizeTextBlockContent = (content: any): any => {
-  if (!content) return content;
-
-  // Deep copy to avoid mutating original
-  const sanitized = JSON.parse(JSON.stringify(content));
-
-  // If it's a text block, sanitize title and content
-  if (sanitized.type === 'text' && sanitized.data) {
-    const sanitizeString = (str: string): string => {
-      if (!str || typeof str !== 'string') return str || '';
-
-      let sanitizedStr = str;
-
-      // 1. Remove all script tags and their content
-      sanitizedStr = sanitizedStr.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '');
-
-      // 2. Remove HTML comments and CDATA sections
-      sanitizedStr = sanitizedStr.replace(/<!--[\s\S]*?-->/g, '');
-      sanitizedStr = sanitizedStr.replace(/<!\[CDATA\[[\s\S]*?\]\]>/g, '');
-
-      // 3. Remove dangerous tags
-      sanitizedStr = sanitizedStr.replace(/<\/?(iframe|embed|object|svg|style|link|meta|base)[^>]*>/gim, '');
-
-      // 4. Remove event handlers
-      sanitizedStr = sanitizedStr.replace(/on\w+\s*=\s*["'][^"']*["']/gim, '');
-      sanitizedStr = sanitizedStr.replace(/on\w+\s*=\s*[^\s>]+/gim, '');
-
-      // 5. Remove javascript: and data: URLs
-      sanitizedStr = sanitizedStr.replace(/\s+(href|src|background|style)\s*=\s*["'](javascript:|data:)[^"']*["']/gim, '');
-      sanitizedStr = sanitizedStr.replace(/javascript\s*:/gim, '');
-
-      // 6. Remove CSS expressions
-      sanitizedStr = sanitizedStr.replace(/expression\s*\([^)]*\)/gim, '');
-
-      // 7. Escape HTML entities
-      const escapeHtml = (text: string) => {
-        const htmlEntities: Record<string, string> = {
-          '&': '&',
-          '<': '<',
-          '>': '>',
-          '"': '"',
-          "'": "&#x27;",
-          '/': '&#x2F;'
-        };
-        return text.replace(/[&<>"'/]/g, char => htmlEntities[char]);
-      };
-
-      sanitizedStr = escapeHtml(sanitizedStr);
-
-      // 8. Clean up whitespace
-      sanitizedStr = sanitizedStr.replace(/\s+/g, ' ').trim();
-
-      return sanitizedStr;
-    };
-
-    // Sanitize title and content
-    sanitized.data.title = sanitizeString(sanitized.data.title);
-    sanitized.data.content = sanitizeString(sanitized.data.content);
-  }
-
-  return sanitized;
-};
 
 // 2. Update My Profile & Settings
 app.put(
@@ -3047,20 +3111,20 @@ app.put(
   zValidator(
     'json',
     z.object({
-      full_name: z.string().optional(),
-      username: z.string().optional(),
-      bio: z.string().optional(),
+      full_name: z.string().optional().refine(noScriptRefinement, XSS_ERROR_MESSAGE).transform(v => v ? sanitizeString(v) : v),
+      username: z.string().optional().refine(noScriptRefinement, XSS_ERROR_MESSAGE).transform(v => v ? sanitizeString(v) : v),
+      bio: z.string().optional().refine(noScriptRefinement, XSS_ERROR_MESSAGE).transform(v => v ? sanitizeString(v) : v),
       avatar_url: z.string().optional(),
-      domain_name: z.string().optional(),
-      seo_title: z.string().optional(),
-      seo_description: z.string().optional(),
+      domain_name: z.string().regex(/^[a-z0-9-]+$/, 'Hanya boleh berisi huruf kecil, angka, dan tanda hubung').optional(),
+      seo_title: z.string().optional().refine(noScriptRefinement, XSS_ERROR_MESSAGE).transform(v => v ? sanitizeString(v) : v),
+      seo_description: z.string().optional().refine(noScriptRefinement, XSS_ERROR_MESSAGE).transform(v => v ? sanitizeString(v) : v),
       instagram_url: z.string().optional(),
       tiktok_url: z.string().optional(),
       twitter_url: z.string().optional(),
       youtube_url: z.string().optional(),
       phone: z.string().optional(),
-      address_text: z.string().optional(),
-      city: z.string().optional(),
+      address_text: z.string().optional().refine(noScriptRefinement, XSS_ERROR_MESSAGE).transform(v => v ? sanitizeString(v) : v),
+      city: z.string().optional().refine(noScriptRefinement, XSS_ERROR_MESSAGE).transform(v => v ? sanitizeString(v) : v),
       postcode: z.string().optional(),
       blocks: z.array(
         z.object({
@@ -3071,9 +3135,10 @@ app.put(
           subtitle: z.string().optional(),
           data: z.any().optional()
         })
-      ).optional(),
+      ).optional().transform(blocks => blocks ? blocks.map(sanitizeTextBlockContent) : blocks),
       theme: z.string().optional(),
     })
+
   ),
   async (c) => {
     const { supabase, user } = await getAuthContext(c);
@@ -4141,7 +4206,7 @@ app.post('/admin/payouts/update-status', async (c) => {
       await adminSupabase.from('notifications').insert({
         user_id: creatorId,
         title: 'Withdrawal Rejected',
-        message: `Permintaan pencairan dana sebesar Rp ${amount.toLocaleString('id-ID')} ditolak. Alasan: ${notes}. Saldo telah dikembalikan ke Virtual Balance Anda.`,
+        message: `Permintaan pencairan dana sebesar Rp ${amount.toLocaleString('id-ID')} ditolak. Alasan: ${notes}. Saldo telah dikembalikan ke Available Balance Anda.`,
         type: 'error'
       });
     }

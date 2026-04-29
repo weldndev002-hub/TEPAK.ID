@@ -5,6 +5,8 @@ import { IdleTimeoutGuard } from "../components/auth/IdleTimeoutGuard";
 import { AnalyticsTracker } from "../components/AnalyticsTracker";
 import { AnalyticsDebugPanel } from "../components/AnalyticsDebugPanel";
 import { createClient } from "@supabase/supabase-js";
+import { Toaster } from "sonner";
+
 
 // Fetch Branding Settings from locals (more resilient)
 const supabase = Astro.locals.supabase;
@@ -26,14 +28,22 @@ if (supabase) {
 interface Props {
 	title: string;
 	description?: string;
+	image?: string;
+	url?: string;
+	type?: string;
 }
+
 
 const {
 	title,
 	description = branding?.seo_description ||
 		branding?.site_tagline ||
 		"Platform Jualan Produk Digital Tercepat & Termudah.",
+	image = branding?.logo_url || "/og-image.png",
+	url = Astro.url.href,
+	type = "website",
 } = Astro.props;
+
 
 const siteName = branding?.site_name || "Tepak.ID";
 const fullTitle = title === siteName ? title : `${title} | ${siteName}`;
@@ -52,6 +62,22 @@ const isAdmin = Astro.locals.isAdmin || false;
 		<link rel="icon" href={faviconUrl} />
 		<meta name="generator" content={Astro.generator} />
 		<title>{fullTitle}</title>
+		<meta name="title" content={fullTitle} />
+
+		<!-- Open Graph / Facebook -->
+		<meta property="og:type" content={type} />
+		<meta property="og:url" content={url} />
+		<meta property="og:title" content={fullTitle} />
+		<meta property="og:description" content={description} />
+		<meta property="og:image" content={image} />
+
+		<!-- Twitter -->
+		<meta property="twitter:card" content="summary_large_image" />
+		<meta property="twitter:url" content={url} />
+		<meta property="twitter:title" content={fullTitle} />
+		<meta property="twitter:description" content={description} />
+		<meta property="twitter:image" content={image} />
+
 
 		<!-- Google Fonts & Material Symbols -->
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -110,7 +136,14 @@ const isAdmin = Astro.locals.isAdmin || false;
 		class="min-h-screen font-sans antialiased"
 		data-is-admin={isAdmin ? "true" : "false"}
 	>
+		<Toaster position="top-right" richColors client:only="react" />
+		<script>
+			import { toast } from 'sonner';
+			// @ts-ignore
+			window.toast = toast;
+		</script>
 		<ImpersonationBanner client:only="react" />
+
 		<AnalyticsDebugPanel client:only="react" />
 		<IdleTimeoutGuard client:only="react" />
 		<slot />

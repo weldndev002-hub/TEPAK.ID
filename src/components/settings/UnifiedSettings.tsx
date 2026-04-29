@@ -26,6 +26,7 @@ import {
     TrashIcon as TrashIconSolid
 } from '@heroicons/react/24/solid';
 import { useSubscription, SubscriptionProvider } from '../../context/SubscriptionContext';
+import { supabase } from '../../lib/supabase';
 
 export const UnifiedSettings = ({ defaultTab = 'account' }: { defaultTab?: 'account' | 'bank' }) => {
     return (
@@ -46,6 +47,23 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
     const [terminateError, setTerminateError] = useState<string | null>(null);
     const { hasFeature } = useSubscription();
     const showCommerce = hasFeature('Digital Product Sales');
+    
+    const [userProvider, setUserProvider] = useState<string | null>(null);
+    const [authLoading, setAuthLoading] = useState(true);
+
+    // Fetch Auth Info
+    React.useEffect(() => {
+        const checkAuth = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                // Determine provider
+                const provider = user.app_metadata.provider || user.identities?.[0]?.provider || 'email';
+                setUserProvider(provider);
+            }
+            setAuthLoading(false);
+        };
+        checkAuth();
+    }, []);
 
     // --- Bank State ---
     const [bankData, setBankData] = useState<{
@@ -183,8 +201,8 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                 throw new Error(data.error || 'Gagal menghapus akun');
             }
 
-            // Success! Redirect to login
-            window.location.href = '/login?deleted=true'; 
+            // Success! Redirect to signup page
+            window.location.href = '/signup?deleted=true'; 
         } catch (err: any) {
             setTerminateError(err.message);
             setIsTerminating(false);
@@ -242,7 +260,9 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                                 </div>
                                 <div>
                                     <h3 className="text-xl font-black text-slate-900 leading-tight uppercase tracking-tight">Permanent Termination</h3>
-                                    <p className="text-[10px] text-rose-600 font-black uppercase tracking-widest mt-1">Danger Zone</p>
+                                    <p className="text-[10px] text-rose-600 font-black uppercase tracking-widest mt-1">
+                                        {plan === 'pro' ? 'Account Locked (Pro)' : 'Danger Zone'}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -277,10 +297,14 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                                 <button 
                                     className={cn(
                                         "w-full h-14 bg-rose-600 text-white font-black uppercase text-[10px] tracking-[0.2em] rounded-xl shadow-lg shadow-rose-600/10 hover:opacity-90 transition-all flex items-center justify-center gap-2",
-                                        isTerminating && "opacity-50 cursor-not-allowed"
+                                        (isTerminating || plan === 'pro') && "opacity-50 cursor-not-allowed"
                                     )}
-                                    disabled={isTerminating}
+                                    disabled={isTerminating || plan === 'pro'}
                                     onClick={() => {
+                                        if (plan === 'pro') {
+                                            setTerminateError('Subscription Pro harus dibatalkan terlebih dahulu.');
+                                            return;
+                                        }
                                         if (!password) {
                                             setTerminateError('Masukkan password Anda untuk melanjutkan.');
                                             return;
@@ -288,7 +312,7 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                                         setShowTerminateConfirm(true);
                                     }}
                                 >
-                                    {isTerminating ? 'Processing...' : 'Terminate Account'}
+                                    {plan === 'pro' ? 'Locked (Cancel Pro First)' : (isTerminating ? 'Processing...' : 'Terminate Account')}
                                 </button>
                                 {terminateError && (
                                     <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest text-center animate-shake">
@@ -302,26 +326,49 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                     <Card className="flex flex-col border-none rounded-[3rem] shadow-sm overflow-hidden bg-white">
                         <div className="bg-slate-50 p-10 border-b border-slate-100 font-black">
                             <div className="flex items-center gap-6">
-                                <div className="w-16 h-16 bg-white rounded-[1.5rem] flex items-center justify-center text-slate-300 border border-slate-100">
+                                <div className="w-16 h-16 bg-white rounded-[1.5rem] flex items-center justify-center text-slate-300 border border-slate-100 shadow-sm">
                                     <LockClosedIcon className="w-8 h-8" />
                                 </div>
                                 <div>
-                                    <h3 className="text-xl font-black text-slate-900 leading-tight uppercase tracking-tight">Security Lock</h3>
-                                    <p className="text-[10px] text-primary font-black uppercase tracking-widest mt-1">Status: Restricted</p>
+                                    <h3 className="text-xl font-black text-slate-900 leading-tight uppercase tracking-tight">Security Access</h3>
+                                    <p className="text-[10px] text-primary font-black uppercase tracking-widest mt-1">Provider: {userProvider?.toUpperCase() || '...'}</p>
                                 </div>
                             </div>
                         </div>
                         <div className="p-10 flex flex-col items-center justify-center flex-1 text-center space-y-6">
-                            <ShieldCheckIconSolid className="w-20 h-20 text-slate-100" />
-                            <div className="space-y-2">
-                                <h4 className="text-lg font-black text-slate-900 uppercase">Pro Protection Active</h4>
-                                <p className="text-[10px] text-slate-400 font-black uppercase leading-relaxed max-w-[240px]">
-                                    Subscription must be terminated via the Billing Hub before account deletion can proceed.
-                                </p>
-                            </div>
-                            <Button variant="ghost" className="w-full h-14 border border-slate-100 rounded-xl text-slate-400 font-black uppercase text-[10px] tracking-widest cursor-not-allowed" disabled>
-                                Disconnect Billing
-                            </Button>
+                            {userProvider === 'google' || userProvider === 'github' ? (
+                                <>
+                                    <div className="w-20 h-20 bg-blue-50 rounded-[2rem] flex items-center justify-center text-blue-500 shadow-inner">
+                                        <ShieldCheckIconSolid className="w-10 h-10" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h4 className="text-lg font-black text-slate-900 uppercase tracking-tighter">Social Login Active</h4>
+                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-relaxed max-w-[240px]">
+                                            You are authenticated via <b>{userProvider}</b>. Password management is handled by your provider.
+                                        </p>
+                                    </div>
+                                    <Button variant="outline" className="w-full h-14 rounded-xl text-slate-400 font-black uppercase text-[10px] tracking-widest cursor-not-allowed" disabled>
+                                        Manage on {userProvider}
+                                    </Button>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="w-20 h-20 bg-slate-50 rounded-[2rem] flex items-center justify-center text-slate-300 shadow-inner">
+                                        <KeyIcon className="w-10 h-10" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h4 className="text-lg font-black text-slate-900 uppercase tracking-tighter">Identity Security</h4>
+                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-relaxed max-w-[240px]">
+                                            Update your password regularly to ensure the highest level of account protection.
+                                        </p>
+                                    </div>
+                                    <a href="/reset-password" class="w-full">
+                                        <Button className="w-full h-14 bg-slate-900 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-slate-200">
+                                            Change Password
+                                        </Button>
+                                    </a>
+                                </>
+                            )}
                         </div>
                     </Card>
                 </div>

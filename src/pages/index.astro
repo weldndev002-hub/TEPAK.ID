@@ -1,6 +1,7 @@
 ---
 import { PricingFlow } from "../components/billing/PricingFlow";
 import BaseLayout from "../layouts/BaseLayout.astro";
+
 import Button from "../components/ui/Button";
 import ProductCard from "../components/ui/ProductCard";
 import {
@@ -133,11 +134,14 @@ const profile = merchantData ? {
 
 const seo = merchantData ? {
     title: `${profile?.name} | ${siteName}`,
-    description: profile?.bio || ""
+    description: profile?.bio || "",
+    image: profile?.avatar
 } : {
     title: `${siteName} - ${siteTagline}`,
-    description: branding?.site_tagline || "Satu Link. Semua Kebutuhan Digitalmu."
+    description: branding?.site_tagline || "Satu Link. Semua Kebutuhan Digitalmu.",
+    image: logoUrl
 };
+
 
 // Brand Icons Mapping
 const BrandIcons: Record<string, string> = {
@@ -213,7 +217,7 @@ const isMainSiteAlias = hostname.split(".")[0] === "tepak" || hostname.split("."
 const showLandingPage = isMainDomain && (isMainSiteAlias || !detectedUser);
 ---
 
-<BaseLayout title={seo.title} description={seo.description}>
+<BaseLayout title={seo.title} description={seo.description} image={seo.image}>
     <div
         class="min-h-screen bg-surface font-['Funnel_Display',sans-serif] selection:bg-primary-container selection:text-on-primary-container"
     >

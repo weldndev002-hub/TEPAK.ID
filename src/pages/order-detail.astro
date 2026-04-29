@@ -17,3 +17,32 @@ import { OrderDetailDashboard } from '../components/orders/OrderDetailDashboard'
         </div>
     </div>
 </BaseLayout>
+<style is:global>
+    @media print {
+        .no-print, 
+        aside, 
+        nav, 
+        [class*="Sidebar"],
+        header button,
+        .fixed {
+            display: none !important;
+        }
+        
+        .flex, .flex-1, .h-screen {
+            display: block !important;
+            height: auto !important;
+            overflow: visible !important;
+        }
+        
+        main {
+            overflow: visible !important;
+            padding: 0 !important;
+        }
+        
+        body, html {
+            background-color: white !important;
+            height: auto !important;
+            overflow: visible !important;
+        }
+    }
+</style>

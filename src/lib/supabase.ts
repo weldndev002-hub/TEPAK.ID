@@ -155,6 +155,7 @@ export const getServerClient = (cookies: any, request: Request, runtimeEnv?: any
       },
     },
   });
+  return browserClient;
 };
 
 export const getSupabaseAdmin = (runtimeEnv?: any) => {

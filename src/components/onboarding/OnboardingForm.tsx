@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -403,11 +405,12 @@ export const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialBranding 
                                                             setAvatarUrl(data.url);
                                                         } else {
                                                             const err = await res.json().catch(() => ({}));
-                                                            alert('Gagal upload foto: ' + (err?.error || 'Unknown error'));
+                                                            toast.error('Gagal upload foto: ' + (err?.error || 'Unknown error'));
                                                         }
                                                     } catch (e: any) {
-                                                        alert('Error: ' + e.message);
+                                                        toast.error('Error: ' + e.message);
                                                     }
+
                                                 }}
                                             />
 

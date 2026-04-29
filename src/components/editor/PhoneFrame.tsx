@@ -12,6 +12,7 @@ interface PhoneFrameProps {
   profileName?: string;
   profileBio?: string;
   profileImage?: string;
+  socials?: { icon: string; url: string | null }[];
 }
 
 export const PhoneFrame: React.FC<PhoneFrameProps> = ({ 
@@ -20,7 +21,8 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({
     theme = 'minimal',
     profileName,
     profileBio,
-    profileImage
+    profileImage,
+    socials = []
 }) => {
   const isDark = theme === 'atelier-dark' || theme === 'bold';
   const isSunrise = theme === 'sunrise-glow';
@@ -60,16 +62,28 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({
                     className="w-full h-full object-cover group-hover/avatar:scale-110 transition-transform duration-700" 
                 />
             </div>
-            <h4 className="font-black text-2xl tracking-tighter uppercase line-clamp-1">{profileName || 'Your Name'}</h4>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 mt-2 italic leading-relaxed">
+            <h4 className="font-black text-2xl tracking-tighter line-clamp-1">{profileName || 'Your Name'}</h4>
+            <p className="text-[10px] font-black tracking-[0.1em] opacity-40 mt-2 leading-relaxed">
                 {profileBio || 'Capture moments, share stories.'}
             </p>
+
             
-            <div className="flex gap-6 mt-8">
-                {[1, 2].map((i) => (
-                    <div key={i} className="w-12 h-12 rounded-full border border-current opacity-20 hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-slate-50 cursor-pointer">
-                        <ShareIcon className="w-5 h-5" />
-                    </div>
+            <div className="flex flex-wrap justify-center gap-4 mt-8">
+                {socials.map((social, i) => (
+                    <a 
+                      key={i} 
+                      href={social.url || '#'} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className={cn(
+                        "w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-500 shadow-sm border",
+                        isDark ? "bg-slate-800 text-slate-400 border-slate-700 hover:bg-primary hover:text-white" :
+                        isSunrise ? "bg-white/50 text-rose-400 border-white hover:bg-rose-500 hover:text-white" :
+                        "bg-slate-50 text-slate-400 border-slate-100 hover:bg-primary hover:text-white"
+                      )}
+                    >
+                        <div dangerouslySetInnerHTML={{ __html: social.icon }} className="w-5 h-5" />
+                    </a>
                 ))}
             </div>
             
