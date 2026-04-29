@@ -2761,8 +2761,8 @@ app.post('/payments/duitku/webhook', async (c) => {
           }
 
           // Check if product is digital/course and has a file URL
-          // Accept both 'digital' and 'course' types as digital products
-          const isDigitalProduct = productType === 'digital' || productType === 'course';
+          // Accept all digital product types
+          const isDigitalProduct = ['digital', 'course', 'ebook', 'assets', 'software', 'video', 'templates'].includes(productType || '');
 
           if (isDigitalProduct && fileUrl && customerEmail) {
             console.log(`[Webhook DuitKu] ✅ Triggering digital delivery for ${productType} product order ${orderData.id}`);
