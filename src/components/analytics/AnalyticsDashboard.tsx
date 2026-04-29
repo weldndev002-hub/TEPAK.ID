@@ -22,14 +22,7 @@ export const AnalyticsDashboard = () => {
 };
 
 const AnalyticsDashboardContent = () => {
-    const { hasFeature, isLoading: subLoading } = useSubscription();
-
-    useEffect(() => {
-        // Block access if feature is disabled in Admin
-        if (!subLoading && !hasFeature('Analytics')) {
-            window.location.replace('/dashboard');
-        }
-    }, [hasFeature, subLoading]);
+    const { plan, hasFeature, isLoading: subLoading } = useSubscription();
 
     const [range, setRange] = useState('7d');
     const [isLoading, setIsLoading] = useState(false);
@@ -143,9 +136,37 @@ const AnalyticsDashboardContent = () => {
         );
     }
 
-    if (!hasFeature('Analytics')) {
-        return null; // Will redirect via useEffect
+    const isFree = plan === 'free';
+
+    // If not authorized (feature off in Admin), show the access denied screen
+    if (!subLoading && !hasFeature('Analytics')) {
+        return (
+            <div className="min-h-[400px] flex flex-col items-center justify-center bg-white rounded-[3rem] border-2 border-dashed border-slate-200 p-8 text-center">
+                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
+                    <span className="material-symbols-outlined text-3xl">lock</span>
+                </div>
+                <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Fitur Analitik Belum Aktif</h3>
+                <p className="text-sm text-slate-500 max-w-xs mb-6">Fitur ini belum diaktifkan untuk paket Anda. Hubungi Admin atau upgrade paket Anda.</p>
+                <Button onClick={() => window.location.href = '/plan-info'} variant="primary" className="px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest">Lihat Paket</Button>
+            </div>
+        );
     }
+
+    // Helper component for Pro-only content
+    const ProLock = () => (
+        <div className="absolute inset-0 z-10 backdrop-blur-[6px] bg-white/40 flex flex-col items-center justify-center p-4 text-center rounded-[inherit] border border-white/50 shadow-inner">
+            <div className="w-8 h-8 bg-slate-900 text-white rounded-full flex items-center justify-center mb-2 shadow-lg scale-90">
+                <span className="material-symbols-outlined text-sm">lock</span>
+            </div>
+            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest leading-none mb-1">PRO Metric</p>
+            <button 
+                onClick={() => window.location.href = '/plan-info'}
+                className="text-[9px] font-bold text-primary hover:underline"
+            >
+                Upgrade to Unlock
+            </button>
+        </div>
+    );
 
     const showDateError = (msg: string) => {
         setDateError(msg);
@@ -290,7 +311,8 @@ const AnalyticsDashboardContent = () => {
                         </Card>
 
                         {/* Conversion Rate */}
-                        <Card className="p-6 border-slate-50 shadow-sm bg-gradient-to-br from-emerald-50 to-emerald-50/30 hover:shadow-lg transition-shadow border-emerald-100">
+                        <Card className="p-6 border-slate-50 shadow-sm bg-gradient-to-br from-emerald-50 to-emerald-50/30 hover:shadow-lg transition-shadow border-emerald-100 relative overflow-hidden">
+                            {isFree && <ProLock />}
                             <div className="flex items-start justify-between">
                                 <div>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Conversion Rate</p>
@@ -304,7 +326,8 @@ const AnalyticsDashboardContent = () => {
                         </Card>
 
                         {/* Total Revenue */}
-                        <Card className="p-6 border-slate-50 shadow-sm bg-gradient-to-br from-amber-50 to-amber-50/30 hover:shadow-lg transition-shadow border-amber-100">
+                        <Card className="p-6 border-slate-50 shadow-sm bg-gradient-to-br from-amber-50 to-amber-50/30 hover:shadow-lg transition-shadow border-amber-100 relative overflow-hidden">
+                            {isFree && <ProLock />}
                             <div className="flex items-start justify-between">
                                 <div>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Total Revenue</p>
@@ -321,7 +344,8 @@ const AnalyticsDashboardContent = () => {
                     {/* SECONDARY METRICS */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                         {/* Total Orders */}
-                        <Card className="p-6 border-slate-50 shadow-sm">
+                        <Card className="p-6 border-slate-50 shadow-sm relative overflow-hidden">
+                            {isFree && <ProLock />}
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Total Orders</p>
                             <div className="flex items-end justify-between">
                                 <div>
@@ -335,7 +359,8 @@ const AnalyticsDashboardContent = () => {
                         </Card>
 
                         {/* Average Order Value */}
-                        <Card className="p-6 border-slate-50 shadow-sm">
+                        <Card className="p-6 border-slate-50 shadow-sm relative overflow-hidden">
+                            {isFree && <ProLock />}
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Avg Order Value</p>
                             <div className="flex items-end justify-between">
                                 <div>
@@ -368,6 +393,7 @@ const AnalyticsDashboardContent = () => {
 
                         {/* Device Segmentation Chart */}
                         <Card className="lg:col-span-2 p-8 border-slate-50 shadow-sm relative overflow-hidden group">
+                            {isFree && <ProLock />}
                             <div className="flex items-center justify-between mb-10">
                                 <div>
                                     <h3 className="text-xl font-black text-slate-900 tracking-tighter uppercase mb-1">Device Segmentation</h3>
@@ -412,7 +438,8 @@ const AnalyticsDashboardContent = () => {
                         </Card>
 
                         {/* Browser Ranking Table */}
-                        <Card className="p-8 border-slate-50 shadow-sm">
+                        <Card className="p-8 border-slate-50 shadow-sm relative overflow-hidden">
+                            {isFree && <ProLock />}
                             <div className="flex items-center gap-3 mb-10">
                                 <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white">
                                     <ChartBarIcon className="w-5 h-5" />
