@@ -1076,93 +1076,7 @@ app.post('/bank-accounts', zValidator('json', z.object({
   }
 });
 
-// Get all orders for the merchant
-app.get('/orders', async (c) => {
-  console.log('[API] Orders List requested');
-  const { supabase, user } = await getAuthContext(c);
-  if (!user) {
-    console.log('[API] Orders List - Unauthorized');
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        products (*),
-        customers (*)
-      `)
-      .eq('merchant_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    console.log(`[API] Orders List - Success (${data?.length || 0} orders)`);
-    return c.json(data || []);
-  } catch (err: any) {
-    console.error('[Orders API] Fetch error:', err);
-    return c.json({ error: err.message }, 500);
-  }
-});
-
-// Get order statistics for the dashboard cards
-app.get('/orders/stats', async (c) => {
-  console.log('[API] Order Stats requested');
-  const { supabase, user } = await getAuthContext(c);
-  if (!user) {
-    console.log('[API] Order Stats - Unauthorized');
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
-
-  try {
-    const { data: orders, error } = await supabase
-      .from('orders')
-      .select('amount, status, net_amount')
-      .eq('merchant_id', user.id);
-
-    if (error) throw error;
-
-    const stats = {
-      total_orders: orders?.length || 0,
-      successful_orders: orders?.filter(o => o.status === 'success' || o.status === 'paid').length || 0,
-      pending_orders: orders?.filter(o => o.status === 'pending').length || 0,
-      total_revenue: orders
-        ?.filter(o => o.status === 'success' || o.status === 'paid')
-        .reduce((sum, o) => sum + Number(o.net_amount || o.amount), 0) || 0
-    };
-
-    console.log('[API] Order Stats - Success');
-    return c.json(stats);
-  } catch (err: any) {
-    console.error('[Order Stats API] error:', err);
-    return c.json({ error: err.message }, 500);
-  }
-});
-
-// GET SINGLE ORDER DETAIL
-app.get('/orders/:id', async (c) => {
-  const id = c.req.param('id');
-  const { supabase, user } = await getAuthContext(c);
-  if (!user) return c.json({ error: 'Unauthorized' }, 401);
-
-  try {
-    const { data, error } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        products (*),
-        customers (*)
-      `)
-      .eq('id', id)
-      .eq('merchant_id', user.id)
-      .single();
-
-    if (error) throw error;
-    return c.json(data);
-  } catch (err: any) {
-    return c.json({ error: err.message }, 500);
-  }
-});
+// NOTE: Orders & Stats routes are defined below (enhanced versions) — duplicates removed to fix Hono "matcher already built" error
 
 // GET SINGLE WITHDRAWAL DETAIL
 app.get('/withdrawals/:id', async (c) => {
@@ -1188,29 +1102,7 @@ app.get('/withdrawals/:id', async (c) => {
   }
 });
 
-// GET SINGLE CUSTOMER DETAIL
-app.get('/customers/:id', async (c) => {
-  const id = c.req.param('id');
-  const { supabase, user } = await getAuthContext(c);
-  if (!user) return c.json({ error: 'Unauthorized' }, 401);
-
-  try {
-    const { data, error } = await supabase
-      .from('customers')
-      .select(`
-        *,
-        orders (*, products (*))
-      `)
-      .eq('id', id)
-      .eq('merchant_id', user.id)
-      .single();
-
-    if (error) throw error;
-    return c.json(data);
-  } catch (err: any) {
-    return c.json({ error: err.message }, 500);
-  }
-});
+// NOTE: Customer detail route is defined below (enhanced version) — duplicate removed to fix Hono "matcher already built" error
 
 // UPDATE CUSTOMER DETAIL
 app.put('/customers/:id', async (c) => {

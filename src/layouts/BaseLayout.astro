@@ -1,6 +1,7 @@
 ---
 import "../styles/globals.css";
 import { ImpersonationBanner } from "../components/admin/ImpersonationBanner";
+import { IdleTimeoutGuard } from "../components/auth/IdleTimeoutGuard";
 import { AnalyticsTracker } from "../components/AnalyticsTracker";
 import { AnalyticsDebugPanel } from "../components/AnalyticsDebugPanel";
 import { createClient } from "@supabase/supabase-js";
@@ -111,6 +112,7 @@ const isAdmin = Astro.locals.isAdmin || false;
 	>
 		<ImpersonationBanner client:only="react" />
 		<AnalyticsDebugPanel client:only="react" />
+		<IdleTimeoutGuard client:only="react" />
 		<slot />
 
 		<script>
