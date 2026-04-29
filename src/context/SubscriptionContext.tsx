@@ -8,6 +8,7 @@ interface SubscriptionContextType {
     plan: Plan;
     planDetails: any | null;
     expiryDate: string | null;
+    billingPeriod: BillingPeriod;
     autoRenewal: boolean;
     isLoading: boolean;
     upgradeToPro: (method?: string) => Promise<void>;
@@ -25,6 +26,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const [plan, setPlan] = useState<Plan>('free');
     const [planDetails, setPlanDetails] = useState<any | null>(null);
     const [expiryDate, setExpiryDate] = useState<string | null>(null);
+    const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
     const [autoRenewal, setAutoRenewal] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [transactions, setTransactions] = useState<any[]>([]);
@@ -50,6 +52,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
                     setPlan(data.plan_status as Plan);
                     setExpiryDate(data.plan_expiry);
                     setAutoRenewal(data.auto_renewal);
+                    setBillingPeriod((data.billing_period as BillingPeriod) || 'monthly');
                     setPlanDetails(data.plan_details || null);
                 }
             }
@@ -158,6 +161,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
             plan,
             planDetails,
             expiryDate,
+            billingPeriod,
             autoRenewal,
             isLoading,
             upgradeToPro,

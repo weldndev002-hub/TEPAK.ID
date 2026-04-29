@@ -1258,7 +1258,8 @@ app.get('/profile', async (c) => {
           .from('user_settings')
           .update({
             plan_status: 'free',
-            auto_renewal: false
+            auto_renewal: false,
+            billing_period: 'monthly'
           })
           .eq('user_id', user.id)
           .select()
@@ -2150,7 +2151,7 @@ app.get('/subscription/status', async (c) => {
   try {
     const { data: settings, error: settingsError } = await supabase
       .from('user_settings')
-      .select('plan_status, plan_expiry, auto_renewal')
+      .select('plan_status, plan_expiry, auto_renewal, billing_period')
       .eq('user_id', user.id)
       .single();
 
@@ -2165,7 +2166,7 @@ app.get('/subscription/status', async (c) => {
         console.log(`[Subscription] Plan expired for user ${user.id}. Auto-reverting to free.`);
         await supabase
           .from('user_settings')
-          .update({ plan_status: 'free', auto_renewal: false })
+          .update({ plan_status: 'free', auto_renewal: false, billing_period: 'monthly' })
           .eq('user_id', user.id);
         planId = 'free';
       }
@@ -2182,6 +2183,7 @@ app.get('/subscription/status', async (c) => {
       plan_status: planId,
       plan_expiry: settings?.plan_expiry || null,
       auto_renewal: settings?.auto_renewal || false,
+      billing_period: settings?.billing_period || 'monthly',
       plan_details: planDetails || { id: planId, name: planId.toUpperCase(), features: [], config: {} }
     });
   } catch (err: any) {
@@ -2311,6 +2313,43 @@ app.post('/subscription/upgrade', async (c) => {
     if (!planId) {
       throw new Error('ID Paket (planId) wajib dipilih untuk melakukan upgrade.');
     }
+
+    // ── Upgrade validation: check current plan & prevent downgrade ──
+    const { data: currentSettings } = await supabase
+      .from('user_settings')
+      .select('plan_status, plan_expiry, billing_period')
+      .eq('user_id', user.id)
+      .single();
+
+    const currentPlanId = currentSettings?.plan_status || 'free';
+
+    // If user already has a paid plan, validate the upgrade
+    if (currentPlanId !== 'free' && currentPlanId !== planId) {
+      // Fetch both plans to compare prices (higher price = higher tier)
+      const { data: currentPlanRow } = await supabase
+        .from('subscription_plans')
+        .select('id, price_monthly')
+        .eq('id', currentPlanId)
+        .single();
+
+      const { data: targetPlanRow } = await supabase
+        .from('subscription_plans')
+        .select('id, price_monthly')
+        .eq('id', planId)
+        .single();
+
+      if (currentPlanRow && targetPlanRow) {
+        const currentPrice = Number(currentPlanRow.price_monthly) || 0;
+        const targetPrice = Number(targetPlanRow.price_monthly) || 0;
+
+        if (targetPrice <= currentPrice) {
+          throw new Error(`Tidak dapat downgrade dari ${currentPlanRow.id} ke ${targetPlanRow.id}. Hanya upgrade ke paket yang lebih tinggi yang diizinkan.`);
+        }
+      }
+    }
+
+    // If user is on the same plan, allow re-subscription / renewal
+    // (e.g., extending an active subscription with the same or different billing period)
 
     if (!merchantCode || !merchantKey) {
       throw new Error(`Konfigurasi Duitku tidak ditemukan. Code: ${!!merchantCode}, Key: ${!!merchantKey}`);
@@ -2621,6 +2660,7 @@ app.post('/payments/duitku/webhook', async (c) => {
           plan_status: planIdFromHistory,
           plan_expiry: expireIso,
           auto_renewal: true,
+          billing_period: billingPeriodFromHistory,
           updated_at: new Date().toISOString()
         };
 

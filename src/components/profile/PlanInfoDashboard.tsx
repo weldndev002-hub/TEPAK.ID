@@ -11,7 +11,8 @@ import {
     ArrowPathIcon,
     DocumentTextIcon,
     BoltIcon,
-    CheckCircleIcon
+    CheckCircleIcon,
+    ArrowUpIcon
 } from '@heroicons/react/24/outline';
 import { InvoiceModal } from './InvoiceModal';
 import { SubscriptionProvider, useSubscription } from '../../context/SubscriptionContext';
@@ -35,7 +36,7 @@ const formatCountdown = (expiryDate: string | null) => {
 };
 
 const PlanInfoContent = () => {
-    const { plan, expiryDate, autoRenewal, upgradeToPlan, cancelSubscription, isLoading } = useSubscription();
+    const { plan, expiryDate, billingPeriod, autoRenewal, upgradeToPlan, cancelSubscription, isLoading } = useSubscription();
     const [countdown, setCountdown] = useState<string | null>(null);
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [isCancelling, setIsCancelling] = useState(false);
@@ -46,7 +47,7 @@ const PlanInfoContent = () => {
 
     const handleViewInvoice = async () => {
         if (isFetchingInvoice) return; // Anti-spam
-        
+
         setIsFetchingInvoice(true);
         try {
             const res = await fetch('/api/subscription/invoice');
@@ -61,7 +62,7 @@ const PlanInfoContent = () => {
         }
     };
     const [selectedBillingPeriod, setSelectedBillingPeriod] = useState<BillingPeriod>('monthly');
-    const [selectedPlanId, setSelectedPlanId] = useState<string>('pro');
+    const [selectedPlanId, setSelectedPlanId] = useState<string>('');
     const [allPlans, setAllPlans] = useState<any[]>([]);
     const [plansLoading, setPlansLoading] = useState(true);
 
@@ -83,10 +84,16 @@ const PlanInfoContent = () => {
                 if (res.ok) {
                     const data = await res.json();
                     setAllPlans(data || []);
-                    // Set default selected plan ke plan berbayar pertama yang bukan free
-                    const firstPaidPlan = (data || []).find((p: any) => p.price_monthly > 0);
-                    if (firstPaidPlan) {
-                        setSelectedPlanId(firstPaidPlan.id);
+                    // Set default selected plan ke plan berbayar pertama yang lebih tinggi dari plan saat ini
+                    const paidPlans = (data || []).filter((p: any) => p.price_monthly > 0);
+                    const currentPlanData = (data || []).find((p: any) => p.id === plan);
+                    const currentPrice = Number(currentPlanData?.price_monthly || 0);
+                    const higherPlan = paidPlans.find((p: any) => Number(p.price_monthly) > currentPrice);
+                    if (higherPlan) {
+                        setSelectedPlanId(higherPlan.id);
+                    } else if (paidPlans.length > 0) {
+                        // Jika tidak ada plan yang lebih tinggi, default ke plan berbayar pertama
+                        setSelectedPlanId(paidPlans[0].id);
                     }
                 }
             } catch (err) {
@@ -96,7 +103,7 @@ const PlanInfoContent = () => {
             }
         };
         fetchAllPlans();
-    }, []);
+    }, [plan]);
 
     const formattedExpiry = expiryDate
         ? new Date(expiryDate).toLocaleDateString('id-ID', {
@@ -116,6 +123,11 @@ const PlanInfoContent = () => {
 
     // Dapatkan nama plan saat ini (bukan hardcoded PRO)
     const currentPlanInfo = allPlans.find((p: any) => p.id === plan);
+
+    // Determine which plans are available for upgrade (higher tier only)
+    const currentPlanPrice = Number(currentPlanInfo?.price_monthly || 0);
+    const upgradeablePlans = allPlans.filter((p: any) => Number(p.price_monthly) > currentPlanPrice);
+    const hasUpgradeablePlans = upgradeablePlans.length > 0;
 
     const handleUpgrade = () => {
         if (!selectedPlanId) return;
@@ -161,23 +173,133 @@ const PlanInfoContent = () => {
                             </p>
                         </div>
 
-                        <div className={`mt-12 pt-8 border-t ${plan !== 'free' ? 'border-white/10' : 'border-slate-50'} flex items-center justify-between`}>
+                        <div className={`mt-12 pt-8 border-t ${plan !== 'free' ? 'border-white/10' : 'border-slate-50'}`}>
                             {plan !== 'free' ? (
-                                <>
-                                    <div className="flex items-center gap-3">
-                                        <CalendarIcon className="w-5 h-5 text-white/50" />
+                                <div className="space-y-6">
+                                    {/* Expiry & Countdown */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <CalendarIcon className="w-5 h-5 text-white/50" />
+                                            <div>
+                                                <p className="text-[9px] font-black text-white/50 uppercase tracking-widest leading-none mb-1">Berakhir pada</p>
+                                                <p className="text-sm font-black uppercase text-white">{formattedExpiry}</p>
+                                            </div>
+                                        </div>
+                                        {countdown && (
+                                            <div className="text-right">
+                                                <p className="text-[9px] font-black text-white/50 uppercase tracking-widest mb-1">Sisa Waktu</p>
+                                                <p className="text-sm font-black font-mono text-white">{countdown}</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Billing Period Badge */}
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${billingPeriod === 'yearly' ? 'bg-emerald-500/20' : 'bg-white/10'}`}>
+                                            <ShieldCheckIcon className="w-4 h-4 text-white/60" />
+                                        </div>
                                         <div>
-                                            <p className="text-[9px] font-black text-white/50 uppercase tracking-widest leading-none mb-1">Berakhir pada</p>
-                                            <p className="text-sm font-black uppercase text-white">{formattedExpiry}</p>
+                                            <p className="text-[9px] font-black text-white/50 uppercase tracking-widest leading-none mb-0.5">Periode Langganan</p>
+                                            <p className="text-xs font-black uppercase text-white">
+                                                {billingPeriod === 'yearly' ? 'Tahunan (1 Tahun)' : 'Bulanan (1 Bulan)'}
+                                            </p>
                                         </div>
                                     </div>
-                                    {countdown && (
-                                        <div className="text-right">
-                                            <p className="text-[9px] font-black text-white/50 uppercase tracking-widest mb-1">Sisa Waktu</p>
-                                            <p className="text-sm font-black font-mono text-white">{countdown}</p>
+
+                                    {/* Upgrade Section for Paid Users */}
+                                    {hasUpgradeablePlans && (
+                                        <div className="space-y-4 pt-4 border-t border-white/10">
+                                            <div className="flex items-center gap-2">
+                                                <ArrowUpIcon className="w-4 h-4 text-white/60" />
+                                                <p className="text-[9px] font-black text-white/50 uppercase tracking-widest">Upgrade ke Paket Lebih Tinggi</p>
+                                            </div>
+
+                                            {/* Pilih Paket Upgrade */}
+                                            <div className="space-y-2">
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {upgradeablePlans.map((p: any) => (
+                                                        <button
+                                                            key={p.id}
+                                                            onClick={() => setSelectedPlanId(p.id)}
+                                                            className={`p-2.5 rounded-xl border text-[10px] font-bold uppercase transition-all text-left flex flex-col justify-center ${selectedPlanId === p.id
+                                                                ? 'border-white bg-white/20 text-white shadow-sm ring-1 ring-white/40'
+                                                                : 'border-white/10 bg-white/5 text-white/60 hover:border-white/20 hover:bg-white/10'
+                                                                }`}
+                                                        >
+                                                            <span className="font-black">{p.name}</span>
+                                                            <span className="text-[9px] mt-0.5">Rp {Number(p.price_monthly).toLocaleString('id-ID')}/bln</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Pilih Periode Billing */}
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <button
+                                                    onClick={() => setSelectedBillingPeriod('monthly')}
+                                                    className={`p-2.5 rounded-xl border text-[10px] font-bold uppercase transition-all text-left flex flex-col justify-center ${selectedBillingPeriod === 'monthly'
+                                                        ? 'border-white bg-white/20 text-white shadow-sm ring-1 ring-white/40'
+                                                        : 'border-white/10 bg-white/5 text-white/60 hover:border-white/20 hover:bg-white/10'
+                                                        }`}
+                                                >
+                                                    <span className="font-black">Bulanan</span>
+                                                    <span className="text-[9px] mt-0.5">Rp {Number(selectedPlan?.price_monthly || 0).toLocaleString('id-ID')}/bln</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => setSelectedBillingPeriod('yearly')}
+                                                    className={`p-2.5 rounded-xl border text-[10px] font-bold uppercase transition-all text-left flex flex-col justify-center ${selectedBillingPeriod === 'yearly'
+                                                        ? 'border-white bg-white/20 text-white shadow-sm ring-1 ring-white/40'
+                                                        : 'border-white/10 bg-white/5 text-white/60 hover:border-white/20 hover:bg-white/10'
+                                                        }`}
+                                                >
+                                                    <span className="font-black">Tahunan</span>
+                                                    <span className="text-[9px] mt-0.5">Rp {Number(selectedPlan?.price_yearly || 0).toLocaleString('id-ID')}/thn</span>
+                                                </button>
+                                            </div>
+
+                                            {/* Pilih Metode Pembayaran */}
+                                            <div className="space-y-2">
+                                                <p className="text-[9px] font-black text-white/40 uppercase tracking-widest pl-0.5">Metode Pembayaran</p>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {[
+                                                        { id: 'BT', name: 'Bank (Permata)' },
+                                                        { id: 'B1', name: 'Bank (CIMB)' },
+                                                        { id: 'SP', name: 'ShopeePay/QRIS' },
+                                                        { id: 'OV', name: 'OVO' },
+                                                        { id: 'LA', name: 'Alfamart' }
+                                                    ].map((m) => (
+                                                        <button
+                                                            key={m.id}
+                                                            onClick={() => setSelectedMethod(m.id)}
+                                                            className={`p-2 rounded-lg border text-[9px] font-bold uppercase transition-all text-left ${selectedMethod === m.id
+                                                                ? 'border-white bg-white/20 text-white ring-1 ring-white/40'
+                                                                : 'border-white/10 bg-white/5 text-white/50 hover:border-white/20'
+                                                                }`}
+                                                        >
+                                                            {m.name}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <Button
+                                                onClick={handleUpgrade}
+                                                disabled={isLoading || !selectedPlanId}
+                                                className="w-full bg-white text-primary hover:bg-white/90 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-black/10 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                            >
+                                                <ArrowUpIcon className="w-4 h-4" />
+                                                {isLoading ? 'Memproses...' : `Upgrade ke ${selectedPlan?.name || 'Paket'} ${selectedBillingPeriod === 'yearly' ? 'Tahunan' : 'Bulanan'} — Rp ${selectedPrice.toLocaleString('id-ID')}`}
+                                            </Button>
                                         </div>
                                     )}
-                                </>
+
+                                    {!hasUpgradeablePlans && plan !== 'free' && (
+                                        <div className="flex items-center gap-2 pt-2">
+                                            <CheckCircleIcon className="w-4 h-4 text-emerald-300" />
+                                            <p className="text-xs font-bold text-white/60">Anda sudah menggunakan paket tertinggi.</p>
+                                        </div>
+                                    )}
+                                </div>
                             ) : (
                                 <div className="space-y-6 w-full">
                                     {/* Pilih Paket */}
@@ -190,8 +312,8 @@ const PlanInfoContent = () => {
                                                         key={p.id}
                                                         onClick={() => setSelectedPlanId(p.id)}
                                                         className={`p-3 rounded-xl border text-[10px] font-bold uppercase transition-all text-left flex flex-col justify-center ${selectedPlanId === p.id
-                                                                ? 'border-primary bg-primary/5 text-primary shadow-sm ring-1 ring-primary'
-                                                                : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
+                                                            ? 'border-primary bg-primary/5 text-primary shadow-sm ring-1 ring-primary'
+                                                            : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
                                                             }`}
                                                     >
                                                         <span className="font-black">{p.name}</span>
@@ -209,8 +331,8 @@ const PlanInfoContent = () => {
                                             <button
                                                 onClick={() => setSelectedBillingPeriod('monthly')}
                                                 className={`p-3 rounded-xl border text-[10px] font-bold uppercase transition-all text-left flex flex-col justify-center ${selectedBillingPeriod === 'monthly'
-                                                        ? 'border-primary bg-primary/5 text-primary shadow-sm ring-1 ring-primary'
-                                                        : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
+                                                    ? 'border-primary bg-primary/5 text-primary shadow-sm ring-1 ring-primary'
+                                                    : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
                                                     }`}
                                             >
                                                 <span className="font-black">Bulanan</span>
@@ -219,8 +341,8 @@ const PlanInfoContent = () => {
                                             <button
                                                 onClick={() => setSelectedBillingPeriod('yearly')}
                                                 className={`p-3 rounded-xl border text-[10px] font-bold uppercase transition-all text-left flex flex-col justify-center ${selectedBillingPeriod === 'yearly'
-                                                        ? 'border-primary bg-primary/5 text-primary shadow-sm ring-1 ring-primary'
-                                                        : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
+                                                    ? 'border-primary bg-primary/5 text-primary shadow-sm ring-1 ring-primary'
+                                                    : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
                                                     }`}
                                             >
                                                 <span className="font-black">Tahunan</span>
@@ -244,8 +366,8 @@ const PlanInfoContent = () => {
                                                     key={m.id}
                                                     onClick={() => setSelectedMethod(m.id)}
                                                     className={`p-3 rounded-xl border text-[10px] font-bold uppercase transition-all text-left flex flex-col justify-center ${selectedMethod === m.id
-                                                            ? 'border-primary bg-primary/5 text-primary shadow-sm ring-1 ring-primary'
-                                                            : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
+                                                        ? 'border-primary bg-primary/5 text-primary shadow-sm ring-1 ring-primary'
+                                                        : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
                                                         }`}
                                                 >
                                                     {m.name}
@@ -271,17 +393,15 @@ const PlanInfoContent = () => {
                 <Card className="bg-white p-10 rounded-[2.5rem] shadow-sm border-none shadow-[0px_20px_40px_rgba(16,27,50,0.0454)] space-y-8">
                     <h3 className="text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">Manfaat Paket Aktif</h3>
                     <ul className="grid grid-cols-1 gap-5">
-                        {[
-                            { name: "Produk Tanpa Batas", active: true },
-                            { name: "Custom Domain (.com / .id)", active: plan !== 'free' },
-                            { name: "Hapus Branding Orbit Site", active: plan !== 'free' },
-                            { name: "Analitik Real-time", active: plan !== 'free' },
-                            { name: "Prioritas Support", active: plan !== 'free' }
-                        ].map((f, i) => (
-                            <li key={i} className={`flex items-center gap-4 ${f.active ? 'opacity-100' : 'opacity-30'}`}>
-                                <div className={`w-1.5 h-1.5 rounded-full ${f.active ? 'bg-primary shadow-[0_0_8px_rgba(255,185,76,0.8)]' : 'bg-slate-300'}`}></div>
-                                <span className={`text-xs font-bold uppercase tracking-tight ${f.active ? 'text-slate-600' : 'text-slate-400'}`}>
-                                    {f.name}
+                        {(currentPlanInfo?.features || [
+                            "Landing Page Builder",
+                            "Basic Analytics",
+                            "Unlimited Links"
+                        ]).map((feature: string, i: number) => (
+                            <li key={i} className="flex items-center gap-4">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(255,185,76,0.8)]"></div>
+                                <span className="text-xs font-bold uppercase tracking-tight text-slate-600">
+                                    {feature}
                                 </span>
                             </li>
                         ))}
@@ -299,8 +419,8 @@ const PlanInfoContent = () => {
                         <div>
                             <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Manajemen Langganan</h4>
                             <p className="text-[11px] text-slate-500 font-medium mt-1">
-                                {autoRenewal 
-                                    ? 'Perpanjangan otomatis sedang aktif.' 
+                                {autoRenewal
+                                    ? `Perpanjangan otomatis sedang aktif (${billingPeriod === 'yearly' ? 'Tahunan' : 'Bulanan'}).`
                                     : `Langganan akan berakhir pada ${formattedExpiry}.`}
                             </p>
                         </div>
@@ -364,20 +484,24 @@ const PlanInfoContent = () => {
                         {allPlans.map((availablePlan) => {
                             const isCurrentPlan = plan === availablePlan.id;
                             const isFreePlan = availablePlan.price_monthly === 0;
+                            const isUpgrade = Number(availablePlan.price_monthly) > currentPlanPrice;
+                            const isDowngrade = !isCurrentPlan && !isFreePlan && Number(availablePlan.price_monthly) <= currentPlanPrice && plan !== 'free';
 
                             return (
                                 <div key={availablePlan.id} className={`relative group animate-in fade-in slide-in-from-bottom-12 duration-1000`}>
                                     <div className={`h-full bg-white rounded-[2.5rem] p-10 border transition-all duration-500 flex flex-col ${isCurrentPlan
-                                            ? 'border-emerald-500 shadow-[0_32px_64px_-16px_rgba(16,185,129,0.2)] ring-2 ring-emerald-500/20'
-                                            : availablePlan.id === 'pro'
+                                        ? 'border-emerald-500 shadow-[0_32px_64px_-16px_rgba(16,185,129,0.2)] ring-2 ring-emerald-500/20'
+                                        : isUpgrade
+                                            ? availablePlan.id === 'pro'
                                                 ? 'border-primary shadow-[0_32px_64px_-16px_rgba(255,185,76,0.2)] scale-105 z-10'
                                                 : 'border-slate-100 shadow-sm hover:shadow-xl hover:border-slate-200'
+                                            : 'border-slate-100 shadow-sm opacity-60'
                                         }`}>
 
                                         {availablePlan.badge && availablePlan.badge !== 'DEFAULT' && (
                                             <div className={`absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-xl ${isCurrentPlan
-                                                    ? 'bg-emerald-500 text-white'
-                                                    : 'bg-primary text-white'
+                                                ? 'bg-emerald-500 text-white'
+                                                : 'bg-primary text-white'
                                                 }`}>
                                                 {isCurrentPlan ? 'Paket Aktif' : availablePlan.badge}
                                             </div>
@@ -420,7 +544,7 @@ const PlanInfoContent = () => {
                                                 {(availablePlan.features || []).map((feature: string, idx: number) => (
                                                     <li key={idx} className="flex items-start gap-3">
                                                         <div className="mt-1">
-                                                            <CheckCircleIcon className={`w-5 h-5 ${availablePlan.id === 'pro' ? 'text-primary' : 'text-slate-300'}`} />
+                                                            <CheckCircleIcon className={`w-5 h-5 ${isCurrentPlan ? 'text-emerald-500' : availablePlan.id === 'pro' ? 'text-primary' : 'text-slate-300'}`} />
                                                         </div>
                                                         <span className="text-sm font-bold text-slate-600 leading-tight">{feature}</span>
                                                     </li>
@@ -442,7 +566,15 @@ const PlanInfoContent = () => {
                                                 variant="ghost"
                                                 className="w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all bg-slate-50 text-slate-600 hover:bg-slate-100 mt-auto"
                                             >
-                                                Matikan Auto-Renew di Atas
+                                                {plan !== 'free' ? 'Paket Starter' : 'Matikan Auto-Renew di Atas'}
+                                            </Button>
+                                        ) : isDowngrade ? (
+                                            <Button
+                                                disabled
+                                                variant="ghost"
+                                                className="w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all bg-slate-50 text-slate-300 mt-auto cursor-not-allowed"
+                                            >
+                                                Tidak Tersedia
                                             </Button>
                                         ) : (
                                             <div className="space-y-3 mt-auto">
@@ -454,8 +586,8 @@ const PlanInfoContent = () => {
                                                             setSelectedBillingPeriod('monthly');
                                                         }}
                                                         className={`flex-1 py-2.5 text-[9px] font-black uppercase tracking-widest transition-all ${selectedPlanId === availablePlan.id && selectedBillingPeriod === 'monthly'
-                                                                ? 'bg-primary text-white'
-                                                                : 'bg-white text-slate-400 hover:text-slate-600'
+                                                            ? 'bg-primary text-white'
+                                                            : 'bg-white text-slate-400 hover:text-slate-600'
                                                             }`}
                                                     >
                                                         Bulanan
@@ -466,8 +598,8 @@ const PlanInfoContent = () => {
                                                             setSelectedBillingPeriod('yearly');
                                                         }}
                                                         className={`flex-1 py-2.5 text-[9px] font-black uppercase tracking-widest transition-all ${selectedPlanId === availablePlan.id && selectedBillingPeriod === 'yearly'
-                                                                ? 'bg-primary text-white'
-                                                                : 'bg-white text-slate-400 hover:text-slate-600'
+                                                            ? 'bg-primary text-white'
+                                                            : 'bg-white text-slate-400 hover:text-slate-600'
                                                             }`}
                                                     >
                                                         Tahunan
@@ -481,11 +613,11 @@ const PlanInfoContent = () => {
                                                     }}
                                                     variant={availablePlan.id === 'pro' ? 'primary' : 'ghost'}
                                                     className={`w-full py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${availablePlan.id === 'pro'
-                                                            ? 'bg-primary text-white shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95'
-                                                            : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                                                        ? 'bg-primary text-white shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95'
+                                                        : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
                                                         }`}
                                                 >
-                                                    Pilih {availablePlan.name}
+                                                    {plan !== 'free' ? `Upgrade ke ${availablePlan.name}` : `Pilih ${availablePlan.name}`}
                                                 </Button>
                                             </div>
                                         )}
@@ -502,7 +634,7 @@ const PlanInfoContent = () => {
             </div>
 
             {/* Invoice Detail Modal */}
-            <InvoiceModal 
+            <InvoiceModal
                 isOpen={showInvoiceModal}
                 onClose={() => setShowInvoiceModal(false)}
                 invoiceData={invoiceData}
