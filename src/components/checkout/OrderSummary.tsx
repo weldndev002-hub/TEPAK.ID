@@ -13,8 +13,8 @@ interface OrderSummaryProps {
 export const OrderSummary: React.FC<OrderSummaryProps> = ({ 
     productTitle, productPrice, feePercentage, image, onPay, status 
 }) => {
-    const serviceFee = Math.round(productPrice * (feePercentage / 100));
-    const totalPrice = productPrice + serviceFee;
+    // Service fee is now deducted from creator's side, buyer pays the flat product price
+    const totalPrice = productPrice;
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('id-ID', {
@@ -46,10 +46,6 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
                 <div className="flex justify-between text-on-surface-variant font-medium">
                     <span className="text-sm">Harga Produk</span>
                     <span className="text-sm font-bold">{formatCurrency(productPrice)}</span>
-                </div>
-                <div className="flex justify-between text-on-surface-variant font-medium">
-                    <span className="text-sm">Biaya Layanan ({feePercentage}%)</span>
-                    <span className="text-sm font-bold">{formatCurrency(serviceFee)}</span>
                 </div>
                 
                 <div className="flex justify-between items-center pt-4 border-t border-secondary/20">

@@ -103,7 +103,7 @@ END $$;
 
 -- Now insert or update the config
 INSERT INTO public.platform_configs (id, payout_fee, min_withdrawal, pg_fee, platform_fee_percent, updated_at)
-VALUES (1, 5000, 50000, 2000, 5, NOW())
+VALUES (1, 5000, 50000, 0, 5, NOW())
 ON CONFLICT (id) DO UPDATE SET
     payout_fee = EXCLUDED.payout_fee,
     min_withdrawal = EXCLUDED.min_withdrawal,
@@ -134,8 +134,8 @@ END $$;
 -- Now update the values
 UPDATE public.orders
 SET
-    pg_fee = 2000,
-    net_amount = FLOOR(amount * (1 - (COALESCE(platform_fee, 5) / 100))) - 2000
+    pg_fee = 0,
+    net_amount = FLOOR(amount * (1 - (COALESCE(platform_fee, 5) / 100))) - pg_fee
 WHERE (pg_fee = 0 OR pg_fee IS NULL OR net_amount IS NULL);
 
 -- ==============================================================================

@@ -81,13 +81,13 @@ app.onError((err, c) => {
  */
 const sanitizeString = (str: any): string => {
   if (!str || typeof str !== 'string') return typeof str === 'string' ? '' : str;
-  
+
   // 1. Remove all script tags and their content
   let cleaned = str.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '');
-  
+
   // 2. Strip ALL HTML tags for text-only fields (profile bio, block text, etc.)
   cleaned = cleaned.replace(/<[^>]*>?/gm, '');
-  
+
   // 3. Normalize whitespace
   return cleaned.replace(/\s+/g, ' ').trim();
 };
@@ -110,7 +110,7 @@ const sanitizeTextBlockContent = (block: any): any => {
     // Top-level fields
     if (sanitized.title) sanitized.title = sanitizeString(sanitized.title);
     if (sanitized.subtitle) sanitized.subtitle = sanitizeString(sanitized.subtitle);
-    
+
     // Data fields
     if (sanitized.data) {
       if (sanitized.data.title) sanitized.data.title = sanitizeString(sanitized.data.title);
@@ -556,7 +556,7 @@ const getAuthContext = async (c: any) => {
                 }
               }
             }
-          } catch (jwtErr) {}
+          } catch (jwtErr) { }
         }
       }
 
@@ -618,8 +618,8 @@ app.get('/utils/fetch-metadata', async (c) => {
     });
 
     if (!response.ok) {
-        console.error(`[Fetch Metadata] HTTP Error: ${response.status} ${response.statusText} for ${url}`);
-        throw new Error(`Failed to fetch URL: ${response.statusText}`);
+      console.error(`[Fetch Metadata] HTTP Error: ${response.status} ${response.statusText} for ${url}`);
+      throw new Error(`Failed to fetch URL: ${response.statusText}`);
     }
 
 
@@ -636,9 +636,9 @@ app.get('/utils/fetch-metadata', async (c) => {
       for (const meta of metas) {
         const lowerMeta = meta.toLowerCase();
         if (
-            lowerMeta.includes(`"${target}"`) || lowerMeta.includes(`'${target}'`) ||
-            lowerMeta.includes(`"${ogTarget}"`) || lowerMeta.includes(`'${ogTarget}'`) ||
-            lowerMeta.includes(`"${twitterTarget}"`) || lowerMeta.includes(`'${twitterTarget}'`)
+          lowerMeta.includes(`"${target}"`) || lowerMeta.includes(`'${target}'`) ||
+          lowerMeta.includes(`"${ogTarget}"`) || lowerMeta.includes(`'${ogTarget}'`) ||
+          lowerMeta.includes(`"${twitterTarget}"`) || lowerMeta.includes(`'${twitterTarget}'`)
         ) {
 
           const contentMatch = meta.match(/content=["']([^"']*)["']/i);
@@ -659,9 +659,9 @@ app.get('/utils/fetch-metadata', async (c) => {
 
     // Fallback for Shopee images if og:image is missing
     if (!image && html.includes('shopee.co.id')) {
-        const shopeeImgRegex = /https:\/\/(?:down-id\.img\.susercontent\.com|cf\.shopee\.co\.id)\/file\/([a-z0-9_]+)/i;
-        const match = html.match(shopeeImgRegex);
-        if (match) image = match[0];
+      const shopeeImgRegex = /https:\/\/(?:down-id\.img\.susercontent\.com|cf\.shopee\.co\.id)\/file\/([a-z0-9_]+)/i;
+      const match = html.match(shopeeImgRegex);
+      if (match) image = match[0];
     }
 
 
@@ -670,13 +670,13 @@ app.get('/utils/fetch-metadata', async (c) => {
       try {
         const baseUrl = new URL(url);
         image = new URL(image, baseUrl.origin).toString();
-      } catch (e) {}
+      } catch (e) { }
     }
 
-    return c.json({ 
-      title, 
-      description, 
-      image 
+    return c.json({
+      title,
+      description,
+      image
     });
 
   } catch (err: any) {
@@ -1414,7 +1414,7 @@ app.delete('/profile', async (c) => {
 
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id);
     if (deleteError) throw deleteError;
-    
+
     // Clear cookies explicitly to avoid redirect loops or "ghost" sessions
     const cookiesToClear = ['sb-access-token', 'sb-refresh-token', 'auth-token', 'sb_access_token'];
     cookiesToClear.forEach(name => {
@@ -1468,7 +1468,7 @@ app.post('/seo/og-image', async (c) => {
 
     // Check if bucket exists, create if not (only if service key is available)
     if (isValidKey(serviceKey)) {
-        await uploadClient.storage.createBucket(BUCKET, { public: true }).catch(() => {});
+      await uploadClient.storage.createBucket(BUCKET, { public: true }).catch(() => { });
     }
 
     // Upload file
@@ -1703,17 +1703,17 @@ app.put('/profile', async (c) => {
     for (const field of allowedFields) {
       if (field in body) {
         let value = body[field];
-        
+
         // Sanitize string fields
         if (typeof value === 'string' && ['full_name', 'bio', 'username', 'address_text', 'city'].includes(field)) {
           value = sanitizeString(value);
         }
-        
+
         // Sanitize blocks array
         if (field === 'blocks' && Array.isArray(value)) {
           value = value.map(sanitizeTextBlockContent);
         }
-        
+
         updatePayload[field] = value;
       }
     }
@@ -2264,12 +2264,14 @@ app.post(
 
     const currentFee = pConfig?.platform_fee || 5;
     const pgFee = pConfig?.pg_fee || 0;
-    
-    // User wants price + 5% as total amount paid by customer
+
+    // Buyer pays the product price exactly (no extra fee)
     // body.amount is the base product price sent from frontend
     const platformFeeAmount = Math.round(body.amount * (currentFee / 100));
     const totalAmount = body.amount; // Buyer pays the product price exactly
-    const netAmount = body.amount - platformFeeAmount - pgFee; // Merchant pays the fees
+    const netAmount = body.amount - platformFeeAmount - pgFee; // Merchant pays the fees (platform fee + pg fee)
+
+    console.log(`[Order Creation] Fee breakdown: amount=${body.amount}, platformFee=${currentFee}% (${platformFeeAmount}), pgFee=${pgFee}, netAmount=${netAmount}`);
 
     // 3. Create Order (Status Pending)
     const invoiceId = `TPK-${Math.floor(Math.random() * 1000000)}`;
@@ -2857,12 +2859,12 @@ app.post('/payments/duitku/webhook', async (c) => {
           '02': 'CANCELED',
         };
         const subsStatus = statusMap[resultCode] || 'CANCELED';
-        
+
         await supabase
           .from('subscription_history')
           .update({ status: subsStatus, updated_at: new Date().toISOString() })
           .eq('invoice_id', merchantOrderId);
-          
+
         console.log(`[Webhook DuitKu] ❌ Payment failed for ${merchantOrderId} with status ${subsStatus}`);
       }
       return c.json({ success: true });
@@ -3239,7 +3241,7 @@ app.put(
     try {
       const updateData = Object.fromEntries(Object.entries(profileFields).filter(([_, v]) => v !== undefined));
       console.log(`[PUT /profile/me] Attempting update for user ${user.id} with keys:`, Object.keys(updateData));
-      
+
       const { error: profileError } = await supabase
         .from('profiles')
         .update(updateData)
@@ -3247,32 +3249,32 @@ app.put(
 
       if (profileError) {
         console.error('[PUT /profile/me] Profile Update Error:', profileError);
-        
+
         // Handle common schema errors gracefully
         if (profileError.code === '23505') {
-           return c.json({ error: 'Username ini sudah digunakan oleh orang lain. Silakan pilih username lain.', code: 'DUPLICATE_USERNAME' }, 400);
+          return c.json({ error: 'Username ini sudah digunakan oleh orang lain. Silakan pilih username lain.', code: 'DUPLICATE_USERNAME' }, 400);
         } else if (profileError.code === '42703' || profileError.message.includes('column')) {
-           const missingColumn = profileError.message.match(/column "([^"]+)"/)?.[1] || 'unknown';
-           console.warn(`[PUT /profile/me] Column "${missingColumn}" appears to be missing. Retrying without suspected columns...`);
-           
-           // List of columns that might be missing in older schemas
-           const suspectedColumns = ['blocks', 'instagram_url', 'tiktok_url', 'twitter_url', 'youtube_url', 'phone', 'address_text', 'city', 'postcode'];
-           const resilientData = Object.fromEntries(
-             Object.entries(updateData).filter(([k]) => !suspectedColumns.includes(k) || k === 'full_name' || k === 'username' || k === 'bio' || k === 'avatar_url' || k === 'updated_at')
-           );
-           
-           console.log('[PUT /profile/me] Retrying with resilient data keys:', Object.keys(resilientData));
-           const { error: retryError } = await supabase
-             .from('profiles')
-             .update(resilientData)
-             .eq('id', user.id);
-           
-           if (retryError) {
-             console.error('[PUT /profile/me] Retry failed:', retryError);
-             return c.json({ error: retryError.message, code: retryError.code }, 500);
-           }
+          const missingColumn = profileError.message.match(/column "([^"]+)"/)?.[1] || 'unknown';
+          console.warn(`[PUT /profile/me] Column "${missingColumn}" appears to be missing. Retrying without suspected columns...`);
+
+          // List of columns that might be missing in older schemas
+          const suspectedColumns = ['blocks', 'instagram_url', 'tiktok_url', 'twitter_url', 'youtube_url', 'phone', 'address_text', 'city', 'postcode'];
+          const resilientData = Object.fromEntries(
+            Object.entries(updateData).filter(([k]) => !suspectedColumns.includes(k) || k === 'full_name' || k === 'username' || k === 'bio' || k === 'avatar_url' || k === 'updated_at')
+          );
+
+          console.log('[PUT /profile/me] Retrying with resilient data keys:', Object.keys(resilientData));
+          const { error: retryError } = await supabase
+            .from('profiles')
+            .update(resilientData)
+            .eq('id', user.id);
+
+          if (retryError) {
+            console.error('[PUT /profile/me] Retry failed:', retryError);
+            return c.json({ error: retryError.message, code: retryError.code }, 500);
+          }
         } else {
-           return c.json({ error: profileError.message, code: profileError.code }, 500);
+          return c.json({ error: profileError.message, code: profileError.code }, 500);
         }
       }
     } catch (err: any) {
