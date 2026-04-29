@@ -1438,6 +1438,59 @@ app.delete('/profile', async (c) => {
 // Endpoints /subscription/upgrade dan /subscription/cancel lama telah dihapus
 // karena sudah digulirkan ke integrasi Duitku yang sesungguhnya di bagian bawah file ini.
 
+// UPLOAD SEO IMAGE - Server-side using admin client
+app.post('/seo/og-image', async (c) => {
+  const { user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  try {
+    const formData = await c.req.formData();
+    const file = formData.get('image') as File | null;
+    if (!file) return c.json({ error: 'No file provided' }, 400);
+
+    const BUCKET = 'SEO';
+    const fileExt = file.name.split('.').pop() || 'jpg';
+    const filePath = `og-${user.id}-${Date.now()}.${fileExt}`;
+    const arrayBuffer = await file.arrayBuffer();
+    const fileBuffer = new Uint8Array(arrayBuffer);
+
+    const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL') || '';
+    const serviceKey = getEnv('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const anonKey = getEnv('PUBLIC_SUPABASE_ANON_KEY') || '';
+
+    const isValidKey = (k: string) => k && k.length > 20 && (k.startsWith('eyJ') || k.startsWith('sb_'));
+
+    let uploadClient = (isValidKey(serviceKey))
+      ? createClient(supabaseUrl, serviceKey)
+      : (isValidKey(anonKey))
+        ? createClient(supabaseUrl, anonKey)
+        : (await getAuthContext(c)).supabase;
+
+    // Check if bucket exists, create if not (only if service key is available)
+    if (isValidKey(serviceKey)) {
+        await uploadClient.storage.createBucket(BUCKET, { public: true }).catch(() => {});
+    }
+
+    // Upload file
+    const { error: uploadError } = await uploadClient.storage
+      .from(BUCKET)
+      .upload(filePath, fileBuffer, { contentType: file.type || 'image/jpeg', upsert: true });
+
+    if (uploadError) {
+      console.error('[SEO Image Upload] Storage error:', uploadError.message);
+      return c.json({ error: uploadError.message }, 500);
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = uploadClient.storage.from(BUCKET).getPublicUrl(filePath);
+
+    return c.json({ seo_image: publicUrl });
+
+  } catch (err: any) {
+    console.error('[SEO Image Upload] Unexpected error:', err);
+    return c.json({ error: err.message }, 500);
+  }
+});
 
 // UPLOAD AVATAR - Server-side using admin client to bypass storage RLS
 app.post('/profile/avatar', async (c) => {
@@ -1999,7 +2052,7 @@ app.get('/orders/stats', async (c) => {
   const totalRevenue = orders
     .filter(o => o.status === 'success' || o.status === 'paid')
     .reduce((sum, o) => {
-      const val = o.net_amount !== null ? Number(o.net_amount) : (Number(o.amount) * 0.95);
+      const val = o.net_amount !== null ? Number(o.net_amount) : Math.max(0, (Number(o.amount) * 0.95) - 2000);
       return sum + val;
     }, 0);
 
@@ -2215,8 +2268,8 @@ app.post(
     // User wants price + 5% as total amount paid by customer
     // body.amount is the base product price sent from frontend
     const platformFeeAmount = Math.round(body.amount * (currentFee / 100));
-    const totalAmount = body.amount + platformFeeAmount + pgFee;
-    const netAmount = body.amount; // Merchant gets the full base price
+    const totalAmount = body.amount; // Buyer pays the product price exactly
+    const netAmount = body.amount - platformFeeAmount - pgFee; // Merchant pays the fees
 
     // 3. Create Order (Status Pending)
     const invoiceId = `TPK-${Math.floor(Math.random() * 1000000)}`;
@@ -3136,6 +3189,8 @@ app.put(
           data: z.any().optional()
         })
       ).optional().transform(blocks => blocks ? blocks.map(sanitizeTextBlockContent) : blocks),
+      seo_image: z.string().optional(),
+      seo_keywords: z.string().optional(),
       theme: z.string().optional(),
     })
 
@@ -3174,6 +3229,8 @@ app.put(
       domain_name: body.domain_name,
       seo_title: body.seo_title,
       seo_description: body.seo_description,
+      seo_image: body.seo_image,
+      seo_keywords: body.seo_keywords,
       theme: body.theme,
       updated_at: new Date().toISOString()
     };

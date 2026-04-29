@@ -157,7 +157,7 @@ const profile = {
 const seo = {
     title: merchantData.seo_title || `${profile.name} | tepak.id Ecosystem`,
     description: merchantData.seo_description || profile.bio,
-    image: profile.avatar
+    image: merchantData.seo_image || profile.avatar
 };
 
 

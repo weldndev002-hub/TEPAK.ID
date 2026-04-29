@@ -30,10 +30,11 @@ export const EditProfileForm = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [saveModal, setSaveModal] = useState(false);
     const [cancelModal, setCancelModal] = useState(false);
+    const [planStatus, setPlanStatus] = useState<string>('free');
     const [toast, setToast] = useState<string | null>(null);
 
     const showToast = (msg: string) => {
-        setToast(msg);
+        setToast(String(msg));
         setTimeout(() => setToast(null), 4000);
     };
 
@@ -48,6 +49,7 @@ export const EditProfileForm = () => {
             const res = await fetch('/api/profile');
             if (res.ok) {
                 const data = await res.json();
+                setPlanStatus(data.settings?.plan_status || 'free');
                 setProfile({
                     ...data,
                     // Fallbacks for null values
@@ -322,54 +324,23 @@ export const EditProfileForm = () => {
                                     </a>
                                 </div>
 
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-primary/[0.03] rounded-2xl p-6 md:p-8 border border-primary/10">
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <p className="text-xs font-black text-primary uppercase tracking-tight">SEO Optimization</p>
-                                            <span className="px-2 py-0.5 rounded bg-primary text-[7px] font-black text-white uppercase tracking-widest">PRO</span>
+                                {planStatus !== 'free' && (
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-primary/[0.03] rounded-2xl p-6 md:p-8 border border-primary/10">
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <p className="text-xs font-black text-primary uppercase tracking-tight">SEO Optimization</p>
+                                                <span className="px-2 py-0.5 rounded bg-primary text-[7px] font-black text-white uppercase tracking-widest">{planStatus.toUpperCase()}</span>
+                                            </div>
+                                            <p className="text-[10px] text-primary/60 max-w-sm font-medium uppercase tracking-tight">Optimize your site snippet for Google search and social media sharing.</p>
                                         </div>
-                                        <p className="text-[10px] text-primary/60 max-w-sm font-medium uppercase tracking-tight">Optimize your site snippet for Google search and social media sharing.</p>
+                                        <a href="/seo-settings" title="SEO settings" className="w-full sm:w-auto">
+                                            <Button variant="primary" type="button" className="bg-primary text-white font-black text-[9px] uppercase tracking-widest px-8 py-3 rounded-xl shadow-lg shadow-primary/20 w-full">Configure SEO</Button>
+                                        </a>
                                     </div>
-                                    <a href="/seo-settings" title="SEO settings" className="w-full sm:w-auto">
-                                        <Button variant="primary" type="button" className="bg-primary text-white font-black text-[9px] uppercase tracking-widest px-8 py-3 rounded-xl shadow-lg shadow-primary/20 w-full">Configure SEO</Button>
-                                    </a>
-                                </div>
+                                )}
                             </div>
                         </section>
 
-                        {/* Section 5: Bank Account Details */}
-                        <section className="bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-slate-100">
-                            <div className="flex items-center justify-between mb-10">
-                                <h3 className="text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase">Bank Account details</h3>
-                                <span className="flex items-center gap-2 text-[9px] font-black text-emerald-500 bg-emerald-50 px-4 py-1.5 rounded-full uppercase tracking-widest">
-                                    <CheckBadgeIcon className="w-3.5 h-3.5" />
-                                    Verified
-                                </span>
-                            </div>
-
-                            <div className="bg-slate-50 border border-slate-100/50 p-6 md:p-8 rounded-3xl flex flex-col sm:flex-row items-start gap-8 relative group">
-                                <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center p-3 text-primary shrink-0 border border-slate-100">
-                                    <BuildingLibraryIcon className="w-10 h-10" />
-                                </div>
-                                <div className="flex-1 grid grid-cols-2 gap-y-6 w-full">
-                                    <div className="col-span-2 sm:col-span-1">
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Bank Name</p>
-                                        <p className="text-xs font-black text-slate-900 uppercase tracking-tight">Bank Central Asia (BCA)</p>
-                                    </div>
-                                    <div className="col-span-2 sm:col-span-1">
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Account Number</p>
-                                        <p className="text-xs font-black text-slate-900 tracking-[0.3em]">•••• •••• 8829</p>
-                                    </div>
-                                    <div className="col-span-2">
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Owner Name</p>
-                                        <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{profile.full_name}</p>
-                                    </div>
-                                </div>
-                                <a href="/bank-info" title="Edit Bank Info" className="absolute top-6 right-6 md:top-8 md:right-8 text-slate-300 hover:text-primary transition-all active:scale-95">
-                                    <PencilSquareIcon className="w-6 h-6" />
-                                </a>
-                            </div>
-                        </section>
 
                         {/* Bottom Action Bar */}
                         <div className="pt-6 flex flex-col md:flex-row items-center justify-end gap-6">

@@ -25,13 +25,20 @@ export const GET: APIRoute = async ({ request, locals }) => {
       .from('subscription_plans')
       .select('*');
 
+    // Check platform_configs
+    const { data: config, error: configError } = await supabase
+      .from('platform_configs')
+      .select('*');
+
     return new Response(JSON.stringify({
       history,
       historyError,
       orders,
       ordersError,
       plans,
-      plansError
+      plansError,
+      config,
+      configError
     }, null, 2), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }

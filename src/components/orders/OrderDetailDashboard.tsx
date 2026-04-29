@@ -174,28 +174,34 @@ export const OrderDetailDashboard = () => {
                                         </div>
                                     </div>
                                 </div>
-                                {/* Totals */}
+                                { /* Totals Breakdown */ }
                                 <div className="px-6 pt-2 pb-6 space-y-2 border-t border-slate-50">
                                     <div className="flex justify-between text-xs font-bold text-slate-500 py-1">
-                                        <span>Total Produk (Bruto)</span><span>{formatCurrency(Number(order.amount))}</span>
+                                        <span>Total Pembayaran (Gross)</span>
+                                        <span>{formatCurrency(Number(order.amount))}</span>
                                     </div>
-                                    {Number(order.platform_fee) > 0 && (
-                                        <div className="flex justify-between text-xs font-bold text-rose-500 py-1">
-                                            <span>Biaya Platform ({order.platform_fee}%)</span>
-                                            <span>- {formatCurrency(Math.max(0, Number(order.amount) - Number(order.net_amount || order.amount) - Number(order.pg_fee)))}</span>
+                                    
+                                    {/* Platform Fee Breakdown */}
+                                    <div className="flex justify-between text-xs font-bold text-rose-500 py-1">
+                                        <div className="flex items-center gap-1">
+                                            <span>Biaya Platform</span>
+                                            <span className="text-[9px] px-1.5 py-0.5 bg-rose-50 rounded text-rose-400 font-black">{order.platform_fee || 5}%</span>
                                         </div>
-                                    )}
-                                    {Number(order.pg_fee) > 0 && (
-                                        <div className="flex justify-between text-xs font-bold text-rose-500 py-1">
-                                            <span>Biaya Pembayaran (PG)</span><span>- {formatCurrency(Number(order.pg_fee))}</span>
-                                        </div>
-                                    )}
+                                        <span>- {formatCurrency(Math.max(0, Math.round(Number(order.amount) * ((order.platform_fee || 5) / 100))))}</span>
+                                    </div>
+
+                                    {/* PG Fee Breakdown */}
+                                    <div className="flex justify-between text-xs font-bold text-rose-500 py-1">
+                                        <span>Biaya Gateway (Duitku)</span>
+                                        <span>- {formatCurrency(Number(order.pg_fee || 2000))}</span>
+                                    </div>
+
                                     <div className="flex justify-between text-sm font-black text-slate-900 py-3 border-t border-slate-100 mt-2 bg-slate-50/50 -mx-6 px-6">
                                         <div className="flex flex-col">
                                             <span className="uppercase tracking-tight">Penghasilan Bersih</span>
-                                            <span className="text-[9px] text-slate-400 font-medium normal-case leading-none mt-1">Diterima di Wallet</span>
+                                            <span className="text-[9px] text-slate-400 font-medium normal-case leading-none mt-1">Total yang masuk ke saldo Anda</span>
                                         </div>
-                                        <span className="text-primary text-lg">{formatCurrency(Number(order.net_amount || order.amount))}</span>
+                                        <span className="text-primary text-lg">{formatCurrency(Number(order.net_amount || (order.amount * 0.95) - 2000))}</span>
                                     </div>
                                 </div>
                             </Card>

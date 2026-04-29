@@ -194,7 +194,9 @@ export const OrdersDashboard = () => {
                                         </div>
                                     </TableCell>
                                     <TableCell className="font-black text-slate-400 text-right text-[10px] whitespace-nowrap">Rp {Number(order.amount).toLocaleString('id-ID')}</TableCell>
-                                    <TableCell className="font-black text-slate-900 text-right text-xs whitespace-nowrap">Rp {Number(order.net_amount || order.amount).toLocaleString('id-ID')}</TableCell>
+                                    <TableCell className="font-black text-slate-900 text-right text-xs whitespace-nowrap">
+                                        Rp {Number(order.net_amount !== null ? order.net_amount : Math.max(0, (order.amount * 0.95) - 2000)).toLocaleString('id-ID')}
+                                    </TableCell>
                                     <TableCell className="px-10">
                                         <div className="flex justify-center">
                                             <Badge 
