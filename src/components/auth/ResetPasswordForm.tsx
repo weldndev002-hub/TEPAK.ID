@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-import { 
-    CheckCircleIcon, 
-    ShieldCheckIcon, 
-    ArrowPathIcon, 
-    ArrowLeftIcon, 
-    EyeIcon, 
+import {
+    CheckCircleIcon,
+    ShieldCheckIcon,
+    ArrowPathIcon,
+    ArrowLeftIcon,
+    EyeIcon,
     EyeSlashIcon,
     XCircleIcon,
     LockClosedIcon
@@ -23,10 +23,30 @@ interface ResetPasswordFormProps {
 }
 
 export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ supabaseUrl, supabaseAnonKey }) => {
-    // Initialized client
+    // Initialize client WITH cookie handlers (required for PKCE flow)
     const [supabase] = useState(() => {
         if (supabaseUrl && supabaseAnonKey) {
-            return createBrowserClient(supabaseUrl, supabaseAnonKey);
+            return createBrowserClient(supabaseUrl, supabaseAnonKey, {
+                cookies: {
+                    getAll() {
+                        return document.cookie.split('; ').filter(Boolean).map(cookie => {
+                            const [name, ...valueParts] = cookie.split('=');
+                            return { name, value: valueParts.join('=') };
+                        });
+                    },
+                    setAll(cookiesToSet) {
+                        cookiesToSet.forEach(({ name, value, options }) => {
+                            let cookieString = `${name}=${value}`;
+                            if (options?.path) cookieString += `; path=${options.path}`;
+                            if (options?.maxAge !== undefined) cookieString += `; max-age=${options.maxAge}`;
+                            if (options?.domain) cookieString += `; domain=${options.domain}`;
+                            if (options?.sameSite) cookieString += `; samesite=${options.sameSite}`;
+                            if (options?.secure && window.location.protocol === 'https:') cookieString += '; secure';
+                            document.cookie = cookieString;
+                        });
+                    },
+                },
+            });
         }
         return globalSupabase;
     });
@@ -43,6 +63,99 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ supabaseUr
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
+    // ===== PKCE Session Exchange =====
+    // When Supabase sends a password reset email with PKCE flow,
+    // the link contains ?code=XXXX in the URL. We must exchange
+    // this code for a session BEFORE calling updateUser().
+    const [sessionReady, setSessionReady] = useState(false);
+    const [sessionLoading, setSessionLoading] = useState(true);
+    const [sessionError, setSessionError] = useState('');
+
+    useEffect(() => {
+        const establishSession = async () => {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                const code = urlParams.get('code');
+                const type = urlParams.get('type') || hashParams.get('type');
+
+                console.log('[ResetPassword] URL analysis:', {
+                    hasCode: !!code,
+                    type,
+                    search: window.location.search,
+                    hash: window.location.hash,
+                });
+
+                // PKCE flow: exchange code for session
+                if (code) {
+                    console.log('[ResetPassword] Exchanging PKCE code for session...');
+                    const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+
+                    if (exchangeError) {
+                        console.error('[ResetPassword] Code exchange failed:', exchangeError.message);
+                        setSessionError('Link reset password tidak valid atau sudah kadaluarsa. Silakan minta link baru.');
+                        setSessionLoading(false);
+                        return;
+                    }
+
+                    if (data?.session) {
+                        console.log('[ResetPassword] Session established successfully for:', data.session.user?.email);
+                        setSessionReady(true);
+                        setSessionLoading(false);
+                        // Clean URL to remove the code parameter for security
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        return;
+                    }
+
+                    console.error('[ResetPassword] No session after code exchange');
+                    setSessionError('Gagal membuat sesi. Silakan coba lagi.');
+                    setSessionLoading(false);
+                    return;
+                }
+
+                // Implicit flow: tokens in URL hash (fallback for non-PKCE setups)
+                const accessToken = hashParams.get('access_token');
+                const refreshToken = hashParams.get('refresh_token');
+                if (accessToken && type === 'recovery') {
+                    console.log('[ResetPassword] Found recovery tokens in URL hash');
+                    // The createBrowserClient with @supabase/ssr should auto-process
+                    // the hash on initialization. Let's check if we have a session.
+                    const { data: sessionData } = await supabase.auth.getSession();
+                    if (sessionData?.session) {
+                        console.log('[ResetPassword] Session found after hash processing');
+                        setSessionReady(true);
+                        setSessionLoading(false);
+                        // Clean URL hash for security
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        return;
+                    }
+                }
+
+                // No code or hash tokens — check if there's already an active session
+                // (e.g., user navigated here while already logged in, or session was
+                // established by middleware)
+                const { data: existingSession } = await supabase.auth.getSession();
+                if (existingSession?.session) {
+                    console.log('[ResetPassword] Existing session found');
+                    setSessionReady(true);
+                    setSessionLoading(false);
+                    return;
+                }
+
+                // No session at all — invalid access
+                console.error('[ResetPassword] No code, no hash tokens, no existing session');
+                setSessionError('Link reset password tidak valid atau sudah kadaluarsa. Silakan minta link baru dari halaman lupa password.');
+                setSessionLoading(false);
+            } catch (err) {
+                console.error('[ResetPassword] Session establishment error:', err);
+                setSessionError('Terjadi kesalahan saat verifikasi link reset. Silakan coba lagi.');
+                setSessionLoading(false);
+            }
+        };
+
+        establishSession();
+    }, [supabase]);
+
     // Password Strength Logic
     const criteria = {
         length: password.length >= 8,
@@ -52,7 +165,7 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ supabaseUr
     };
 
     const strengthScore = Object.values(criteria).filter(Boolean).length;
-    
+
     const getStrengthLabel = () => {
         if (password.length === 0) return { label: 'Kosong', color: 'text-slate-400', bg: 'bg-slate-50' };
         if (strengthScore <= 1) return { label: 'Sangat Lemah', color: 'text-rose-600', bg: 'bg-rose-50' };
@@ -67,6 +180,11 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ supabaseUr
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+
+        if (!sessionReady) {
+            setError('Sesi belum terverifikasi. Tunggu hingga verifikasi selesai.');
+            return;
+        }
 
         if (password !== confirmPassword) {
             setError('Konfirmasi password tidak cocok');
@@ -99,6 +217,67 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ supabaseUr
         }
     };
 
+    // ===== Loading State: Session being established =====
+    if (sessionLoading) {
+        return (
+            <main className="w-full max-w-[480px] bg-white rounded-[2.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.05)] border border-slate-50 overflow-hidden flex flex-col items-center px-12 py-16 relative z-10">
+                <div className="mb-10 relative flex items-center justify-center">
+                    <div className="w-[140px] h-[140px] bg-blue-50 rounded-full flex items-center justify-center border border-blue-100/50">
+                        <ArrowPathIcon className="text-blue-500 w-16 h-16 animate-spin" style={{ animationDuration: '2000ms' }} />
+                    </div>
+                </div>
+                <h1 className="text-2xl font-black text-slate-900 text-center mb-4 tracking-tighter uppercase leading-none">
+                    Memverifikasi Link...
+                </h1>
+                <p className="text-[13px] text-slate-500 font-medium text-center leading-relaxed max-w-[320px] italic">
+                    Sedang memverifikasi link reset password Anda. Mohon tunggu sebentar.
+                </p>
+            </main>
+        );
+    }
+
+    // ===== Error State: Session failed =====
+    if (sessionError) {
+        return (
+            <>
+                <main className="w-full max-w-[480px] bg-white rounded-[2.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.05)] border border-slate-50 overflow-hidden flex flex-col items-center px-12 py-16 relative z-10">
+                    <div className="mb-10 relative flex items-center justify-center">
+                        <div className="w-[140px] h-[140px] bg-rose-50 rounded-full flex items-center justify-center border border-rose-100/50">
+                            <XCircleIcon className="text-rose-500 w-20 h-20" />
+                        </div>
+                    </div>
+                    <h1 className="text-2xl font-black text-slate-900 text-center mb-4 tracking-tighter uppercase leading-none">
+                        Link Tidak Valid
+                    </h1>
+                    <p className="text-[13px] text-slate-500 font-medium text-center leading-relaxed max-w-[320px] mb-10 italic">
+                        {sessionError}
+                    </p>
+                    <div className="w-full flex flex-col items-center gap-6">
+                        <a href="/forgot-password" className="w-full">
+                            <Button variant="primary" className="w-full h-16 text-[11px] font-black uppercase tracking-[0.3em] rounded-2xl shadow-2xl shadow-primary/20 hover:scale-[1.02] transition-all">
+                                Minta Link Baru
+                            </Button>
+                        </a>
+                        <a className="text-[10px] font-black text-slate-400 hover:text-primary transition-all uppercase tracking-widest border-b border-transparent hover:border-primary pb-1" href="/login">
+                            Kembali ke halaman login
+                        </a>
+                    </div>
+                    <div className="mt-16 flex items-center gap-3 opacity-30 group">
+                        <div className="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center group-hover:bg-primary transition-colors">
+                            <ShieldCheckIcon className="text-slate-900 w-5 h-5 group-hover:text-white transition-colors" />
+                        </div>
+                        <span className="text-[10px] font-black tracking-[0.4em] text-slate-900 uppercase">{siteName}</span>
+                    </div>
+                </main>
+                <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+                    <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-rose-50 rounded-full blur-[120px] opacity-60"></div>
+                    <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-50 rounded-full blur-[120px] opacity-60"></div>
+                </div>
+            </>
+        );
+    }
+
+    // ===== Success State =====
     if (isSuccess) {
         return (
             <>
@@ -130,7 +309,7 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ supabaseUr
                                 Masuk Sekarang
                             </Button>
                         </a>
-                        
+
                         {/* Secondary Link */}
                         <a className="text-[10px] font-black text-slate-400 hover:text-primary transition-all uppercase tracking-widest border-b border-transparent hover:border-primary pb-1" href="/">
                             Kembali ke beranda
@@ -155,6 +334,7 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ supabaseUr
         );
     }
 
+    // ===== Main Form (only shown after session is confirmed) =====
     return (
         <main className="w-full max-w-[480px] bg-white rounded-[2.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.05)] border border-slate-50 overflow-hidden ">
             <div className="p-10 relative">
@@ -184,13 +364,13 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ supabaseUr
 
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="space-y-8" method="POST">
-                    
+
                     {/* Password Baru Input */}
                     <div className="space-y-3">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1" htmlFor="new_password">Password Baru</label>
-                        <Input 
-                            id="new_password" 
-                            name="new_password" 
+                        <Input
+                            id="new_password"
+                            name="new_password"
                             type={showPassword ? "text" : "password"}
                             placeholder="Minimal 8 karakter"
                             iconLeft={LockClosedIcon}
@@ -224,7 +404,7 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ supabaseUr
                                 {label}
                             </span>
                         </div>
-                        
+
                         {/* Criteria List */}
                         <ul className="grid grid-cols-1 gap-y-3 pt-2">
                             <li className={cn("flex items-center gap-3 text-[10px] font-black uppercase tracking-widest transition-all", criteria.length ? "text-emerald-600" : "text-slate-400 opacity-40")}>
@@ -249,9 +429,9 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ supabaseUr
                     {/* Konfirmasi Password Input */}
                     <div className="space-y-3">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] ml-1" htmlFor="confirm_password">Konfirmasi Password</label>
-                        <Input 
-                            id="confirm_password" 
-                            name="confirm_password" 
+                        <Input
+                            id="confirm_password"
+                            name="confirm_password"
                             type={showConfirm ? "text" : "password"}
                             iconLeft={LockClosedIcon}
                             className="h-16 rounded-2xl border-slate-100 bg-slate-50/50 shadow-inner"

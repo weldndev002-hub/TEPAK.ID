@@ -12,10 +12,30 @@ interface VerifyEmailProps {
 }
 
 export const VerifyEmailComponent: React.FC<VerifyEmailProps> = ({ supabaseUrl, supabaseAnonKey }) => {
-    // Initialized client
+    // Initialize client WITH cookie handlers (required for PKCE flow)
     const [supabase] = useState(() => {
         if (supabaseUrl && supabaseAnonKey) {
-            return createBrowserClient(supabaseUrl, supabaseAnonKey);
+            return createBrowserClient(supabaseUrl, supabaseAnonKey, {
+                cookies: {
+                    getAll() {
+                        return document.cookie.split('; ').filter(Boolean).map(cookie => {
+                            const [name, ...valueParts] = cookie.split('=');
+                            return { name, value: valueParts.join('=') };
+                        });
+                    },
+                    setAll(cookiesToSet) {
+                        cookiesToSet.forEach(({ name, value, options }) => {
+                            let cookieString = `${name}=${value}`;
+                            if (options?.path) cookieString += `; path=${options.path}`;
+                            if (options?.maxAge !== undefined) cookieString += `; max-age=${options.maxAge}`;
+                            if (options?.domain) cookieString += `; domain=${options.domain}`;
+                            if (options?.sameSite) cookieString += `; samesite=${options.sameSite}`;
+                            if (options?.secure && window.location.protocol === 'https:') cookieString += '; secure';
+                            document.cookie = cookieString;
+                        });
+                    },
+                },
+            });
         }
         return globalSupabase;
     });
