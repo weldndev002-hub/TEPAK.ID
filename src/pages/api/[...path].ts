@@ -2494,134 +2494,6 @@ app.post(
 // 2. Handler Webhook DuitKu (untuk notifikasi pembayaran)
 app.post('/payments/duitku/webhook', async (c) => {
 
-  // --- DISBURSEMENT WEBHOOK (Duitku Transfer Callback) ---
-  // Endpoint ini menerima callback dari Duitku saat status transfer berubah (Success/Failed)
-  app.post('/webhooks/duitku-disbursement', async (c) => {
-    console.log('[Disbursement Webhook] Received callback');
-
-    try {
-      // Duitku Disbursement webhook mengirim JSON body
-      const body = await c.req.json();
-
-      console.log('[Disbursement Webhook] Payload:', JSON.stringify(body, null, 2));
-
-      const {
-        disburseId,
-        custRefNumber,
-        responseCode,
-        responseDesc,
-        amountTransfer,
-        bankCode,
-        bankAccount,
-        accountName,
-        signature
-      } = body;
-
-      if (!disburseId || !responseCode) {
-        return c.json({ error: 'Missing required fields' }, 400);
-      }
-
-      // --- Validasi Signature ---
-      const { DuitkuDisbursementService } = await import('../../lib/duitku-disbursement');
-      const service = new DuitkuDisbursementService();
-
-      const isValid = await service.validateWebhook(body);
-      if (!isValid) {
-        console.error('[Disbursement Webhook] ❌ Invalid signature');
-        return c.json({ error: 'Invalid signature' }, 401);
-      }
-
-      // --- Update database berdasarkan status ---
-      const supabaseUrl = getEnv('PUBLIC_SUPABASE_URL') || '';
-      const supabaseKey = getEnv('SUPABASE_SERVICE_ROLE_KEY') || '';
-      const supabase = createClient(supabaseUrl, supabaseKey);
-
-      // Cari withdrawal berdasarkan disburse_id kolom (pencarian lebih cepat & akurat)
-      const { data: withdrawals, error: findError } = await supabase
-        .from('withdrawals')
-        .select('id, merchant_id, amount, status, notes')
-        .eq('disburse_id', disburseId)
-        .limit(1);
-
-      if (findError) {
-        console.error('[Disbursement Webhook] Error finding withdrawal:', findError);
-      }
-
-      // Fallback: jika tidak ditemukan via kolom, coba via notes (legacy support)
-      let withdrawal = (withdrawals && withdrawals.length > 0) ? withdrawals[0] : null;
-      if (!withdrawal) {
-        console.log(`[Disbursement Webhook] Withdrawal not found by column, trying legacy notes search for ${disburseId}`);
-        const { data: legacyWithdrawals } = await supabase
-          .from('withdrawals')
-          .select('id, merchant_id, amount, status, notes')
-          .ilike('notes', `%${disburseId}%`)
-          .limit(1);
-
-        if (legacyWithdrawals && legacyWithdrawals.length > 0) {
-          withdrawal = legacyWithdrawals[0];
-        }
-      }
-
-      if (responseCode === '00') {
-        // --- TRANSFER SUKSES ---
-        console.log(`[Disbursement Webhook] ✅ Transfer SUCCESS: ${disburseId}`);
-
-        if (withdrawal) {
-          await supabase
-            .from('withdrawals')
-            .update({
-              status: 'completed',
-              processed_at: new Date().toISOString(),
-              notes: `${withdrawal.notes} | COMPLETED via webhook`
-            })
-            .eq('id', withdrawal.id);
-
-          console.log(`[Disbursement Webhook] Withdrawal ${withdrawal.id} marked as completed`);
-        }
-
-      } else {
-        // --- TRANSFER GAGAL ---
-        console.log(`[Disbursement Webhook] ❌ Transfer FAILED: ${disburseId}, reason: ${responseDesc}`);
-
-        if (withdrawal) {
-          // Update status withdrawal ke rejected
-          await supabase
-            .from('withdrawals')
-            .update({
-              status: 'rejected',
-              processed_at: new Date().toISOString(),
-              notes: `${withdrawal.notes} | FAILED: ${responseDesc}`
-            })
-            .eq('id', withdrawal.id);
-
-          // --- REFUND: Kembalikan saldo ke wallet user via RPC ---
-          const { error: refundError } = await supabase.rpc('update_wallet_payout_reject', {
-            p_merchant_id: withdrawal.merchant_id,
-            p_amount: Number(withdrawal.amount)
-          });
-
-          if (refundError) {
-            console.error(`[Disbursement Webhook] Refund Error:`, refundError);
-          } else {
-            console.log(`[Disbursement Webhook] Refunded Rp ${withdrawal.amount} to wallet ${withdrawal.merchant_id} via RPC`);
-          }
-        }
-      }
-
-      // Selalu return 200 ke Duitku agar mereka tidak retry
-      return c.json({
-        received: true,
-        disburseId,
-        status: responseCode === '00' ? 'SUCCESS' : 'FAILED'
-      });
-
-    } catch (err: any) {
-      console.error('[Disbursement Webhook] Error:', err);
-      // Tetap return 200 agar Duitku tidak retry terus
-      return c.json({ received: true, error: err.message }, 200);
-    }
-  });
-
   // Duitku bisa mengirim JSON atau Form-UrlEncoded.
   // parseBody() mengembalikan Record<string, string | File>, tapi Duitku selalu mengirim string values.
   const rawBody = await c.req.parseBody();
@@ -2953,6 +2825,49 @@ app.post('/payments/duitku/webhook', async (c) => {
   } catch (error: any) {
     console.error('Kesalahan webhook DuitKu:', error);
     return c.json({ error: error.message }, 500);
+  }
+});
+
+
+// --- DISBURSEMENT WEBHOOK (Duitku Transfer Callback) ---
+app.post('/webhooks/duitku-disbursement', async (c) => {
+  console.log('[Disbursement Webhook] Received callback');
+  try {
+    const body = await c.req.json();
+    console.log('[Disbursement Webhook] Payload:', JSON.stringify(body, null, 2));
+    const { disburseId, responseCode, responseDesc } = body;
+    if (!disburseId || !responseCode) return c.json({ error: 'Missing required fields' }, 400);
+    const { DuitkuDisbursementService } = await import('../../lib/duitku-disbursement');
+    const service = new DuitkuDisbursementService();
+    const isValid = await service.validateWebhook(body);
+    if (!isValid) {
+      console.error('[Disbursement Webhook] Invalid signature');
+      return c.json({ error: 'Invalid signature' }, 401);
+    }
+    const { createClient: createSupa } = await import('@supabase/supabase-js');
+    const supabase = createSupa(getEnv('PUBLIC_SUPABASE_URL') || '', getEnv('SUPABASE_SERVICE_ROLE_KEY') || '');
+    const { data: withdrawals } = await supabase.from('withdrawals').select('id, merchant_id, amount, status, notes').eq('disburse_id', disburseId).limit(1);
+    let withdrawal = withdrawals?.[0] || null;
+    if (!withdrawal) {
+      const { data: legWd } = await supabase.from('withdrawals').select('id, merchant_id, amount, status, notes').ilike('notes', '%' + disburseId + '%').limit(1);
+      withdrawal = legWd?.[0] || null;
+    }
+    if (responseCode === '00') {
+      if (withdrawal) {
+        await supabase.from('withdrawals').update({ status: 'completed', processed_at: new Date().toISOString(), notes: withdrawal.notes + ' | COMPLETED via webhook' }).eq('id', withdrawal.id);
+        console.log('[Disbursement Webhook] Withdrawal ' + withdrawal.id + ' completed');
+      }
+    } else {
+      if (withdrawal) {
+        await supabase.from('withdrawals').update({ status: 'rejected', processed_at: new Date().toISOString(), notes: withdrawal.notes + ' | FAILED: ' + responseDesc }).eq('id', withdrawal.id);
+        const { error: refundError } = await supabase.rpc('update_wallet_payout_reject', { p_merchant_id: withdrawal.merchant_id, p_amount: Number(withdrawal.amount) });
+        if (refundError) console.error('[Disbursement Webhook] Refund Error:', refundError);
+      }
+    }
+    return c.json({ received: true, disburseId, status: responseCode === '00' ? 'SUCCESS' : 'FAILED' });
+  } catch (err) {
+    console.error('[Disbursement Webhook] Error:', err);
+    return c.json({ received: true, error: err.message }, 200);
   }
 });
 
