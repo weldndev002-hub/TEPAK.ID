@@ -1176,29 +1176,62 @@ app.delete('/profile', async (c) => {
   if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
   try {
-    // 1. Validasi: Jangan izinkan hapus jika masih PRO
+    // 1. Cek status langganan dan batalkan otomatis jika masih aktif
     const { data: settings } = await supabase
       .from('user_settings')
-      .select('plan_status')
+      .select('plan_status, plan_id, plan_expiry')
       .eq('user_id', user.id)
       .single();
 
     if (settings?.plan_status && settings.plan_status !== 'free') {
-      return c.json({
-        error: 'Berlangganan PRO harus dihentikan (Matikan Auto-Renew) terlebih dahulu sebelum menghapus akun.'
-      }, 400);
+      // Otomatis batalkan langganan sebelum menghapus akun
+      console.log(`[Account Termination] User ${user.id} has active plan: ${settings.plan_status}. Auto-cancelling before deletion.`);
+
+      await supabase
+        .from('user_settings')
+        .update({
+          plan_status: 'free',
+          plan_id: null,
+          plan_expiry: null,
+          billing_period: 'monthly',
+        })
+        .eq('user_id', user.id);
+
+      // Catat pembatalan di subscription_history
+      if (settings.plan_id) {
+        await supabase
+          .from('subscription_history')
+          .insert({
+            user_id: user.id,
+            plan_id: settings.plan_id,
+            action: 'cancelled',
+            status: 'CANCELLED',
+            description: 'Langganan dibatalkan otomatis saat penghapusan akun',
+          });
+      }
     }
 
-    // 2. Gunakan Admin Client untuk menghapus User dari auth.users
+    // 2. Hapus data terkait pengguna sebelum menghapus akun auth
+    // Hapus subscription_history
+    await supabase.from('subscription_history').delete().eq('user_id', user.id);
+    // Hapus user_settings
+    await supabase.from('user_settings').delete().eq('user_id', user.id);
+    // Hapus digital_deliveries
+    await supabase.from('digital_deliveries').delete().eq('creator_id', user.id);
+    // Hapus orders
+    await supabase.from('orders').delete().eq('creator_id', user.id);
+    // Hapus products
+    await supabase.from('products').delete().eq('user_id', user.id);
+    // Hapus profiles
+    await supabase.from('profiles').delete().eq('id', user.id);
+
+    // 3. Gunakan Admin Client untuk menghapus User dari auth.users
     const { getSupabaseAdmin } = await import('../../lib/supabase');
     const adminClient = getSupabaseAdmin(cfEnv);
 
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id);
 
     if (deleteError) throw deleteError;
-
-    // Supabase akan menghapus data di tabel lain secara otomatis jika cascade delete aktif,
-    // Jika tidak, RLS akan memastikan data tersebut tidak bisa diakses lagi.
 
     return c.json({ success: true });
   } catch (err: any) {
