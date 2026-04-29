@@ -80,6 +80,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
                 'Analytics',
                 'Customer Management',
                 'WhatsApp Notification',
+                'Landing Page Builder',
                 'Facebook Pixel & GA4'
             ];
             if (corePaidFeatures.includes(featureName)) {

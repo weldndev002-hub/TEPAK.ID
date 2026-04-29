@@ -47,12 +47,6 @@ const CreatorAtelierEditorContent: React.FC<CreatorAtelierEditorProps> = ({ init
         refreshStatus();
     }, []);
 
-    React.useEffect(() => {
-        // Block access if feature is disabled in Admin
-        if (!subLoading && !hasFeature('Landing Page Builder')) {
-            window.location.replace('/dashboard');
-        }
-    }, [hasFeature, subLoading]);
 
     // URL Search Params
     const queryParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
@@ -114,9 +108,6 @@ const CreatorAtelierEditorContent: React.FC<CreatorAtelierEditorProps> = ({ init
         );
     }
 
-    if (!hasFeature('Landing Page Builder')) {
-        return null; // Will redirect via useEffect
-    }
 
     const handleSaveProfile = async () => {
         setIsLoading(true);

@@ -9,30 +9,8 @@ if (!user || !supabase) {
     return Astro.redirect('/login');
 }
 
-let hasEditorFeature = false;
-try {
-    const { data: settings } = await supabase
-        .from('user_settings')
-        .select('plan_status')
-        .eq('user_id', user.id)
-        .single();
-        
-    const planId = settings?.plan_status || 'free';
-
-    const { data: planDetails } = await supabase
-        .from('subscription_plans')
-        .select('features')
-        .eq('id', planId)
-        .single();
-        
-    if (planDetails && Array.isArray(planDetails.features) && planDetails.features.includes('Landing Page Builder')) {
-        hasEditorFeature = true;
-    }
-} catch (e) {}
-
-if (!hasEditorFeature) {
-    return Astro.redirect('/plan-info?upgrade=required');
-}
+// Editor is now accessible to all logged-in users regardless of plan
+const hasEditorFeature = true;
 
 let branding: any = null;
 if (supabase) {

@@ -158,7 +158,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     // ==========================================
     // AUTHENTICATION PROTECTION
     // ==========================================
-    const publicAuthRoutes = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email'];
+    const publicAuthRoutes = ['/login', '/signup', '/forgot-password', '/verify-email'];
     const isAuthRoute = publicAuthRoutes.includes(url.pathname);
 
     const protectedRoutes = [

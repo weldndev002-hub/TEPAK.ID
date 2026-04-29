@@ -246,28 +246,53 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ supabaseUr
         );
     }
 
-    // ===== Error State: Session failed =====
+    // ===== Error State: Session failed or Social Login =====
     if (sessionError) {
+        const isSocialLogin = sessionError.includes('google') || sessionError.includes('github');
+
         return (
             <>
                 <main className="w-full max-w-[480px] bg-white rounded-[2.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.05)] border border-slate-50 overflow-hidden flex flex-col items-center px-12 py-16 relative z-10">
                     <div className="mb-10 relative flex items-center justify-center">
-                        <div className="w-[140px] h-[140px] bg-rose-50 rounded-full flex items-center justify-center border border-rose-100/50">
-                            <XCircleIcon className="text-rose-500 w-20 h-20" />
+                        <div className={cn(
+                            "w-[140px] h-[140px] rounded-full flex items-center justify-center border",
+                            isSocialLogin ? "bg-blue-50 border-blue-100/50" : "bg-rose-50 border-rose-100/50"
+                        )}>
+                            {isSocialLogin ? (
+                                <ShieldCheckIcon className="text-blue-500 w-20 h-20" />
+                            ) : (
+                                <XCircleIcon className="text-rose-500 w-20 h-20" />
+                            )}
                         </div>
                     </div>
                     <h1 className="text-2xl font-black text-slate-900 text-center mb-4 tracking-tighter uppercase leading-none">
-                        Link Tidak Valid
+                        {isSocialLogin ? 'Social Login Aktif' : 'Link Tidak Valid'}
                     </h1>
-                    <p className="text-[13px] text-slate-500 font-medium text-center leading-relaxed max-w-[320px] mb-10 italic">
-                        {sessionError}
-                    </p>
+                    <div className={cn(
+                        "p-6 rounded-2xl mb-10 w-full text-center",
+                        isSocialLogin ? "bg-blue-50/50 border border-blue-100" : "bg-rose-50/50 border border-rose-100"
+                    )}>
+                        <p className={cn(
+                            "text-[12px] font-bold leading-relaxed",
+                            isSocialLogin ? "text-blue-700" : "text-rose-700"
+                        )}>
+                            {sessionError}
+                        </p>
+                    </div>
                     <div className="w-full flex flex-col items-center gap-6">
-                        <a href="/forgot-password" className="w-full">
-                            <Button variant="primary" className="w-full h-16 text-[11px] font-black uppercase tracking-[0.3em] rounded-2xl shadow-2xl shadow-primary/20 hover:scale-[1.02] transition-all">
-                                Minta Link Baru
-                            </Button>
-                        </a>
+                        {isSocialLogin ? (
+                            <a href="/settings" className="w-full">
+                                <Button variant="primary" className="w-full h-16 text-[11px] font-black uppercase tracking-[0.3em] rounded-2xl shadow-2xl shadow-primary/20 hover:scale-[1.02] transition-all bg-slate-900">
+                                    Kembali ke Pengaturan
+                                </Button>
+                            </a>
+                        ) : (
+                            <a href="/forgot-password" className="w-full">
+                                <Button variant="primary" className="w-full h-16 text-[11px] font-black uppercase tracking-[0.3em] rounded-2xl shadow-2xl shadow-primary/20 hover:scale-[1.02] transition-all">
+                                    Minta Link Baru
+                                </Button>
+                            </a>
+                        )}
                         <a className="text-[10px] font-black text-slate-400 hover:text-primary transition-all uppercase tracking-widest border-b border-transparent hover:border-primary pb-1" href="/login">
                             Kembali ke halaman login
                         </a>
@@ -280,7 +305,10 @@ export const ResetPasswordForm: React.FC<ResetPasswordFormProps> = ({ supabaseUr
                     </div>
                 </main>
                 <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-                    <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-rose-50 rounded-full blur-[120px] opacity-60"></div>
+                    <div className={cn(
+                        "absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full blur-[120px] opacity-60",
+                        isSocialLogin ? "bg-blue-50" : "bg-rose-50"
+                    )}></div>
                     <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-50 rounded-full blur-[120px] opacity-60"></div>
                 </div>
             </>
