@@ -3509,14 +3509,15 @@ app.get('/admin/users', async (c) => {
     // Map emails by ID for fast lookup
     const emailMap = new Map(authUsers?.map(au => [au.id, au.email]) || []);
 
-    // Parallel fetch counts for performance
     // Parallel fetch counts for performance (Standard Query fallback)
     const [
       { data: allPages },
-      { data: allProducts }
+      { data: allProducts },
+      { data: allOrders }
     ] = await Promise.all([
       adminSupabase.from('pages').select('user_id'),
-      adminSupabase.from('products').select('merchant_id')
+      adminSupabase.from('products').select('merchant_id'),
+      adminSupabase.from('orders').select('merchant_id, amount').in('status', ['success', 'paid'])
     ]);
 
     // Map counts by ID
@@ -3530,9 +3531,15 @@ app.get('/admin/users', async (c) => {
       productMap.set(p.merchant_id, (productMap.get(p.merchant_id) || 0) + 1);
     });
 
+    const orderMap = new Map();
+    allOrders?.forEach(o => {
+      orderMap.set(o.merchant_id, (orderMap.get(o.merchant_id) || 0) + Number(o.amount));
+    });
+
     // Map data to match Admin Dashboard structure
     const formattedUsers = (profiles || []).map(u => {
       const setting = Array.isArray(u.settings) ? u.settings[0] : u.settings;
+      const totalTransacted = orderMap.get(u.id) || 0;
 
       return {
         id: u.id,
@@ -3544,7 +3551,7 @@ app.get('/admin/users', async (c) => {
         status: (u.is_banned || setting?.plan_status === 'banned') ? 'Banned' : 'Active',
         is_banned: u.is_banned || setting?.plan_status === 'banned',
         joined: u.created_at ? new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A',
-        total: 'Rp 0',
+        total: `Rp ${totalTransacted.toLocaleString('id-ID')}`,
         stats: {
           pages: pageMap.get(u.id) || 0,
           products: productMap.get(u.id) || 0
