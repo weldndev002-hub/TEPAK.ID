@@ -196,7 +196,13 @@ const is_banned = merchantData?.plan_status === 'banned' || merchantData?.profil
 const showProductsSection = formatted_products.length > 0;
 ---
 
-<BaseLayout title={seo.title} description={seo.description} image={seo.image}>
+<BaseLayout 
+    title={seo.title} 
+    description={seo.description} 
+    image={seo.image}
+    gaId={merchantData?.ga_id}
+    fbPixelId={merchantData?.fb_pixel_id}
+>
 
     <AnalyticsTracker client:only="react" merchantId={merchantData.profiles.id} />
     

@@ -210,7 +210,13 @@ if (is_banned) {
 }
 ---
 
-<BaseLayout title={seo.title} description={seo.description} image={seo.image}>
+<BaseLayout 
+    title={seo.title} 
+    description={seo.description} 
+    image={seo.image}
+    gaId={merchantData?.user_settings?.ga_id || merchantData?.ga_id}
+    fbPixelId={merchantData?.user_settings?.fb_pixel_id || merchantData?.fb_pixel_id}
+>
     <AnalyticsTracker
         client:only="react"
         merchantId={merchant_id || "00000000-0000-0000-0000-000000000000"}

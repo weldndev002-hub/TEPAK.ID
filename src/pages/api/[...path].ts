@@ -2797,14 +2797,16 @@ app.delete('/domain', async (c) => {
   if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
   try {
-    await supabase
-      .from('profiles')
+    const { error } = await supabase
+      .from('user_settings')
       .update({
-        custom_domain: null,
-        custom_domain_status: 'none',
-        custom_domain_config: {}
+        domain_name: null,
+        domain_verified: false,
+        updated_at: new Date().toISOString()
       })
-      .eq('id', user.id);
+      .eq('user_id', user.id);
+
+    if (error) throw error;
 
     return c.json({ success: true, message: 'Custom domain berhasil dihapus.' });
   } catch (err: any) {
@@ -3510,6 +3512,8 @@ app.put(
       ).optional().transform(blocks => blocks ? blocks.map(sanitizeTextBlockContent) : blocks),
       seo_image: z.string().optional(),
       seo_keywords: z.string().optional(),
+      ga_id: z.string().optional(),
+      fb_pixel_id: z.string().optional(),
       theme: z.string().optional(),
     }),
     (result, c) => {

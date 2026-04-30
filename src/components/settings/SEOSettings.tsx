@@ -310,10 +310,7 @@ export const SEOSettingsDashboard = () => {
                             </div>
                             <div className="text-[#006621] text-sm flex items-center gap-1 font-['Roboto',sans-serif]">
                                 <span>
-                                    {activeDomain 
-                                        ? `https://${activeDomain}` 
-                                        : `https://tepakiid.weldn-dev-002.workers.dev/u/${username}`
-                                    }
+                                    https://tepakiid.weldn-dev-002.workers.dev/u/{activeDomain || username}
                                 </span>
                                 <ChevronDownIcon className="w-3 h-3" />
                             </div>
