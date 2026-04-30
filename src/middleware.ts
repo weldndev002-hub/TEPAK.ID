@@ -109,6 +109,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
     // ==========================================
     // DOMAIN & SUBDOMAIN ENGINE (SaaS Logic)
+    // Updated: April 30, 2026 - Manual Mode Active
     // ==========================================
     const hostname = url.hostname;
     const PRIMARY_DOMAIN = runtimeEnv.PUBLIC_SITE_URL ? new URL(runtimeEnv.PUBLIC_SITE_URL).hostname : 'tepak.id';
