@@ -7,7 +7,8 @@ import {
     TicketIcon, 
     AcademicCapIcon, 
     Cog6ToothIcon,
-    ArrowLeftOnRectangleIcon
+    ArrowLeftOnRectangleIcon,
+    GlobeAltIcon
 } from '@heroicons/react/24/outline';
 import { supabase } from '../../lib/supabase';
 
