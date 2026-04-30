@@ -19,7 +19,7 @@ export default function PDFViewer({ pdfUrl, fileName }: PDFViewerProps) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const pdfRef = useRef<pdfjsLib.PDFDocument | null>(null);
+    const [pdfDoc, setPdfDoc] = useState<pdfjsLib.PDFDocument | null>(null);
     const [scale, setScale] = useState(1.5);
 
     // Load PDF
@@ -29,7 +29,7 @@ export default function PDFViewer({ pdfUrl, fileName }: PDFViewerProps) {
                 setLoading(true);
                 setError(null);
                 const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
-                pdfRef.current = pdf;
+                setPdfDoc(pdf);
                 setNumPages(pdf.numPages);
                 setCurrentPage(1);
             } catch (err) {
@@ -45,11 +45,11 @@ export default function PDFViewer({ pdfUrl, fileName }: PDFViewerProps) {
 
     // Render page
     useEffect(() => {
-        if (!pdfRef.current || !canvasRef.current) return;
+        if (!pdfDoc || !canvasRef.current) return;
 
         const renderPage = async () => {
             try {
-                const page = await pdfRef.current!.getPage(currentPage);
+                const page = await pdfDoc.getPage(currentPage);
                 const viewport = page.getViewport({ scale });
 
                 const canvas = canvasRef.current!;
@@ -70,7 +70,7 @@ export default function PDFViewer({ pdfUrl, fileName }: PDFViewerProps) {
         };
 
         renderPage();
-    }, [currentPage, scale]);
+    }, [pdfDoc, currentPage, scale]);
 
     if (error) {
         return (

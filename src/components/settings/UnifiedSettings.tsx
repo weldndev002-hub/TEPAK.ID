@@ -187,14 +187,18 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
         setIsTerminating(true);
         setTerminateError(null);
 
+        console.log('[Account Termination] Starting process...');
         try {
+            console.log('[Account Termination] Calling DELETE /api/profile...');
             const res = await fetch('/api/profile', { 
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ confirmation: confirmKeyword }) // Backend can verify keyword if needed
+                body: JSON.stringify({ confirmation: confirmKeyword })
             });
 
+            console.log('[Account Termination] Response status:', res.status);
             const data = await res.json();
+            console.log('[Account Termination] Response data:', data);
 
             if (!res.ok) {
                 throw new Error(data.error || 'Gagal menghapus akun');
@@ -260,7 +264,7 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                                 <div>
                                     <h3 className="text-xl font-black text-slate-900 leading-tight uppercase tracking-tight">Permanent Termination</h3>
                                     <p className="text-[10px] text-rose-600 font-black uppercase tracking-widest mt-1">
-                                        {plan === 'pro' ? 'Account Locked (Pro)' : 'Danger Zone'}
+                                        Danger Zone
                                     </p>
                                 </div>
                             </div>
@@ -294,14 +298,10 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                                 <button 
                                     className={cn(
                                         "w-full h-14 bg-rose-600 text-white font-black uppercase text-[10px] tracking-[0.2em] rounded-xl shadow-lg shadow-rose-600/10 hover:opacity-90 transition-all flex items-center justify-center gap-2",
-                                        (isTerminating || plan === 'pro') && "opacity-50 cursor-not-allowed"
+                                        isTerminating && "opacity-50 cursor-not-allowed"
                                     )}
-                                    disabled={isTerminating || plan === 'pro'}
+                                    disabled={isTerminating}
                                     onClick={() => {
-                                        if (plan === 'pro') {
-                                            setTerminateError('Subscription Pro harus dibatalkan terlebih dahulu.');
-                                            return;
-                                        }
                                         if (confirmKeyword.toUpperCase() !== 'YES') {
                                             setTerminateError('Ketik "YES" di kolom atas untuk melanjutkan.');
                                             return;
@@ -309,7 +309,7 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                                         setShowTerminateConfirm(true);
                                     }}
                                 >
-                                    {plan === 'pro' ? 'Locked (Cancel Pro First)' : (isTerminating ? 'Processing...' : 'Terminate Account')}
+                                    {isTerminating ? 'Processing...' : 'Terminate Account'}
                                 </button>
                                 {terminateError && (
                                     <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest text-center animate-shake">
@@ -359,7 +359,7 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                                             Update your password regularly to ensure the highest level of account protection.
                                         </p>
                                     </div>
-                                    <a href="/reset-password" class="w-full">
+                                    <a href="/reset-password" className="w-full">
                                         <Button className="w-full h-14 bg-slate-900 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-slate-200">
                                             Change Password
                                         </Button>
@@ -501,19 +501,35 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                             </p>
                         </div>
                         <div className="px-8 py-5 bg-rose-50 border-t border-rose-100 flex items-center justify-end gap-3">
-                            <button className="px-5 py-2.5 rounded-xl font-black text-slate-600 hover:bg-white transition-all text-[10px] uppercase tracking-widest" onClick={() => setShowTerminateConfirm(false)}>Batal</button>
+                            <button className="px-5 py-2.5 rounded-xl font-black text-slate-600 hover:bg-white transition-all text-[10px] uppercase tracking-widest" onClick={() => {
+                                setShowTerminateConfirm(false);
+                                setTerminateError(null);
+                            }}>Batal</button>
                             <button 
                                 className={cn(
                                     "px-6 py-2.5 rounded-xl font-black bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-600/20 transition-all text-[10px] uppercase tracking-widest flex items-center gap-2",
-                                    isTerminating && "opacity-50"
+                                    isTerminating && "opacity-50 cursor-not-allowed"
                                 )} 
                                 disabled={isTerminating}
                                 onClick={handleTerminate}
                             >
-                                {isTerminating && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
-                                Ya, Hapus Akun Permanen
+                                {isTerminating ? (
+                                    <>
+                                        <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                        Memproses...
+                                    </>
+                                ) : (
+                                    "Ya, Hapus Akun Permanen"
+                                )}
                             </button>
                         </div>
+                        {terminateError && (
+                            <div className="px-8 pb-6 text-center">
+                                <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest animate-shake bg-rose-50 py-3 rounded-xl">
+                                    {terminateError}
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

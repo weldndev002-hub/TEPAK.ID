@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 import { Card } from '../ui/Card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/Table';
 import { Button } from '../ui/Button';
@@ -42,7 +43,6 @@ const CustomersDashboardContent = () => {
     const [allCustomers, setAllCustomers] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [stats, setStats] = useState<any>(null);
-    const [toast, setToast] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState('all');
 
@@ -64,7 +64,10 @@ const CustomersDashboardContent = () => {
             const res = await fetch(`/api/customers?filter=${filter}`);
             if (res.ok) {
                 const data = await res.json();
-                setAllCustomers(data);
+                console.log('[Customers] Received data:', data);
+                // Menangani jika data adalah array langsung atau objek yang berisi array
+                const customersArray = Array.isArray(data) ? data : (data.customers || []);
+                setAllCustomers(customersArray);
             }
         } catch (error) {
             console.error('Error fetching customers:', error);
@@ -101,6 +104,48 @@ const CustomersDashboardContent = () => {
         customer.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const handleExportExcel = () => {
+        console.log('[Export] Clicked. allCustomers:', allCustomers.length, 'filtered:', filteredCustomers.length);
+        
+        if (filteredCustomers.length === 0) {
+            const msg = allCustomers.length === 0 
+                ? 'Daftar pelanggan Anda masih kosong.' 
+                : 'Tidak ada data yang cocok dengan pencarian Anda.';
+            toast.error(msg);
+            return;
+        }
+
+        try {
+            console.log('[Export] Transforming data...');
+            // Transform data agar rapi di Excel
+            const exportData = filteredCustomers.map((c, index) => ({
+                'No': index + 1,
+                'Nama': c.name || '-',
+                'Email': c.email || '-',
+                'No. HP': c.phone || '-',
+                'Jumlah Order': c.total_orders || c.order_count || 0,
+                'Total Belanja (Rp)': c.total_spent || 0,
+                'Order Terakhir': c.last_order_at ? new Date(c.last_order_at).toLocaleDateString('id-ID') : '-'
+            }));
+
+            console.log('[Export] Creating worksheet...');
+            // Buat worksheet dan workbook
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Daftar Pelanggan');
+
+            // Download file
+            const dateStr = new Date().toISOString().split('T')[0];
+            console.log('[Export] Initiating file download...');
+            XLSX.writeFile(wb, `TepakID_Pelanggan_${dateStr}.xlsx`);
+            
+            toast.success('Daftar pelanggan berhasil diunduh.');
+        } catch (error: any) {
+            console.error('[Export] Critical Error:', error);
+            toast.error(`Gagal mengunduh: ${error.message || 'Terjadi kesalahan sistem'}`);
+        }
+    };
+
     const handleDeleteCustomer = async (id: string, name: string) => {
         if (!confirm(`Apakah Anda yakin ingin menghapus pelanggan "${name}"? Data pesanan akan tetap ada namun tidak lagi terhubung ke pelanggan ini.`)) return;
         
@@ -122,33 +167,6 @@ const CustomersDashboardContent = () => {
         }
     };
 
-    const handleExportCSV = () => {
-        const headers = ["ID", "Name", "Email", "Phone", "Location", "Joined Date", "Total Orders", "Total Spent (IDR)"];
-        const rows = filteredCustomers.map(c => [
-            c.id, 
-            `"${c.name || ''}"`, 
-            c.email, 
-            `'${c.phone || ''}`, // Prepend apostrophe to prevent Excel from converting to scientific notation
-            "Indonesia", 
-            new Date(c.created_at).toLocaleDateString(),
-            c.order_count || 0,
-            c.total_spent || 0
-        ]);
-        
-        // Use semicolon for better European/Global Excel compatibility, or comma for standard CSV
-        const csvContent = headers.join(",") + "\n"
-            + rows.map(e => e.join(",")).join("\n");
-            
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", `tepak_customers_${activeTab}_${new Date().toISOString().split('T')[0]}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
 
     const filterTabsData = [
         { label: 'All', value: 'all' },
@@ -176,7 +194,7 @@ const CustomersDashboardContent = () => {
                     <Button 
                         variant="primary" 
                         className="px-5 py-2.5 rounded-xl text-[11px] font-black flex items-center gap-2 shadow-lg shadow-primary/20 active:scale-95 transition-all bg-primary hover:bg-primary/90 text-white uppercase tracking-wider"
-                        onClick={handleExportCSV}
+                        onClick={handleExportExcel}
                     >
                         <ArrowDownTrayIcon className="w-4 h-4" />
                         Export Excel

@@ -56,12 +56,12 @@ const EditProductDashboardContent = () => {
     const [downloadLimit, setDownloadLimit] = useState(false);
     const [downloadLimitVal, setDownloadLimitVal] = useState<string>('');
     const [linkExpiry, setLinkExpiry] = useState<string>('forever');
+    const [salePrice, setSalePrice] = useState('');
 
     // UI States
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isDirty, setIsDirty] = useState(false);
-    const [toast, setToast] = useState<string | null>(null);
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [showDiscardModal, setShowDiscardModal] = useState(false);
     const [showFileDeleteModal, setShowFileDeleteModal] = useState(false);
@@ -83,6 +83,7 @@ const EditProductDashboardContent = () => {
             setDownloadLimit(!!data.download_limit);
             setDownloadLimitVal(data.download_limit?.toString() || '');
             setLinkExpiry(data.link_expiry || 'forever');
+            setSalePrice(data.sale_price?.toString() || '');
             setCoverUrl(data.cover_url || '');
             setFileUrl(data.file_url || '');
 
@@ -236,7 +237,8 @@ const EditProductDashboardContent = () => {
                     link_expiry: linkExpiry,
                     cover_url: final_cover_url,
                     file_url: final_file_url,
-                    preview_urls: finalPreviewUrls
+                    preview_urls: finalPreviewUrls,
+                    sale_price: salePrice ? Number(salePrice) : null
                 })
             });
 
@@ -426,9 +428,25 @@ const EditProductDashboardContent = () => {
                                                         {errors.price}
                                                     </p>
                                                 )}
-                                                <div className="mt-2 text-xs text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-200">
-                                                    <span className="font-medium">Catatan:</span> Fitur harga diskon sedang dalam pengembangan dan akan tersedia dalam update berikutnya.
-                                                </div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Harga Diskon (IDR)</label>
+                                            <div className="relative">
+                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">Rp</span>
+                                                <Input
+                                                    type="number"
+                                                    placeholder="Opsional"
+                                                    value={salePrice}
+                                                    onChange={(e) => {
+                                                        setSalePrice(e.target.value);
+                                                        handleInputChange();
+                                                    }}
+                                                    className="pl-10"
+                                                />
+                                                <p className="mt-2 text-[10px] text-slate-400 italic">
+                                                    Biarkan kosong jika ingin menggunakan harga normal.
+                                                </p>
                                             </div>
                                         </div>
                                     </div>

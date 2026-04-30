@@ -8,12 +8,13 @@ interface ProductCardProps {
     image: string;
     title: string;
     price: string;
+    salePrice?: string | null;
     description: string;
     className?: string;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ 
-    id, image, title, price, description, className 
+    id, image, title, price, salePrice, description, className 
 }) => {
     return (
         <div className={cn(
@@ -21,8 +22,24 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             className
         )}>
             {/* PRICE BADGE (TOP FLOATING) */}
-            <div className="absolute top-6 right-6 z-10 px-5 py-2 bg-white/40 backdrop-blur-xl rounded-full border border-white/20 shadow-xl shadow-black/5 animate-in fade-in zoom-in duration-1000">
-                <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{price}</span>
+            <div className="absolute top-6 right-6 z-10 flex flex-col items-end gap-2">
+                {salePrice && (
+                    <div className="px-3 py-1 bg-rose-500 text-white rounded-full text-[8px] font-black uppercase tracking-widest shadow-lg animate-in zoom-in duration-500">
+                        SALE
+                    </div>
+                )}
+                <div className="px-5 py-2 bg-white/60 backdrop-blur-xl rounded-full border border-white/20 shadow-xl shadow-black/5 animate-in fade-in zoom-in duration-1000">
+                    <div className="flex items-center gap-2">
+                        {salePrice ? (
+                            <>
+                                <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{salePrice}</span>
+                                <span className="text-[8px] font-bold text-slate-400 line-through uppercase tracking-widest opacity-60">{price}</span>
+                            </>
+                        ) : (
+                            <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{price}</span>
+                        )}
+                    </div>
+                </div>
             </div>
 
             {/* PRODUCT IMAGE CONTAINER */}

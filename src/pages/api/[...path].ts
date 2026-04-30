@@ -1996,6 +1996,7 @@ app.post(
       cover_url: z.string().optional(),
       file_url: z.string().optional(),
       preview_urls: z.array(z.string()).optional().default([]),
+      sale_price: z.number().nullable().optional(),
     })
   ),
   async (c) => {
@@ -2061,9 +2062,9 @@ app.put(
       is_public: z.boolean().optional(),
       download_limit: z.number().nullable().optional(),
       link_expiry: z.string().optional(),
-      cover_url: z.string().optional(),
       file_url: z.string().optional(),
       preview_urls: z.array(z.string()).optional(),
+      sale_price: z.number().nullable().optional(),
     })
   ),
   async (c) => {

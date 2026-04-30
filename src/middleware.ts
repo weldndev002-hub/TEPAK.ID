@@ -108,15 +108,18 @@ export const onRequest = defineMiddleware(async (context, next) => {
     locals.isAdmin = isAdmin;
 
     // ==========================================
-    // DOMAIN & SUBDOMAIN ENGINE
+    // DOMAIN & SUBDOMAIN ENGINE (SaaS Logic)
     // ==========================================
     const hostname = url.hostname;
+    const PRIMARY_DOMAIN = runtimeEnv.PUBLIC_SITE_URL ? new URL(runtimeEnv.PUBLIC_SITE_URL).hostname : 'tepak.id';
+    
     // Define your primary domains here (local and production)
     const primaryDomains = [
         'localhost', 
         '127.0.0.1', 
         'tepak.id', 
-        'tepakid.weldn-dev-002.workers.dev'
+        'tepakid.weldn-dev-002.workers.dev',
+        PRIMARY_DOMAIN
     ];
     
     const isPrimaryDomain = primaryDomains.some(domain => hostname === domain || hostname.endsWith('.' + domain));
@@ -124,23 +127,23 @@ export const onRequest = defineMiddleware(async (context, next) => {
     locals.detectedUser = null;
     locals.isCustomDomain = false;
 
-    // If it's NOT a primary domain, it's a candidate for Custom Domain
-    if (!primaryDomains.includes(hostname) && supabase) {
-        // 1. Check if it's a Subdomain (e.g., acep.tepak.id)
-        const isSubdomain = primaryDomains.some(pd => hostname.endsWith('.' + pd));
+    // 1. Resolve Identity
+    if (supabase) {
+        // A. Subdomain Logic (e.g., acep.tepak.id)
+        const isSubdomain = primaryDomains.some(pd => hostname.endsWith('.' + pd) && hostname !== pd);
         
         if (isSubdomain) {
             const part = hostname.split('.')[0];
-            if (part && part !== 'www') {
+            if (part && part !== 'www' && part !== 'tepak' && part !== 'tepakid') {
                 const { data: profile } = await supabase.from('profiles').select('id, username').eq('username', part).single();
                 if (profile) {
                     locals.detectedUser = profile;
-                    console.log(`[Middleware] Subdomain detected: ${part} -> user ${profile.id}`);
+                    console.log(`[Middleware] Subdomain: ${part} -> ${profile.id}`);
                 }
             }
         } 
-        // 2. Check if it's a Custom Domain (e.g., mybrand.com)
-        else {
+        // B. Custom Domain Logic (e.g., mybrand.com)
+        else if (!primaryDomains.includes(hostname)) {
             const { data: settings } = await supabase
                 .from('user_settings')
                 .select('user_id, profiles!inner(id, username)')
@@ -150,39 +153,38 @@ export const onRequest = defineMiddleware(async (context, next) => {
             if (settings) {
                 locals.detectedUser = settings.profiles;
                 locals.isCustomDomain = true;
-                console.log(`[Middleware] Custom Domain detected: ${hostname} -> user ${settings.user_id}`);
+                console.log(`[Middleware] Custom Domain: ${hostname} -> ${settings.user_id}`);
             }
         }
     }
 
     // ==========================================
-    // AUTHENTICATION PROTECTION
+    // ROUTE CONFIGURATION & SECURITY
     // ==========================================
     const publicAuthRoutes = ['/login', '/signup', '/forgot-password', '/verify-email'];
-    const isAuthRoute = publicAuthRoutes.includes(url.pathname);
-
     const protectedRoutes = [
-      '/dashboard',
-      '/orders',
-      '/products',
-      '/customers',
-      '/wallet',
-      '/settings',
-      '/profile',
-      '/withdraw',
-      '/domain-settings',
-      '/seo-settings',
-      '/admin',
-      '/withdrawal-details',
-      '/bank-info',
-      '/plan-info',
-      '/add-product',
-      '/edit-product'
+      '/dashboard', '/orders', '/products', '/customers', '/wallet', '/settings', 
+      '/profile', '/withdraw', '/domain-settings', '/seo-settings', '/admin',
+      '/withdrawal-details', '/bank-info', '/plan-info', '/add-product', '/edit-product',
+      '/onboarding'
     ];
 
+    const isAuthRoute = publicAuthRoutes.includes(url.pathname);
     const isProtectedRoute = protectedRoutes.some(route => 
       url.pathname === route || url.pathname.startsWith(route + '/')
     );
+
+    // 1. SaaS Security: Force System Routes to Primary Domain
+    const isSystemRoute = isAuthRoute || isProtectedRoute;
+    if (locals.isCustomDomain && isSystemRoute) {
+        console.log(`[Middleware] Redirecting system route ${url.pathname} from custom domain to primary`);
+        const primaryUrl = new URL(url.pathname + url.search, runtimeEnv.PUBLIC_SITE_URL || `https://${PRIMARY_DOMAIN}`);
+        return redirect(primaryUrl.toString());
+    }
+
+    // ==========================================
+    // AUTHENTICATION PROTECTION
+    // ==========================================
 
     // 1. Jika sudah login dan mencoba akses halaman login/signup -> Lempar ke dashboard
     if (isAuthRoute && user) {

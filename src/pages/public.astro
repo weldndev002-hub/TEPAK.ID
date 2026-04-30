@@ -190,6 +190,11 @@ const formatted_products = products.map((p) => ({
         currency: "IDR",
         maximumFractionDigits: 0,
     }).format(p.price),
+    sale_price: p.sale_price ? new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        maximumFractionDigits: 0,
+    }).format(p.sale_price) : null,
     description: p.description,
     image:
         p.cover_url ||
@@ -455,6 +460,7 @@ if (is_banned) {
                                             image={product.image}
                                             title={product.title}
                                             price={product.price}
+                                            salePrice={product.sale_price}
                                             description={product.description}
                                         />
                                     ))}

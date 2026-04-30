@@ -63,6 +63,7 @@ const AddProductDashboardContent = () => {
     const [previewImages, setPreviewImages] = useState<{ id: string; file: File; url: string }[]>([]);
     const [downloadLimitVal, setDownloadLimitVal] = useState<string>('');
     const [linkExpiry, setLinkExpiry] = useState<string>('forever');
+    const [salePrice, setSalePrice] = useState<string>('');
 
     if (subLoading) {
         return (
@@ -228,7 +229,8 @@ const AddProductDashboardContent = () => {
                     link_expiry: linkExpiry,
                     cover_url,
                     file_url,
-                    preview_urls: previewUrls
+                    preview_urls: previewUrls,
+                    sale_price: salePrice ? Number(salePrice) : null
                 })
             });
 
@@ -372,11 +374,21 @@ const AddProductDashboardContent = () => {
                                             {errors.price && <p className="text-[10px] font-black text-rose-500 uppercase mt-2">{errors.price}</p>}
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Harga Diskon</label>
+                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Harga Diskon (IDR)</label>
                                             <div className="relative">
                                                 <BanknotesIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                                <Input type="number" placeholder="Opsional" className="pl-9" />
+                                                <Input 
+                                                    type="number" 
+                                                    placeholder="Opsional" 
+                                                    className="pl-9" 
+                                                    value={salePrice}
+                                                    onChange={(e) => {
+                                                        setSalePrice(e.target.value);
+                                                        handleInputChange();
+                                                    }}
+                                                />
                                             </div>
+                                            <p className="text-[9px] text-slate-400 mt-2 font-medium italic">Biarkan kosong jika tidak ada diskon.</p>
                                         </div>
                                     </div>
                                 </div>

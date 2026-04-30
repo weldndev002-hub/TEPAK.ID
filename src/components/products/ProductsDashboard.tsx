@@ -274,9 +274,22 @@ const ProductsDashboardContent = () => {
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <span className="text-sm font-bold text-primary">
-                                                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(product.price)}
-                                            </span>
+                                            <div className="flex flex-col">
+                                                {product.sale_price ? (
+                                                    <>
+                                                        <span className="text-sm font-bold text-emerald-600">
+                                                            {formatCurrency(product.sale_price)}
+                                                        </span>
+                                                        <span className="text-[10px] font-bold text-slate-400 line-through opacity-60">
+                                                            {formatCurrency(product.price)}
+                                                        </span>
+                                                    </>
+                                                ) : (
+                                                    <span className="text-sm font-bold text-primary">
+                                                        {formatCurrency(product.price)}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </TableCell>
                                         <TableCell>
                                             <Badge variant={product.status === 'published' ? 'success' : 'pending'}>

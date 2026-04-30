@@ -149,7 +149,8 @@ export const CheckoutForm: React.FC = () => {
         }
     };
 
-    const productPrice = product?.price || 0;
+    const productPrice = product?.sale_price || product?.price || 0;
+    const originalPrice = product?.sale_price ? product?.price : null;
 
     // Validation Schema
     const checkoutSchema = z.object({
@@ -370,6 +371,7 @@ export const CheckoutForm: React.FC = () => {
                 <OrderSummary 
                     productTitle={product?.title || 'Loading...'}
                     productPrice={productPrice}
+                    originalPrice={originalPrice}
                     feePercentage={feePercentage}
                     image={product?.cover_url || ''}
                     onPay={handleInitiatePayment}
