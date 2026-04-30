@@ -110,6 +110,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activePage = 'dashboard' }) =>
         <NavItem href="/admin/users" icon={UsersIcon} label="Users" active={activePage === 'users'} />
         <NavItem href="/admin/payouts" icon={CurrencyDollarIcon} label="Payouts" active={activePage === 'payouts'} />
         <NavItem href="/admin/plans" icon={TicketIcon} label="Plans" active={activePage === 'plans'} />
+        <NavItem href="/admin/domains" icon={GlobeAltIcon} label="Custom Domains" active={activePage === 'domains'} />
         <NavItem href="/admin/tutorials" icon={AcademicCapIcon} label="Tutorials" active={activePage === 'tutorials'} />
         <NavItem href="/admin/general-settings" icon={Cog6ToothIcon} label="Settings" active={activePage === 'settings'} />
       </nav>

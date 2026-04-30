@@ -44,7 +44,7 @@ const BottomNavItem: React.FC<BottomNavItemProps> = ({ icon: Icon, label, active
 );
 
 interface BottomNavbarProps {
-    activePage?: 'dashboard' | 'analytics' | 'editor' | 'products' | 'orders' | 'wallet' | 'customers' | 'academy' | 'settings' | 'plan-info' | 'profile' | 'users' | 'payouts' | 'plans' | 'tutorials';
+    activePage?: 'dashboard' | 'analytics' | 'editor' | 'products' | 'orders' | 'wallet' | 'customers' | 'academy' | 'settings' | 'plan-info' | 'profile' | 'users' | 'payouts' | 'plans' | 'tutorials' | 'domains';
     variant?: 'creator' | 'admin';
 }
 
@@ -101,6 +101,7 @@ const BottomNavbarContent: React.FC<BottomNavbarProps> = ({
         ],
         more: [
             { icon: TicketIcon, label: "Plans", href: "/admin/plans", id: "plans" },
+            { icon: WindowIcon, label: "Domains", href: "/admin/domains", id: "domains" },
             { icon: AcademicCapIcon, label: "Tutorials", href: "/admin/tutorials", id: "tutorials" },
             { icon: Cog6ToothIcon, label: "Settings", href: "/admin/general-settings", id: "settings" },
         ]
