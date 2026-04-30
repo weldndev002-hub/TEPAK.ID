@@ -362,19 +362,30 @@ if (is_banned) {
                                                     )}
                                                 </div>
                                             );
-                                        // Default: link / article block (Affiliate Card)
-                                        const url =
-                                            block.data?.url ||
-                                            block.url ||
-                                            (block.subtitle?.startsWith("http")
-                                                ? block.subtitle
-                                                : "#");
+                                        // 1. Get real-time data from database for products
+                                        const product = block.data?.product_id ? products.find(p => p.id === block.data?.product_id) : null;
+                                        
+                                        const url = product ? `/checkout?product_id=${product.id}` : (block.data?.url || block.url || (block.subtitle?.startsWith("http") ? block.subtitle : "#"));
                                         const domain = extractDomain(url);
-                                        const thumbnail =
-                                            block.data?.thumbnailUrl;
-                                        const description =
-                                            block.data?.description ||
-                                            block.subtitle;
+                                        const thumbnail = product?.cover_url || block.data?.thumbnailUrl;
+                                        const title = product?.title || block.data?.title || block.title;
+                                        const description = product?.description || block.data?.description || block.subtitle;
+
+                                        // 2. Format prices (always use product data if available)
+                                        const rawPrice = product?.price || 0;
+                                        const rawSalePrice = product?.sale_price;
+
+                                        const formattedPrice = new Intl.NumberFormat("id-ID", {
+                                            style: "currency",
+                                            currency: "IDR",
+                                            maximumFractionDigits: 0,
+                                        }).format(rawPrice);
+
+                                        const formattedSalePrice = rawSalePrice !== null && rawSalePrice !== undefined ? new Intl.NumberFormat("id-ID", {
+                                            style: "currency",
+                                            currency: "IDR",
+                                            maximumFractionDigits: 0,
+                                        }).format(rawSalePrice) : null;
                                         return (
                                             <a
                                                 href={url}
@@ -411,7 +422,7 @@ if (is_banned) {
                                                     </div>
                                                     
                                                     <h3 class="text-2xl font-black text-on-surface leading-tight tracking-tight mb-4 group-hover:text-primary transition-colors">
-                                                        {block.title || block.data?.title}
+                                                        {title}
                                                     </h3>
                                                     
                                                     {description && (
@@ -421,7 +432,25 @@ if (is_banned) {
                                                     )}
 
                                                     <div class="mt-auto pt-6 border-t border-white/5 flex items-center justify-between">
-                                                        <span class="text-[11px] font-black text-primary uppercase tracking-[0.2em] group-hover:tracking-[0.3em] transition-all">Lihat Detail</span>
+                                                        <div class="flex flex-col">
+                                                            <span class="text-[9px] font-black text-primary/60 uppercase tracking-widest mb-1">Dapatkan Sekarang</span>
+                                                            <div class="flex items-baseline gap-2">
+                                                                {formattedSalePrice ? (
+                                                                    <>
+                                                                        <span class="text-2xl font-black text-on-surface tracking-tighter">
+                                                                            {formattedSalePrice}
+                                                                        </span>
+                                                                        <span class="text-sm font-bold text-on-surface/40 line-through tracking-tight">
+                                                                            {formattedPrice}
+                                                                        </span>
+                                                                    </>
+                                                                ) : (
+                                                                    <span class="text-2xl font-black text-on-surface tracking-tighter">
+                                                                        {formattedPrice}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
                                                         <div class="w-12 h-12 rounded-full bg-white/5 text-on-surface/20 flex items-center justify-center group-hover:bg-primary group-hover:text-white group-hover:scale-110 transition-all duration-500 shadow-sm">
                                                             <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                                         </div>

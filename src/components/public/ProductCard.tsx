@@ -5,6 +5,7 @@ import Button from '../ui/Button';
 export interface ProductCardProps {
   id?: string;
   title: string;
+  salePrice?: string | null;
   description: string;
   price: string;
   imageSrc: string;
@@ -28,6 +29,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   title, 
   description, 
   price, 
+  salePrice,
   imageSrc, 
   badge, 
   ctaText = "Beli Sekarang", 
@@ -81,7 +83,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <div className="flex items-center justify-between">
                 <div className="flex flex-col">
                     <span className="text-[10px] text-white/40 font-bold uppercase tracking-[0.2em] mb-1">{displayDomain}</span>
-                    <span className="text-2xl font-black text-white">{price}</span>
+                    <div className="flex flex-col">
+                        {salePrice ? (
+                            <>
+                                <span className="text-2xl font-black text-white">{salePrice}</span>
+                                <span className="text-xs font-bold text-white/30 line-through tracking-tighter -mt-1">{price}</span>
+                            </>
+                        ) : (
+                            <span className="text-2xl font-black text-white">{price}</span>
+                        )}
+                    </div>
                 </div>
                 
                 <Button 

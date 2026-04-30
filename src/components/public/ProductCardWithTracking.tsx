@@ -6,6 +6,7 @@ interface ProductWithTrackingProps {
   image: string;
   title: string;
   price: string;
+  salePrice?: string | null;
   description: string;
   merchantId: string;
   viewsCount?: number;
@@ -16,6 +17,7 @@ export const ProductCardWithTracking: React.FC<ProductWithTrackingProps> = ({
   image,
   title,
   price,
+  salePrice,
   description,
   merchantId,
   viewsCount = 0
@@ -52,6 +54,7 @@ export const ProductCardWithTracking: React.FC<ProductWithTrackingProps> = ({
       id={id}
       title={title}
       price={price}
+      salePrice={salePrice}
       description={description}
       imageSrc={image}
       onProductClick={handleProductClick}

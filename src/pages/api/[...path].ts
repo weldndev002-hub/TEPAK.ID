@@ -3789,7 +3789,7 @@ app.get('/public/products/:id', async (c) => {
 
   const { data, error } = await supabase
     .from('products')
-    .select('id, title, price, description, cover_url, merchant_id, status')
+    .select('id, title, price, sale_price, description, cover_url, merchant_id, status')
     .eq('id', id)
     .eq('status', 'published')
     .single();

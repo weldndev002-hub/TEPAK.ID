@@ -111,6 +111,7 @@ try {
                 id: p.id,
                 title: p.title,
                 price: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p.price),
+                sale_price: (p.sale_price !== null && p.sale_price !== undefined) ? new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p.sale_price) : null,
                 description: p.description,
                 image: p.cover_url || "https://images.unsplash.com/photo-1544006659-f0b21f04cb1b?w=400&h=400&fit=crop",
                 views_count: viewCounts.filter((v: any) => v.product_id === p.id).length
