@@ -124,7 +124,7 @@ export const DomainManagementDashboard: React.FC = () => {
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-[10px] font-black text-slate-400 uppercase">@{domain.username}</span>
                           <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
-                          <span className="text-[10px] font-medium text-slate-400">{domain.email}</span>
+                          <span className="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">UID: {domain.id.substring(0, 8)}</span>
                         </div>
                       </div>
                     </div>
@@ -148,7 +148,7 @@ export const DomainManagementDashboard: React.FC = () => {
                     )}
                   </td>
                   <td className="px-8 py-8 text-right">
-                    <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-end gap-3 transition-opacity">
                       {domain.custom_domain_status !== 'active' && (
                         <Button 
                           onClick={() => handleUpdateStatus(domain.id, 'active')}

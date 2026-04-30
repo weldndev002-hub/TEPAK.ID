@@ -133,9 +133,9 @@ const profile = merchantData ? {
 } : null;
 
 const seo = merchantData ? {
-    title: `${profile?.name} | ${siteName}`,
-    description: profile?.bio || "",
-    image: profile?.avatar
+    title: merchantData.profiles?.seo_title || `${profile?.name} | ${siteName}`,
+    description: merchantData.profiles?.seo_description || profile?.bio || "",
+    image: merchantData.profiles?.og_image || profile?.avatar
 } : {
     title: `${siteName} - ${siteTagline}`,
     description: branding?.site_tagline || "Satu Link. Semua Kebutuhan Digitalmu.",
@@ -212,8 +212,8 @@ const is_banned =
 const showProductsSection = formatted_products.length > 0;
 
 // Logic to show Landing Page vs Profile
-const isMainDomain = hostname.includes("tepak.id") || hostname.includes("workers.dev") || hostname.includes("weorbit.site") || hostname === "localhost" || hostname === "127.0.0.1";
-const isMainSiteAlias = hostname.split(".")[0] === "tepak" || hostname.split(".")[0] === "tepakid" || hostname.split(".")[0] === "weorbit" || hostname.split(".")[0] === "www";
+const isMainDomain = hostname.includes("tepak.id") || hostname.includes("workers.dev") || hostname === "localhost" || hostname === "127.0.0.1";
+const isMainSiteAlias = hostname.split(".")[0] === "tepak" || hostname.split(".")[0] === "tepakid" || hostname.split(".")[0] === "www";
 const showLandingPage = isMainDomain && (isMainSiteAlias || !detectedUser);
 ---
 

@@ -120,7 +120,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
         '127.0.0.1', 
         'tepak.id', 
         'tepakid.weldn-dev-002.workers.dev',
-        'weorbit.site',
         PRIMARY_DOMAIN
     ];
     
@@ -137,25 +136,55 @@ export const onRequest = defineMiddleware(async (context, next) => {
         if (isSubdomain) {
             const part = hostname.split('.')[0];
             if (part && part !== 'www' && part !== 'tepak' && part !== 'tepakid') {
-                const { data: profile } = await supabase.from('profiles').select('id, username').eq('username', part).single();
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('id, username, full_name, bio, avatar_url')
+                    .eq('username', part)
+                    .single();
+                
                 if (profile) {
-                    locals.detectedUser = profile;
+                    const { data: settings } = await supabase
+                        .from('user_settings')
+                        .select('seo_title, seo_description, seo_image')
+                        .eq('user_id', profile.id)
+                        .single();
+                    
+                    locals.detectedUser = {
+                        ...profile,
+                        seo_title: settings?.seo_title,
+                        seo_description: settings?.seo_description,
+                        og_image: settings?.seo_image
+                    };
                     console.log(`[Middleware] Subdomain: ${part} -> ${profile.id}`);
                 }
             }
         } 
         // B. Custom Domain Logic (e.g., mybrand.com)
         else if (!primaryDomains.includes(hostname)) {
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('id, username')
-                .eq('custom_domain', hostname)
+            const { data: settings } = await supabase
+                .from('user_settings')
+                .select('user_id, domain_name, seo_title, seo_description, seo_image')
+                .eq('domain_name', hostname)
                 .single();
             
-            if (profile) {
-                locals.detectedUser = profile;
-                locals.isCustomDomain = true;
-                console.log(`[Middleware] Custom Domain: ${hostname} -> ${profile.id}`);
+            if (settings) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('id, username, full_name, bio, avatar_url')
+                    .eq('id', settings.user_id)
+                    .single();
+                
+                if (profile) {
+                    // Merge SEO from settings into profile for the layout to use
+                    locals.detectedUser = {
+                        ...profile,
+                        seo_title: settings.seo_title,
+                        seo_description: settings.seo_description,
+                        og_image: settings.seo_image
+                    };
+                    locals.isCustomDomain = true;
+                    console.log(`[Middleware] Custom Domain: ${hostname} -> ${profile.id}`);
+                }
             }
         }
     }

@@ -1,10 +1,13 @@
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
+import { getSupabaseAdmin } from '../../../lib/supabase';
 
 export const GET: APIRoute = async ({ request }) => {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return new Response(JSON.stringify({ error: 'Supabase admin not initialized' }), { status: 500 });
+
   const { data: domains, error } = await supabase
     .from('profiles')
-    .select('id, email, username, custom_domain, custom_domain_status')
+    .select('id, username, custom_domain, custom_domain_status')
     .not('custom_domain', 'is', null)
     .order('created_at', { ascending: false });
 
@@ -18,6 +21,9 @@ export const GET: APIRoute = async ({ request }) => {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
+    const supabase = getSupabaseAdmin();
+    if (!supabase) return new Response(JSON.stringify({ error: 'Supabase admin not initialized' }), { status: 500 });
+
     const { userId, status } = await request.json();
 
     if (!userId || !status) {
