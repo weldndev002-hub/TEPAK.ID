@@ -1,440 +1,341 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../ui/Card';
-import { Input } from '../ui/Input';
-import { Button } from '../ui/Button';
+import Button from '../ui/Button';
+import Input from '../ui/Input';
 import { Badge } from '../ui/Badge';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/Table';
 import { 
-    ChevronRightIcon, 
-    LanguageIcon, 
-    CheckBadgeIcon, 
-    ServerStackIcon, 
-    CheckCircleIcon,
-    ShieldCheckIcon,
-    LockClosedIcon,
+    GlobeAltIcon, 
+    CheckCircleIcon, 
+    ExclamationTriangleIcon,
+    InformationCircleIcon,
+    ArrowPathIcon,
     TrashIcon,
-    ExclamationCircleIcon,
-    ArrowPathIcon 
+    ClipboardIcon
 } from '@heroicons/react/24/outline';
-import { z } from 'zod';
-import { cn } from '../../lib/utils';
-import { useSubscription, SubscriptionProvider } from '../../context/SubscriptionContext';
 
 export const DomainSettingsDashboard = () => {
-    return (
-        <SubscriptionProvider>
-            <DomainSettingsDashboardContent />
-        </SubscriptionProvider>
-    );
-};
+    const [domain, setDomain] = useState('');
+    const [status, setStatus] = useState<'none' | 'pending' | 'active' | 'failed'>('none');
+    const [config, setConfig] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [isPro, setIsPro] = useState(false);
+    const [toast, setToast] = useState<{msg: string, type: 'success' | 'error'} | null>(null);
+    const [countdown, setCountdown] = useState(0);
 
-const DomainSettingsDashboardContent = () => {
-    const { hasFeature, isLoading: subLoading } = useSubscription();
+    const showToast = (msg: string, type: 'success' | 'error' = 'success') => { 
+        setToast({msg, type}); 
+        setTimeout(() => setToast(null), 4000); 
+    };
 
-    React.useEffect(() => {
-        // Block access if feature is disabled in Admin
-        if (!subLoading && !hasFeature('Custom Domain (CNAME)')) {
-            window.location.replace('/dashboard');
+    useEffect(() => {
+        fetchDomainData();
+    }, []);
+
+    useEffect(() => {
+        if (countdown > 0) {
+            const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+            return () => clearTimeout(timer);
         }
-    }, [hasFeature, subLoading]);
+    }, [countdown]);
 
-    const [domainInput, setDomainInput] = React.useState('');
-    const [status, setStatus] = React.useState<'idle' | 'pending' | 'active'>('idle');
-    const [isLoading, setIsLoading] = React.useState(true);
-    const [isSaving, setIsSaving] = React.useState(false);
-    const [error, setError] = React.useState('');
-    const [toast, setToast] = React.useState<string | null>(null);
-    const [deleteModal, setDeleteModal] = React.useState(false);
-
-    const fetchDomain = async () => {
+    const fetchDomainData = async () => {
         setIsLoading(true);
         try {
-            const res = await fetch('/api/settings/domain');
+            // Get profile data
+            const res = await fetch('/api/profile');
             if (res.ok) {
                 const data = await res.json();
-                if (data.domain_name) {
-                    setDomainInput(data.domain_name);
-                    setStatus(data.domain_verified ? 'active' : 'pending');
-                } else {
-                    setStatus('idle');
-                }
+                setDomain(data.custom_domain || '');
+                setStatus(data.custom_domain_status || 'none');
+                setConfig(data.custom_domain_config || {});
             }
-        } catch (err) {
-            console.error('Fetch domain error:', err);
+
+            // Check if PRO
+            const subRes = await fetch('/api/subscription/status');
+            if (subRes.ok) {
+                const subData = await subRes.json();
+                setIsPro(subData.plan_status === 'pro');
+            }
+        } catch (error) {
+            console.error('Failed to fetch domain data:', error);
         } finally {
             setIsLoading(false);
         }
     };
 
-    React.useEffect(() => {
-        fetchDomain();
-    }, []);
-
-    if (subLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-slate-50">
-                <div className="flex flex-col items-center gap-4">
-                    <ArrowPathIcon className="w-10 h-10 text-primary animate-spin" />
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Validating Plan...</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (!hasFeature('Custom Domain (CNAME)')) {
-        return null; // Will redirect via useEffect
-    }
-
-    const showToast = (msg: string) => {
-        setToast(msg);
-        setTimeout(() => setToast(null), 3000);
-    };
-
-    const domainSchema = z.string()
-        .regex(/^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i, "Format domain tidak valid, gunakan format: domainku.com atau sub.domainku.com")
-        .refine(val => !val.includes('://'), "Gunakan format domain yang benar, tanpa http/https");
-
-    const handleSaveDomain = async () => {
-        const result = domainSchema.safeParse(domainInput);
-        if (!result.success) {
-            setError(result.error.issues[0].message);
+    const handleSetup = async () => {
+        if (!domain) return;
+        
+        // Simple client-side validation
+        if (domain.includes('http://') || domain.includes('https://')) {
+            showToast('Gunakan format domain yang benar, tanpa http/https', 'error');
             return;
         }
-        setError('');
+
         setIsSaving(true);
         try {
-            const res = await fetch('/api/settings/domain', {
-                method: 'PUT',
+            const res = await fetch('/api/domain/setup', {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ domain_name: domainInput })
+                body: JSON.stringify({ domain })
             });
 
+            const data = await res.json();
             if (res.ok) {
+                showToast('Domain berhasil didaftarkan!', 'success');
                 setStatus('pending');
-                showToast('Domain saved! Please configure your DNS.');
+                setConfig(data);
+                fetchDomainData(); // Refresh
             } else {
-                const err = await res.json();
-                setError(err.error || 'Failed to save domain');
+                showToast(data.error || 'Gagal mendaftarkan domain', 'error');
             }
         } catch (err) {
-            setError('Connection error');
+            showToast('Kesalahan jaringan', 'error');
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleVerify = async () => {
+        if (countdown > 0) return;
+
+        setIsVerifying(true);
+        try {
+            const res = await fetch('/api/domain/verify', { method: 'POST' });
+            const data = await res.json();
+            
+            if (res.ok) {
+                if (data.status === 'active') {
+                    showToast('Domain Anda sudah aktif!', 'success');
+                } else {
+                    showToast('DNS belum terverifikasi. Harap tunggu proses propagasi.', 'error');
+                }
+                setStatus(data.status);
+                setCountdown(60); // 1 minute rate limit
+                fetchDomainData();
+            } else if (res.status === 429) {
+                showToast(data.error, 'error');
+                setCountdown(60);
+            } else {
+                showToast(data.error || 'Gagal memverifikasi domain', 'error');
+            }
+        } catch (err) {
+            showToast('Kesalahan jaringan', 'error');
+        } finally {
+            setIsVerifying(false);
         }
     };
 
     const handleDelete = async () => {
-        setIsSaving(true);
+        if (!confirm('Apakah Anda yakin ingin menghapus domain ini?')) return;
+
         try {
-            const res = await fetch('/api/settings/domain', { method: 'DELETE' });
+            const res = await fetch('/api/domain', { method: 'DELETE' });
             if (res.ok) {
-                setDomainInput('');
-                setStatus('idle');
-                setDeleteModal(false);
-                showToast('Domain removed');
+                showToast('Domain berhasil dihapus');
+                setDomain('');
+                setStatus('none');
+                setConfig(null);
             }
         } catch (err) {
-            showToast('Failed to remove domain');
-        } finally {
-            setIsSaving(false);
+            showToast('Gagal menghapus domain', 'error');
         }
     };
 
-    const handleVerifyDNS = async () => {
-        setIsSaving(true);
-        setError('');
-        try {
-            // First do a client-side quick check (optional, but good for immediate feedback)
-            const dnsRes = await fetch(`https://dns.google/resolve?name=${domainInput}&type=CNAME`);
-            const dnsData = await dnsRes.json();
-            const isPointedClient = dnsData.Answer?.some((ans: any) => 
-                ans.data.toLowerCase().includes('custom.tepak.id')
-            );
-
-            // Now call the backend which does the official Cloudflare status check
-            const verifyRes = await fetch('/api/settings/domain/verify', { method: 'POST' });
-            const data = await verifyRes.json();
-
-            if (verifyRes.ok) {
-                setStatus('active');
-                showToast('Domain verified and active!');
-            } else {
-                // If it's a rate limit, show the specific wait time
-                if (verifyRes.status === 429) {
-                    setError(data.error);
-                } else {
-                    setError(data.error || 'DNS CNAME belum terdeteksi aktif. Harap tunggu proses propagasi.');
-                }
-            }
-        } catch (err) {
-            console.error('DNS Check failed:', err);
-            setError('Gagal melakukan pengecekan. Silakan coba lagi nanti.');
-        } finally {
-            setIsSaving(false);
-        }
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+        showToast('Tersalin ke clipboard!');
     };
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-slate-50">
-                <div className="flex flex-col items-center gap-4">
-                    <ArrowPathIcon className="w-10 h-10 text-primary animate-spin" />
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loading Settings...</p>
-                </div>
+            <div className="w-full h-64 flex flex-col items-center justify-center space-y-4">
+                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loading domain settings...</p>
             </div>
         );
     }
 
+    if (!isPro) {
+        return (
+            <Card className="p-12 border-slate-100 shadow-sm text-center space-y-6 rounded-[2.5rem] bg-white overflow-hidden relative">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 via-primary to-amber-400"></div>
+                <div className="w-20 h-20 bg-amber-50 rounded-3xl flex items-center justify-center mx-auto text-amber-500">
+                    <GlobeAltIcon className="w-10 h-10" />
+                </div>
+                <div className="space-y-2">
+                    <Badge variant="pro" className="mx-auto">PREMIUM FEATURE</Badge>
+                    <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Custom Domain Support</h3>
+                    <p className="text-slate-500 max-w-sm mx-auto font-medium">
+                        Hubungkan domain kustom Anda sendiri (misal: brand.com) untuk tampilan yang lebih profesional.
+                    </p>
+                </div>
+                <Button variant="primary" className="px-10 py-3 rounded-2xl font-black uppercase tracking-widest text-[11px]" onClick={() => window.location.href = '/settings/billing'}>
+                    Upgrade to PRO
+                </Button>
+            </Card>
+        );
+    }
+
     return (
-        <>
-            <div className="flex-1 p-8 min-h-screen bg-slate-50 ">
-            {/* Toast */}
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {toast && (
-                <div className="fixed top-6 right-6 z-[200] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl text-[11px] font-black uppercase tracking-widest bg-emerald-500 text-white animate-in slide-in-from-right duration-300">
-                    <CheckCircleIcon className="w-5 h-5" /> {toast}
+                <div className={`fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-xl text-sm font-bold animate-in slide-in-from-right duration-300 ${
+                    toast.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
+                }`}>
+                    {toast.type === 'success' ? <CheckCircleIcon className="w-5 h-5" /> : <ExclamationTriangleIcon className="w-5 h-5" />}
+                    {toast.msg}
                 </div>
             )}
 
-            <div className="max-w-5xl mx-auto">
-                
-                {/* Breadcrumbs */}
-                <div className="flex items-center gap-2 text-[10px] mb-8 font-black uppercase tracking-widest">
-                    <a href="/settings" className="text-slate-400 hover:text-primary transition-colors">Settings</a>
-                    <ChevronRightIcon className="w-3 h-3 text-slate-300" />
-                    <span className="text-primary">Custom Domain</span>
-                </div>
+            <div className="flex flex-col gap-2">
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Custom Domain</h2>
+                <p className="text-slate-500 font-medium text-sm">Personalize your page URL with your own domain name.</p>
+            </div>
 
-                {/* Page Header */}
-                <div className="mb-12">
-                    <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2 block">Brand Identity</span>
-                    <h2 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Custom Domain</h2>
-                    <p className="text-slate-500 max-w-2xl leading-relaxed font-medium mt-2">Manage your brand identity by connecting a custom domain. These settings help your audience find your work easier.</p>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    
-                    {/* Left Column */}
-                    <div className="lg:col-span-4 flex flex-col gap-8">
-                        
-                        {/* Subdomain Status Card */}
-                        <Card className="p-8 shadow-sm border-slate-100 rounded-3xl">
-                            <div className="flex items-center gap-3 mb-6">
-                                <LanguageIcon className="w-5 h-5 text-primary" />
-                                <h3 className="font-black text-slate-900 tracking-tight uppercase text-sm">Default Subdomain</h3>
+            {status === 'none' ? (
+                <Card className="p-8 border-slate-100 shadow-sm space-y-8 rounded-3xl bg-white">
+                    <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary shrink-0">
+                            <GlobeAltIcon className="w-6 h-6" />
+                        </div>
+                        <div className="space-y-6 flex-1">
+                            <div>
+                                <h3 className="font-black text-slate-900 uppercase tracking-tight text-sm mb-1">Set Up Your Domain</h3>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Connect your branding to your profile</p>
                             </div>
-                            <div className="p-4 bg-slate-50 rounded-2xl mb-6 border border-slate-100">
-                                <p className="text-[11px] font-black text-primary break-all uppercase tracking-tight">creator.tepak.id</p>
+
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Domain Name</label>
+                                    <div className="flex gap-3">
+                                        <Input 
+                                            className="h-14 bg-slate-50/50 border-slate-100 rounded-xl font-bold text-sm focus:bg-white transition-all px-6 flex-1"
+                                            value={domain} 
+                                            onChange={(e) => setDomain(e.target.value)}
+                                            placeholder="e.g. www.brand.com"
+                                        />
+                                        <Button 
+                                            variant="primary" 
+                                            className="h-14 px-8 rounded-xl font-black uppercase tracking-widest text-[11px]"
+                                            onClick={handleSetup}
+                                            disabled={isSaving || !domain}
+                                        >
+                                            {isSaving ? 'Registering...' : 'Register Domain'}
+                                        </Button>
+                                    </div>
+                                    <p className="text-[9px] font-medium text-slate-400 uppercase tracking-tight italic ml-1">
+                                        Input format: domain.com or www.domain.com (without http/https)
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </Card>
+            ) : (
+                <div className="space-y-8">
+                    {/* Current Domain Info */}
+                    <Card className="p-8 border-slate-100 shadow-sm rounded-3xl bg-white">
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
+                                    status === 'active' ? 'bg-emerald-50 text-emerald-500' : 'bg-amber-50 text-amber-500'
+                                }`}>
+                                    <GlobeAltIcon className="w-7 h-7" />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <h3 className="font-black text-slate-900 text-lg tracking-tight uppercase">{domain}</h3>
+                                        <Badge variant={status === 'active' ? 'success' : 'warning'}>
+                                            {status.toUpperCase()}
+                                        </Badge>
+                                    </div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        {status === 'active' ? 'Your domain is live and working' : 'Awaiting DNS propagation and verification'}
+                                    </p>
+                                </div>
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-                                <span className="text-[10px] font-black text-emerald-500 tracking-widest uppercase">Active</span>
-                            </div>
-                        </Card>
-
-                        {/* Decorative Branding Block */}
-                        <div className="bg-slate-900 p-8 rounded-3xl relative overflow-hidden text-white shadow-sm">
-                            <div className="relative z-10">
-                                <h4 className="text-lg font-black mb-2 uppercase tracking-tight leading-tight">Elevate Your Branding</h4>
-                                <p className="text-xs text-slate-400 leading-relaxed font-medium">Use a custom domain to look more professional to clients and collaborators.</p>
-                            </div>
-                            <div className="absolute -right-8 -bottom-8 opacity-10 pointer-events-none">
-                                <CheckBadgeIcon className="w-32 h-32" />
-                            </div>
-                        </div>
-
-                    </div>
-
-                    {/* Right Column */}
-                    <div className="lg:col-span-8 flex flex-col gap-8">
-                        
-                        {/* Custom Domain Config Card */}
-                        <Card className="p-8 shadow-sm border-slate-100 rounded-3xl">
-                            <div className="flex justify-between items-start mb-8">
-                                <div>
-                                    <h3 className="text-xl font-black text-slate-900 tracking-tight mb-1 uppercase">Connect New Domain</h3>
-                                    <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wider">Follow the steps below to connect your domain.</p>
-                                </div>
-                                <Badge variant="pro">Configuration</Badge>
-                            </div>
-                            
-                            <div className="space-y-8">
-                                {/* Input Step */}
-                                <div className="space-y-3">
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Domain Name</label>
-                                    <div className="flex gap-3">
-                                        <div className="flex-1">
-                                            <Input 
-                                                type="text" 
-                                                placeholder="my-store.com" 
-                                                className={cn(
-                                                    "rounded-xl border-slate-100 uppercase text-xs font-black tracking-tight",
-                                                    error ? "ring-2 ring-rose-500" : ""
-                                                )}
-                                                value={domainInput}
-                                                onChange={(e) => {
-                                                    setDomainInput(e.target.value.toLowerCase());
-                                                    if(error) setError('');
-                                                }}
-                                                disabled={status !== 'idle' || isSaving}
-                                            />
-                                        </div>
-                                        {status === 'idle' && (
-                                            <Button 
-                                                variant="primary" 
-                                                className="px-8 font-black text-[11px] uppercase tracking-widest shadow-xl shadow-primary/20 rounded-xl"
-                                                onClick={handleSaveDomain}
-                                                isLoading={isSaving}
-                                            >
-                                                Register
-                                            </Button>
-                                        )}
-                                        {status !== 'idle' && (
-                                            <Button 
-                                                variant="ghost" 
-                                                className="px-6 font-black text-[11px] uppercase tracking-widest rounded-xl border border-slate-100"
-                                                onClick={() => { setStatus('idle'); setDomainInput(''); }}
-                                                disabled={isSaving}
-                                            >
-                                                Change
-                                            </Button>
-                                        )}
-                                    </div>
-                                    {error && <p className="text-[10px] font-black text-rose-500 uppercase flex items-center gap-1"><ExclamationCircleIcon className="w-3 h-3"/> {error}</p>}
-                                </div>
-
-                                {/* DNS Settings Instruction */}
-                                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6">
-                                    <h4 className="text-[11px] font-black text-slate-900 mb-6 flex items-center gap-2 uppercase tracking-widest">
-                                        <ServerStackIcon className="w-4 h-4 text-primary" />
-                                        DNS Settings Instructions
-                                    </h4>
-                                    
-                                    <div className="overflow-x-auto bg-white border border-slate-50 rounded-xl overflow-hidden mb-6">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow className="bg-slate-50/50">
-                                                    <TableHead className="font-black text-[10px] text-slate-400 uppercase tracking-widest px-6">Type</TableHead>
-                                                    <TableHead className="font-black text-[10px] text-slate-400 uppercase tracking-widest px-6">Name/Host</TableHead>
-                                                    <TableHead className="font-black text-[10px] text-slate-400 uppercase tracking-widest px-6">Value (Points to)</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                <TableRow className="hover:bg-white bg-white">
-                                                    <TableCell className="font-black text-[11px] text-slate-900 px-6 tracking-tight">CNAME</TableCell>
-                                                    <TableCell className="font-black text-[11px] text-slate-900 px-6 tracking-tight">@ atau www</TableCell>
-                                                    <TableCell className="font-black text-[11px] text-primary px-6 tracking-tight flex items-center gap-2">
-                                                        custom.tepak.id
-                                                        <button 
-                                                            onClick={() => {
-                                                                navigator.clipboard.writeText('custom.tepak.id');
-                                                                showToast('Copied to clipboard!');
-                                                            }}
-                                                            className="p-1 hover:bg-primary/10 rounded-md transition-colors"
-                                                            title="Copy to clipboard"
-                                                        >
-                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
-                                                            </svg>
-                                                        </button>
-                                                    </TableCell>
-                                                </TableRow>
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-
-                                    <div className="p-4 bg-primary/5 border border-primary/10 rounded-xl">
-                                        <p className="text-[10px] text-primary font-black uppercase tracking-tight leading-relaxed">
-                                            💡 PENTING: Pengaturan ini dilakukan di panel domain provider Anda (Niagahoster, Rumahweb, dll), bukan di dalam Tepak.ID. Masukkan nilai di atas ke dalam pengaturan DNS domain Anda.
-                                        </p>
-                                    </div>
-
-                                    {status === 'pending' && (
-                                        <div className="mt-8 pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-6">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center shrink-0 text-amber-500">
-                                                    <ArrowPathIcon className={cn("w-5 h-5", isSaving && "animate-spin")} />
-                                                </div>
-                                                <div>
-                                                    <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Status: Pending Verification</p>
-                                                    <p className="text-[9px] text-slate-400 font-medium mt-0.5">Klik verifikasi jika Anda sudah mengatur DNS.</p>
-                                                </div>
-                                            </div>
-                                            <Button 
-                                                variant="primary" 
-                                                className="w-full sm:w-auto px-8 font-black text-[11px] uppercase tracking-widest shadow-xl shadow-primary/20 rounded-xl"
-                                                onClick={handleVerifyDNS}
-                                                isLoading={isSaving}
-                                            >
-                                                Verify Connection
-                                            </Button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </Card>
-
-                        {/* Active Custom Domain Card */}
-                        {status === 'active' && (
-                            <Card className="p-8 shadow-sm border-slate-100 rounded-3xl animate-in fade-in zoom-in duration-500">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                                    <div className="flex items-center gap-6">
-                                        <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center shrink-0 text-emerald-500">
-                                            <ShieldCheckIcon className="w-8 h-8" />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase">{domainInput}</h3>
-                                            <div className="flex items-center gap-4 mt-2 flex-wrap">
-                                                <span className="flex items-center gap-2 text-[10px] font-black text-emerald-500 uppercase tracking-widest">
-                                                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                                                    Active & Connected
-                                                </span>
-                                                <span className="text-slate-100">•</span>
-                                                <span className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                                    <LockClosedIcon className="w-3.5 h-3.5" />
-                                                    SSL Secured
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
+                                {status !== 'active' && (
                                     <Button 
-                                        variant="ghost" 
-                                        className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-rose-100 text-rose-500 text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 transition-all shrink-0 active:scale-95"
-                                        onClick={() => setDeleteModal(true)}
-                                        disabled={isSaving}
+                                        variant="outline" 
+                                        className="rounded-xl font-black uppercase tracking-widest text-[10px] h-10 px-5 border-slate-100 hover:bg-slate-50"
+                                        onClick={handleVerify}
+                                        disabled={isVerifying || countdown > 0}
                                     >
-                                        <TrashIcon className="w-4 h-4" />
-                                        Delete Domain
+                                        {isVerifying ? <ArrowPathIcon className="w-4 h-4 animate-spin mr-2" /> : null}
+                                        {countdown > 0 ? `Check again in ${countdown}s` : 'Verify DNS Now'}
                                     </Button>
-                                </div>
-                            </Card>
-                        )}
-
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {/* Delete Domain Confirm Modal */}
-        {deleteModal && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-                <div className="bg-white w-full max-w-sm rounded-[24px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                    <div className="p-8">
-                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-rose-100 mb-4">
-                            <TrashIcon className="w-6 h-6 text-rose-500" />
+                                )}
+                                <Button 
+                                    variant="ghost" 
+                                    className="rounded-xl p-2.5 text-rose-500 hover:bg-rose-50"
+                                    onClick={handleDelete}
+                                >
+                                    <TrashIcon className="w-5 h-5" />
+                                </Button>
+                            </div>
                         </div>
-                        <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Delete Domain?</h3>
-                        <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                            Domain <strong className="text-slate-900">{domainInput}</strong> akan dihapus dari akun Anda. Pengunjung tidak lagi bisa mengakses halaman Anda melalui domain ini.
-                        </p>
-                    </div>
-                    <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
-                        <button className="px-5 py-2.5 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest" onClick={() => setDeleteModal(false)}>Cancel</button>
-                        <button className="px-6 py-2.5 rounded-xl font-black bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-500/20 transition-all text-[10px] uppercase tracking-widest" onClick={handleDelete} disabled={isSaving}>Yes, Delete</button>
-                    </div>
+                    </Card>
+
+                    {/* Verification Instructions */}
+                    {status === 'pending' && (
+                        <Card className="p-8 border-amber-100 bg-amber-50/30 rounded-3xl space-y-8 animate-pulse-subtle">
+                            <div className="flex items-start gap-4">
+                                <InformationCircleIcon className="w-6 h-6 text-amber-500 shrink-0 mt-1" />
+                                <div className="space-y-6 flex-1">
+                                    <div>
+                                        <h3 className="font-black text-slate-900 uppercase tracking-tight text-sm mb-1">DNS Configuration Required</h3>
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Add the following record to your DNS provider</p>
+                                    </div>
+
+                                    <div className="bg-white border border-amber-100 rounded-2xl overflow-hidden shadow-sm">
+                                        <table className="w-full text-left text-xs">
+                                            <thead className="bg-slate-50 border-b border-amber-100">
+                                                <tr>
+                                                    <th className="px-6 py-4 font-black uppercase text-[10px] text-slate-400">Type</th>
+                                                    <th className="px-6 py-4 font-black uppercase text-[10px] text-slate-400">Name (Host)</th>
+                                                    <th className="px-6 py-4 font-black uppercase text-[10px] text-slate-400">Value (Target)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr className="border-b border-amber-50">
+                                                    <td className="px-6 py-5"><Badge variant="outline">CNAME</Badge></td>
+                                                    <td className="px-6 py-5 font-mono font-bold text-slate-900">
+                                                        {domain.split('.')[0] === 'www' ? 'www' : '@'}
+                                                    </td>
+                                                    <td className="px-6 py-5">
+                                                        <div className="flex items-center gap-2">
+                                                            <code className="font-mono font-bold text-primary bg-primary/5 px-2 py-1 rounded">
+                                                                weorbit.site
+                                                            </code>
+                                                            <button onClick={() => copyToClipboard('weorbit.site')} className="p-1 hover:bg-slate-100 rounded transition-colors">
+                                                                <ClipboardIcon className="w-4 h-4 text-slate-400" />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div className="p-5 bg-white border border-amber-100 rounded-2xl flex items-start gap-4">
+                                        <InformationCircleIcon className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                                        <div className="space-y-1">
+                                            <p className="text-[11px] font-black text-slate-900 uppercase">Proses Aktivasi Manual</p>
+                                            <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
+                                                Setelah Anda mengarahkan CNAME ke weorbit.site, admin akan memverifikasi dan mengaktifkan domain Anda dalam 1x24 jam.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </Card>
+                    )}
                 </div>
-            </div>
-        )}
-        </>
+            )}
+        </div>
     );
 };
-

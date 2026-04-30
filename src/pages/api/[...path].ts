@@ -2687,6 +2687,135 @@ app.get('/plans', async (c) => {
   }
 });
 
+/**
+ * CUSTOM DOMAIN MANAGEMENT (PRO ONLY)
+ */
+
+// 1. Setup Custom Domain
+app.post(
+  '/domain/setup',
+  zValidator(
+    'json',
+    z.object({
+      domain: z.string()
+        .min(3)
+        .max(255)
+        .regex(/^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](?:\.[a-zA-Z0-9]{2,})+$/, "Gunakan format domain yang benar, tanpa http/https")
+    })
+  ),
+  async (c) => {
+    const { supabase, user } = await getAuthContext(c);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const { domain } = c.req.valid('json');
+    console.log(`[Domain Setup] Attempting to register: ${domain} for user ${user.id}`);
+
+    try {
+      // Check if user is PRO
+      const { data: settings } = await supabase
+        .from('user_settings')
+        .select('plan_status')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (settings?.plan_status !== 'pro') {
+        console.warn(`[Domain Setup] Access denied: User ${user.id} is not PRO`);
+        return c.json({ error: 'Fitur Custom Domain hanya tersedia untuk pengguna PRO.' }, 403);
+      }
+
+      // Check if domain is already taken
+      const { data: existing } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('custom_domain', domain)
+        .neq('id', user.id)
+        .single();
+      
+      if (existing) {
+        console.warn(`[Domain Setup] Domain ${domain} already taken by another user`);
+        return c.json({ error: 'Domain ini sudah digunakan oleh pengguna lain.' }, 400);
+      }
+
+      // MANUAL MODE: Just save to DB and wait for Admin
+      const { error: dbError } = await supabase
+        .from('profiles')
+        .update({
+          custom_domain: domain,
+          custom_domain_status: 'pending',
+          custom_domain_config: {
+            mode: 'manual',
+            cname_target: 'weorbit.site',
+            created_at: new Date().toISOString()
+          }
+        })
+        .eq('id', user.id);
+
+      if (dbError) throw dbError;
+
+      return c.json({
+        success: true,
+        message: 'Permintaan domain kustom telah dikirim. Silakan atur CNAME Anda ke weorbit.site dan tunggu aktivasi admin.',
+        cname_target: 'weorbit.site'
+      });
+
+    } catch (err: any) {
+      console.error('[Domain Setup] Error:', err);
+      return c.json({ error: err.message }, 500);
+    }
+  }
+);
+
+// 2. Check Domain Status (Manual Mode)
+app.post('/domain/verify', async (c) => {
+  const { supabase, user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('custom_domain, custom_domain_status, custom_domain_config')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile?.custom_domain) {
+      return c.json({ error: 'Belum ada domain yang didaftarkan.' }, 400);
+    }
+
+    // In manual mode, we just return the current status from DB
+    // Admin must manually update custom_domain_status to 'active' in Supabase
+    return c.json({
+      status: profile.custom_domain_status,
+      message: profile.custom_domain_status === 'active' 
+        ? 'Selamat! Domain Anda sudah aktif.' 
+        : 'Domain sedang dalam proses peninjauan admin. Pastikan CNAME sudah diarahkan ke weorbit.site'
+    });
+
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+// 3. Delete Custom Domain
+app.delete('/domain', async (c) => {
+  const { supabase, user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  try {
+    await supabase
+      .from('profiles')
+      .update({
+        custom_domain: null,
+        custom_domain_status: 'none',
+        custom_domain_config: {}
+      })
+      .eq('id', user.id);
+
+    return c.json({ success: true, message: 'Custom domain berhasil dihapus.' });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
 // 2. Upgrade to Plan (Create Duitku Invoice) — mendukung semua paket & billing period
 app.post('/subscription/upgrade', async (c) => {
   console.log('[Subscription Upgrade] Request received');

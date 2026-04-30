@@ -27,8 +27,10 @@ import {
 } from '@heroicons/react/24/solid';
 import { useSubscription, SubscriptionProvider } from '../../context/SubscriptionContext';
 import { supabase } from '../../lib/supabase';
+import { DomainSettingsDashboard } from './DomainSettings';
+import { GlobeAltIcon } from '@heroicons/react/24/outline';
 
-export const UnifiedSettings = ({ defaultTab = 'account' }: { defaultTab?: 'account' | 'bank' }) => {
+export const UnifiedSettings = ({ defaultTab = 'account' }: { defaultTab?: 'account' | 'bank' | 'domain' }) => {
     return (
         <SubscriptionProvider>
             <UnifiedSettingsContent defaultTab={defaultTab} />
@@ -36,8 +38,8 @@ export const UnifiedSettings = ({ defaultTab = 'account' }: { defaultTab?: 'acco
     );
 };
 
-const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'account' | 'bank' }) => {
-    const [activeTab, setActiveTab] = useState<'account' | 'bank'>(defaultTab);
+const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'account' | 'bank' | 'domain' }) => {
+    const [activeTab, setActiveTab] = useState<'account' | 'bank' | 'domain'>(defaultTab);
     const { plan } = useSubscription();
     
     // --- Account State ---
@@ -248,6 +250,18 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                     >
                         <BanknotesIcon className="w-4 h-4" />
                         Payout Method
+                    </button>
+                )}
+                {(activeTab === 'domain' || hasFeature('Custom Domain (CNAME)')) && (
+                    <button 
+                        onClick={() => setActiveTab('domain')}
+                        className={cn(
+                            "flex items-center gap-3 px-8 py-4 rounded-[1.5rem] transition-all font-black uppercase tracking-widest text-[11px]",
+                            activeTab === 'domain' ? "bg-white text-slate-900 shadow-xl shadow-slate-200" : "text-slate-500 hover:text-slate-700"
+                        )}
+                    >
+                        <GlobeAltIcon className="w-4 h-4" />
+                        Custom Domain
                     </button>
                 )}
             </div>
@@ -484,8 +498,11 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                         </div>
                     </div>
                 </div>
+            {activeTab === 'domain' && (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <DomainSettingsDashboard />
+                </div>
             )}
-
 
             {/* Account Termination Confirmation */}
             {showTerminateConfirm && (

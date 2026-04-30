@@ -119,6 +119,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
         '127.0.0.1', 
         'tepak.id', 
         'tepakid.weldn-dev-002.workers.dev',
+        'weorbit.site',
         PRIMARY_DOMAIN
     ];
     
@@ -144,16 +145,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
         } 
         // B. Custom Domain Logic (e.g., mybrand.com)
         else if (!primaryDomains.includes(hostname)) {
-            const { data: settings } = await supabase
-                .from('user_settings')
-                .select('user_id, profiles!inner(id, username)')
-                .eq('domain_name', hostname)
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('id, username')
+                .eq('custom_domain', hostname)
                 .single();
             
-            if (settings) {
-                locals.detectedUser = settings.profiles;
+            if (profile) {
+                locals.detectedUser = profile;
                 locals.isCustomDomain = true;
-                console.log(`[Middleware] Custom Domain: ${hostname} -> ${settings.user_id}`);
+                console.log(`[Middleware] Custom Domain: ${hostname} -> ${profile.id}`);
             }
         }
     }
