@@ -3118,12 +3118,13 @@ app.post('/payments/duitku/webhook', async (c) => {
           // 3. Get product details
           const { data: productData, error: productError } = await supabase
             .from('products')
-            .select('type, file_url')
+            .select('type, file_url, link_expiry')
             .eq('id', orderData.product_id)
             .single();
 
           const customerEmail = customerData?.email;
           const productType = productData?.type;
+          const linkExpiry = productData?.link_expiry || 'forever';
           let fileUrl = productData?.file_url;
 
           console.log(`[Webhook DuitKu] Customer email: ${customerEmail}, Product type: ${productType}, File URL: ${fileUrl ? 'Present' : 'Missing'}`);
@@ -3160,7 +3161,8 @@ app.post('/payments/duitku/webhook', async (c) => {
               customerEmail,
               fileUrl,
               siteBaseUrl,
-              c.env // Pass Hono environment to library
+              c.env, // Pass Hono environment to library
+              linkExpiry
             );
 
             if (result.success) {

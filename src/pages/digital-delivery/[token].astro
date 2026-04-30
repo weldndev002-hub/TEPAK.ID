@@ -135,6 +135,14 @@ if (token && email && supabase && !needsVerification) {
             // Check expiry
             const expiresAt = new Date(delivery.expires_at);
             const now = new Date();
+            const isForever = expiresAt.getFullYear() > (now.getFullYear() + 50);
+            const formattedExpiry = expiresAt.toLocaleDateString('id-ID', { 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
             
             orderId = delivery.orders?.id || "MANUAL";
             accessCount = delivery.access_count || 0;
@@ -464,8 +472,9 @@ if (!isValid && !needsVerification) {
                                                 />
                                             </svg>
                                             <span>
-                                                Tautan ini hanya berlaku untuk 7
-                                                hari sejak pembelian
+                                                {isForever 
+                                                    ? "Tautan ini berlaku selamanya selama email Anda aktif" 
+                                                    : `Tautan ini berlaku hingga ${formattedExpiry}`}
                                             </span>
                                         </li>
                                         <li class="flex items-start">

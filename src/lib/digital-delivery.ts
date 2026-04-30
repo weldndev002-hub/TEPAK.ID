@@ -115,7 +115,8 @@ export async function createDigitalDelivery(
     customerEmail: string,
     fileUrl: string,
     siteBaseUrl?: string,
-    env?: any
+    env?: any,
+    expiryType: string = 'forever'
 ): Promise<{ success: boolean; token?: string; emailSent?: boolean; emailError?: string; error?: string }> {
     console.log('[Digital Delivery] Starting digital delivery process:', {
         orderId,
@@ -159,9 +160,20 @@ export async function createDigitalDelivery(
 
         const token = generateToken();
         const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 7);
+        
+        // Logika masa berlaku fleksibel
+        if (expiryType === '24h') {
+            expiresAt.setHours(expiresAt.getHours() + 24);
+        } else if (expiryType === '7d') {
+            expiresAt.setDate(expiresAt.getDate() + 7);
+        } else if (expiryType === '30d') {
+            expiresAt.setDate(expiresAt.getDate() + 30);
+        } else {
+            // Default: Selamanya (100 tahun)
+            expiresAt.setFullYear(expiresAt.getFullYear() + 100);
+        }
 
-        console.log('[Digital Delivery] Generated token:', token);
+        console.log(`[Digital Delivery] Generated token: ${token} with expiry: ${expiryType} (${expiresAt.toISOString()})`);
 
         // Try to generate signed URL, but fall back to original URL if it fails
         // (This handles both private buckets and public file URLs)
@@ -343,7 +355,7 @@ async function sendDigitalDeliveryEmail(
           <p style="font-size: 14px; color: #666;">
             <strong>Catatan:</strong><br>
             - Gunakan email <b>${toEmail}</b> untuk mengakses tautan ini.<br>
-            - Tautan berlaku selama 7 hari.
+            - Tautan ini dapat diakses kapan saja.
           </p>
           
           <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
