@@ -386,9 +386,8 @@ export const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialBranding 
                                         <p className="text-slate-400 font-medium tracking-tight max-w-lg mx-auto uppercase text-[10px] leading-relaxed">Let your audience know who you are. These details will appear on your public landing page.</p>
                                     </header>
 
-                                    <div className="flex flex-col lg:flex-row gap-20">
                                         {/* PHOTO & BIO */}
-                                        <div className="lg:w-1/2 space-y-12">
+                                        <div className="max-w-2xl mx-auto w-full space-y-12">
                                             <AvatarUpload
                                                 className="mb-14"
                                                 image={avatarUrl}
@@ -435,38 +434,6 @@ export const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialBranding 
                                                 </div>
                                             </div>
                                         </div>
-
-                                        {/* SOCIALS */}
-                                        <div className="lg:w-1/2 space-y-10">
-                                            <div className="p-10 rounded-[3rem] bg-slate-50/50 border border-slate-100 space-y-10">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                                                    <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.4em]">Presence & Socials</h3>
-                                                </div>
-
-                                                <div className="space-y-8">
-                                                    {[
-                                                        { id: 'ig', label: 'Instagram Username', icon: 'IG' },
-                                                        { id: 'tt', label: 'TikTok Username', icon: 'TT' },
-                                                        { id: 'yt', label: 'YouTube Handle', icon: 'YT' }
-                                                    ].map((s) => (
-                                                        <div key={s.id} className="space-y-4">
-                                                            <div className="flex items-center justify-between px-1">
-                                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{s.label}</label>
-                                                                <span className="text-[9px] font-black text-primary opacity-30">{s.icon}</span>
-                                                            </div>
-                                                            <Input
-                                                                className="h-14 rounded-xl border-slate-200 bg-white shadow-sm font-bold"
-                                                                placeholder={`@username`}
-                                                                value={(socials as any)[s.id]}
-                                                                onChange={(e) => setSocials(prev => ({ ...prev, [s.id]: e.target.value }))}
-                                                            />
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
                             )}
 

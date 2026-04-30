@@ -48,7 +48,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   return (
-    <div className={cn("w-full max-w-xs bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden group flex flex-col", className)}>
+    <div className={cn("w-full max-w-xs bg-white rounded-3xl border border-slate-200 shadow-lg overflow-hidden group flex flex-col", className)}>
       
       {/* Product Image Cover */}
       <div className="relative h-48 overflow-hidden shrink-0 bg-slate-100">

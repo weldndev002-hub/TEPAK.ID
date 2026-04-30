@@ -18,6 +18,7 @@ import { AddBlockDrawer } from './AddBlockDrawer';
 import { BlockSettingsForm } from './BlockSettingsForm';
 import { PhoneFrame } from './PhoneFrame';
 import { OnboardingForm } from '../onboarding/OnboardingForm';
+import { WarningModal } from '../ui/WarningModal';
 import { BrandingProvider, type BrandingData } from '../../hooks/useBranding';
 import { useSubscription, SubscriptionProvider } from '../../context/SubscriptionContext';
 
@@ -65,6 +66,7 @@ const CreatorAtelierEditorContent: React.FC<CreatorAtelierEditorProps> = ({ init
     const [blocks, setBlocks] = useState<any[]>([]);
     const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
     const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+    const [securityWarning, setSecurityWarning] = useState<{ open: boolean, message: string }>({ open: false, message: '' });
 
 
     // Fetch Profile Data
@@ -128,7 +130,15 @@ const CreatorAtelierEditorContent: React.FC<CreatorAtelierEditorProps> = ({ init
             if (res.ok) {
                 toast.success('Changes published successfully!');
             } else {
-                toast.error('Failed to publish changes.');
+                const data = await res.json().catch(() => ({}));
+                console.error('[Editor] Save failed:', data);
+                const errorMsg = data.error || 'Failed to publish changes.';
+                
+                // Try toast first, then custom modal as fallback
+                toast.error(errorMsg);
+                if (data.code === 'XSS_DETECTED' || data.error?.includes('skrip')) {
+                    setSecurityWarning({ open: true, message: errorMsg });
+                }
             }
         } catch (err) {
             console.error('Save error:', err);
@@ -518,24 +528,44 @@ const CreatorAtelierEditorContent: React.FC<CreatorAtelierEditorProps> = ({ init
                                                              )}
                                                          </div>
                                                     ) : (
-                                                        <div className={cn("w-full py-4 px-6 border rounded-2xl shadow-sm flex items-center gap-4 transition-all hover:scale-[1.02]", previewTheme.cardClass)}>
-                                                            {block.data?.thumbnailUrl ? (
-                                                                <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-slate-50">
-                                                                    <img src={block.data.thumbnailUrl} className="w-full h-full object-cover" alt="" />
+                                                        <div className={cn("w-full p-2 rounded-[2rem] shadow-sm hover:scale-[1.01] transition-all group/preview overflow-hidden border", previewTheme.cardClass)}>
+                                                            <div className="flex items-stretch gap-0">
+                                                                {/* Left: Thumbnail */}
+                                                                <div className="w-[100px] aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl relative shrink-0 bg-slate-100">
+                                                                    {block.data?.thumbnailUrl ? (
+                                                                        <img src={block.data.thumbnailUrl} className="w-full h-full object-cover group-hover/preview:scale-110 transition-transform duration-700" alt="" />
+                                                                    ) : (
+                                                                        <div className="w-full h-full flex items-center justify-center opacity-20">
+                                                                            <span className="material-symbols-outlined text-3xl">{block.type === 'link' ? 'link' : 'article'}</span>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
-                                                            ) : (
-                                                                <div className="w-8 h-8 rounded-lg bg-primary/5 text-primary flex items-center justify-center shrink-0">
-                                                                    <span className="material-symbols-outlined text-sm">{block.type === 'link' ? 'link' : 'article'}</span>
+
+                                                                {/* Right: Content */}
+                                                                <div className="p-4 flex flex-col flex-1 text-left min-w-0">
+                                                                    <div className="flex items-center gap-2 mb-2 opacity-50">
+                                                                        <span className="w-4 h-[1px] bg-primary"></span>
+                                                                        <span className={cn("text-[7px] font-black uppercase tracking-[0.2em]", previewTheme.cardSubtitleClass)}>Product Detail</span>
+                                                                    </div>
+                                                                    
+                                                                    <h3 className={cn("text-sm font-black leading-tight tracking-tight mb-2 truncate", previewTheme.cardTitleClass)}>
+                                                                        {block.title}
+                                                                    </h3>
+                                                                    
+                                                                    {block.subtitle && (
+                                                                        <p className={cn("text-[9px] font-medium line-clamp-2 leading-relaxed opacity-60", previewTheme.cardSubtitleClass)}>
+                                                                            {block.subtitle}
+                                                                        </p>
+                                                                    )}
+
+                                                                    <div className="mt-auto pt-4 flex items-center justify-between">
+                                                                        <span className={cn("text-[8px] font-black uppercase tracking-widest opacity-60", previewTheme.cardSubtitleClass)}>Lihat Produk</span>
+                                                                        <div className={cn("w-7 h-7 rounded-full flex items-center justify-center border transition-all", previewTheme.cardClass)}>
+                                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
-                                                            )}
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className={cn("text-[10px] font-black tracking-widest truncate", previewTheme.cardTitleClass)}>{block.title}</p>
-
-
-                                                                {block.subtitle && <p className={cn("text-[9px] font-medium truncate mt-0.5", previewTheme.cardSubtitleClass)}>{block.subtitle}</p>}
-
                                                             </div>
-                                                            <svg className="w-3 h-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
                                                         </div>
                                                     )}
 
@@ -616,6 +646,15 @@ const CreatorAtelierEditorContent: React.FC<CreatorAtelierEditorProps> = ({ init
                 </div>
             )}
 
+            <WarningModal 
+                isOpen={securityWarning.open}
+                onClose={() => setSecurityWarning({ ...securityWarning, open: false })}
+                onConfirm={() => setSecurityWarning({ ...securityWarning, open: false })}
+                title="Peringatan Keamanan"
+                description={securityWarning.message}
+                confirmLabel="Saya Mengerti"
+                variant="danger"
+            />
         </BrandingProvider>
     );
 };

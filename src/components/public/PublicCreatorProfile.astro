@@ -1,6 +1,6 @@
 ---
 import ProductCardWithTracking from './ProductCardWithTracking';
-import { CheckBadgeIcon } from '@heroicons/react/24/solid';
+import { CheckBadgeIcon, ArrowRightIcon } from '@heroicons/react/24/solid';
 import { AnalyticsTracker } from '../analytics/AnalyticsTracker';
 
 interface Props {
@@ -96,11 +96,11 @@ const currentTheme = ThemeConfig[themeId] || ThemeConfig['atelier-dark'];
                 <section class="mb-24 flex flex-col items-center text-center relative animate-in fade-in slide-in-from-bottom-12 duration-1000 ease-out group">
                         
                         <div class="relative mb-8 md:mb-12">
-                            <div class="w-32 h-32 md:w-48 md:h-48 rounded-[3rem] overflow-hidden border-[6px] border-white shadow-2xl bg-white transition-all duration-700">
+                            <div class="w-32 h-32 md:w-48 md:h-48 rounded-3xl overflow-hidden border-[6px] border-white shadow-2xl bg-white transition-all duration-700">
                                 <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src={profile.avatar} alt={profile.name} />
                             </div>
                             <div class="absolute -bottom-2 -right-2 bg-primary text-white p-2.5 rounded-2xl flex items-center justify-center border-4 border-white shadow-xl">
-                                <CheckBadgeIcon className="w-5 h-5" />
+                                <CheckBadgeIcon class="w-5 h-5" />
                             </div>
                         </div>
 
@@ -109,9 +109,18 @@ const currentTheme = ThemeConfig[themeId] || ThemeConfig['atelier-dark'];
                                 {profile.name}
                             </h1>
 
-                            <p class={`${currentTheme.heroBioClass} text-lg md:text-xl font-medium leading-relaxed mb-12 opacity-80 max-w-lg mx-auto`}>
+                            <p class={`${currentTheme.heroBioClass} text-lg md:text-xl font-medium leading-relaxed mb-6 opacity-80 max-w-lg mx-auto`}>
                                 {profile.bio}
                             </p>
+
+                            {profile.email && (
+                                <div class="flex items-center justify-center gap-2 mb-12 animate-in fade-in slide-in-from-top-4 duration-1000 delay-300">
+                                    <span class={`text-[10px] font-black uppercase tracking-[0.3em] ${currentTheme.heroBioClass} opacity-40`}>Connect:</span>
+                                    <a href={`mailto:${profile.email}`} class={`text-[11px] font-black uppercase tracking-widest ${currentTheme.heroTitleClass} hover:text-primary transition-colors border-b border-transparent hover:border-primary pb-1`}>
+                                        {profile.email}
+                                    </a>
+                                </div>
+                            )}
 
                             <div class="flex flex-wrap justify-center gap-4">
                                 {socials.map((social) => (
@@ -123,72 +132,97 @@ const currentTheme = ThemeConfig[themeId] || ThemeConfig['atelier-dark'];
 
                             {/* Custom Blocks */}
                             {blocks.length > 0 && (
-                                <div class="w-full mt-8 space-y-3 text-left">
+                                <div class="w-full mt-12 space-y-10 text-left">
                                     {blocks.map((block: any) => {
                                         if (block.type === 'social') return null;
+                                        
                                         if (block.type === 'text') return (
-                                            <div class="py-3 px-2 text-center space-y-2">
-                                                {block.data?.title && <h4 class={`text-lg font-black ${currentTheme.cardTitleClass} tracking-tighter`}>{block.data.title}</h4>}
-
-                                                {block.data?.content && <p class={`text-sm ${currentTheme.cardSubtitleClass} font-medium leading-relaxed italic`}>{block.data.content}</p>}
+                                            <div class={`w-full ${currentTheme.cardClass} p-8 rounded-3xl border text-center space-y-3 animate-in fade-in duration-700 shadow-lg`}>
+                                                {block.data?.title && <h4 class={`text-2xl font-black ${currentTheme.cardTitleClass} tracking-tighter uppercase`}>{block.data.title}</h4>}
+                                                {block.data?.content && <p class={`text-sm ${currentTheme.cardSubtitleClass} font-medium leading-relaxed italic opacity-80`}>{block.data.content}</p>}
                                             </div>
                                         );
+
                                         if (block.type === 'image') return (
-                                            <div class={`w-full ${currentTheme.cardClass} p-3 rounded-[2rem] space-y-3`}>
+                                            <div class={`w-full ${currentTheme.cardClass} p-4 rounded-3xl border space-y-4 animate-in fade-in zoom-in-95 duration-700 shadow-lg`}>
                                                 {block.data?.imageUrl && (
-                                                    <div class="w-full aspect-video rounded-2xl overflow-hidden shadow-sm">
-                                                        <img src={block.data.imageUrl} class="w-full h-full object-cover" alt={block.data?.title || ''} />
+                                                    <div class="w-full aspect-video rounded-2xl overflow-hidden shadow-inner">
+                                                        <img src={block.data.imageUrl} class="w-full h-full object-cover hover:scale-105 transition-transform duration-1000" alt={block.data?.title || ''} />
                                                     </div>
                                                 )}
-                                                {block.data?.title && <p class={`text-[11px] font-black ${currentTheme.cardSubtitleClass} tracking-widest text-center italic`}>{block.data.title}</p>}
+                                                {block.data?.title && <p class={`text-[11px] font-black ${currentTheme.cardSubtitleClass} tracking-[0.2em] text-center italic pb-2`}>{block.data.title}</p>}
                                             </div>
-
                                         );
+
                                         if (block.type === 'video' && block.data?.isYouTube && block.data?.videoId) return (
-                                             <div class={`w-full ${currentTheme.cardClass} p-3 rounded-[2rem] space-y-3`}>
-                                                <div class="w-full aspect-video rounded-2xl overflow-hidden shadow-lg border border-white/10">
+                                             <div class={`w-full ${currentTheme.cardClass} p-4 rounded-3xl border space-y-4 animate-in fade-in zoom-in-95 duration-700 shadow-lg`}>
+                                                <div class="w-full aspect-video rounded-2xl overflow-hidden shadow-inner bg-black/20">
                                                     <iframe
                                                         width="100%" height="100%"
                                                         src={`https://www.youtube.com/embed/${block.data.videoId}`}
                                                         title={block.title || 'Video'}
+                                                        class="w-full h-full"
                                                         frameborder="0"
                                                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                                         allowfullscreen
                                                     />
                                                 </div>
-                                                {block.title && <p class={`text-[11px] font-black ${currentTheme.cardSubtitleClass} tracking-widest text-center italic`}>{block.title}</p>}
+                                                {block.title && <p class={`text-[11px] font-black ${currentTheme.cardSubtitleClass} tracking-[0.2em] text-center italic pb-2`}>{block.title}</p>}
                                             </div>
-
                                         );
+
+                                        // Default: link / article block (Affiliate Card)
+                                        const url = block.data?.url || block.url || (block.subtitle?.startsWith('http') ? block.subtitle : '#');
+                                        const thumbnail = block.data?.thumbnailUrl;
+                                        const description = block.subtitle || block.data?.description;
+                                        
                                         return (
                                             <a
-                                                href={block.data?.url || block.url || (block.subtitle?.startsWith('http') ? block.subtitle : '#')}
+                                                href={url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                class={`flex items-center gap-4 w-full ${currentTheme.cardClass} px-5 py-4 rounded-2xl border transition-all group`}
+                                                class={`group relative flex flex-row w-full ${currentTheme.cardClass} rounded-3xl border transition-all duration-500 overflow-hidden mb-4 shadow-lg hover:shadow-2xl hover:-translate-y-1`}
                                             >
-                                                {block.data?.thumbnailUrl ? (
-                                                    <div class="w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-slate-100 shadow-sm">
-                                                        <img src={block.data.thumbnailUrl} class="w-full h-full object-cover" alt="" />
-                                                    </div>
-                                                ) : (
-                                                    <div class="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                                                        <span class="material-symbols-outlined text-base">{block.type === 'link' ? 'link' : block.type === 'article' ? 'article' : 'info'}</span>
-                                                    </div>
-                                                )}
-                                                <div class="flex-1 min-w-0 text-left">
-                                                    <p class={`text-sm font-black ${currentTheme.cardTitleClass} tracking-tight truncate`}>{block.title || block.data?.title}</p>
+                                                {/* Left: Thumbnail */}
+                                                <div class="w-32 md:w-44 shrink-0 aspect-square overflow-hidden bg-black/20 relative">
+                                                    {thumbnail ? (
+                                                        <img
+                                                            src={thumbnail}
+                                                            class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                                            alt=""
+                                                        />
+                                                    ) : (
+                                                        <div class="w-full h-full flex items-center justify-center opacity-20">
+                                                            <span class="material-symbols-outlined text-4xl">link</span>
+                                                        </div>
+                                                    )}
+                                                </div>
 
-                                                    {(block.subtitle || block.data?.description) && (
-                                                        <p class={`text-[11px] ${currentTheme.cardSubtitleClass} truncate mt-0.5`}>
-                                                            {block.subtitle || block.data?.description}
+                                                {/* Right: Content */}
+                                                <div class="p-5 md:p-6 flex flex-col flex-1 text-left min-w-0">
+                                                    <div class="flex items-center gap-2 mb-2 opacity-50">
+                                                        <span class="w-4 h-[1px] bg-primary"></span>
+                                                        <span class={`text-[8px] font-black uppercase tracking-[0.2em] ${currentTheme.cardSubtitleClass}`}>Product Detail</span>
+                                                    </div>
+                                                    
+                                                    <h3 class={`text-lg md:text-xl font-black ${currentTheme.cardTitleClass} leading-tight tracking-tight mb-2 group-hover:text-primary transition-colors truncate`}>
+                                                        {block.title || block.data?.title}
+                                                    </h3>
+                                                    
+                                                    {description && (
+                                                        <p class={`text-[12px] ${currentTheme.cardSubtitleClass} leading-snug line-clamp-2 font-medium opacity-70 mb-4`}>
+                                                            {description}
                                                         </p>
                                                     )}
 
+                                                    <div class="mt-auto flex items-center justify-between gap-4">
+                                                        <span class="text-[10px] font-black text-primary uppercase tracking-[0.1em] group-hover:tracking-[0.2em] transition-all">Lihat Produk</span>
+                                                        <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all duration-300">
+                                                            <span class="material-symbols-outlined text-lg">arrow_forward</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <span class="material-symbols-outlined text-primary/40 group-hover:text-primary transition-colors text-base shrink-0">arrow_forward</span>
                                             </a>
-
                                         );
                                     })}
                                 </div>
@@ -214,7 +248,7 @@ const currentTheme = ThemeConfig[themeId] || ThemeConfig['atelier-dark'];
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 justify-items-center">
                         {formatted_products.map((product) => (
                             <ProductCardWithTracking 
                                 client:load

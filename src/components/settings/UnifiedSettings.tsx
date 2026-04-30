@@ -41,8 +41,7 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
     const { plan } = useSubscription();
     
     // --- Account State ---
-    const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
+    const [confirmKeyword, setConfirmKeyword] = useState('');
     const [isTerminating, setIsTerminating] = useState(false);
     const [terminateError, setTerminateError] = useState<string | null>(null);
     const { hasFeature } = useSubscription();
@@ -180,8 +179,8 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
     };
 
     const handleTerminate = async () => {
-        if (!password) {
-            setTerminateError('Konfirmasi password diperlukan untuk menghapus akun.');
+        if (confirmKeyword.toUpperCase() !== 'YES') {
+            setTerminateError('Ketik "YES" untuk mengonfirmasi penghapusan akun.');
             return;
         }
 
@@ -192,7 +191,7 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
             const res = await fetch('/api/profile', { 
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password }) // Optional: backend could verify password again if needed
+                body: JSON.stringify({ confirmation: confirmKeyword }) // Backend can verify keyword if needed
             });
 
             const data = await res.json();
@@ -281,19 +280,17 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                                 </ul>
                             </div>
                             <div className="space-y-4">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Verify Password</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Final Confirmation</label>
                                 <Input 
-                                    type={showPassword ? 'text' : 'password'} 
-                                    placeholder="Enter current password" 
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="h-14 rounded-xl bg-slate-50 border-slate-100"
-                                    iconRight={
-                                        <button onClick={() => setShowPassword(!showPassword)} className="p-2 text-slate-300">
-                                            {showPassword ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
-                                        </button>
-                                    }
+                                    type="text" 
+                                    placeholder='Type "YES" to confirm' 
+                                    value={confirmKeyword}
+                                    onChange={(e) => setConfirmKeyword(e.target.value)}
+                                    className="h-14 rounded-xl bg-slate-50 border-slate-100 font-black uppercase tracking-widest text-center"
                                 />
+                                <p className="text-[9px] font-bold text-slate-400 uppercase text-center leading-relaxed">
+                                    To permanently delete your account and all associated data, please type <span className="text-rose-600">YES</span> above.
+                                </p>
                                 <button 
                                     className={cn(
                                         "w-full h-14 bg-rose-600 text-white font-black uppercase text-[10px] tracking-[0.2em] rounded-xl shadow-lg shadow-rose-600/10 hover:opacity-90 transition-all flex items-center justify-center gap-2",
@@ -305,8 +302,8 @@ const UnifiedSettingsContent = ({ defaultTab = 'account' }: { defaultTab?: 'acco
                                             setTerminateError('Subscription Pro harus dibatalkan terlebih dahulu.');
                                             return;
                                         }
-                                        if (!password) {
-                                            setTerminateError('Masukkan password Anda untuk melanjutkan.');
+                                        if (confirmKeyword.toUpperCase() !== 'YES') {
+                                            setTerminateError('Ketik "YES" di kolom atas untuk melanjutkan.');
                                             return;
                                         }
                                         setShowTerminateConfirm(true);

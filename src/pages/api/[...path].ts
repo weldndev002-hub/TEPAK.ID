@@ -85,11 +85,34 @@ const sanitizeString = (str: any): string => {
   // 1. Remove all script tags and their content
   let cleaned = str.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, '');
 
-  // 2. Strip ALL HTML tags for text-only fields (profile bio, block text, etc.)
+  // 2. Remove "on" event handlers (e.g., onclick, onerror)
+  cleaned = cleaned.replace(/on\w+\s*=\s*(['"]?)(.*?)\1/gim, '');
+
+  // 3. Remove "javascript:" protocols
+  cleaned = cleaned.replace(/javascript\s*:/gim, '');
+
+  // 4. Strip ALL HTML tags for text-only fields
   cleaned = cleaned.replace(/<[^>]*>?/gm, '');
 
-  // 3. Normalize whitespace
+  // 5. Normalize whitespace
   return cleaned.replace(/\s+/g, ' ').trim();
+};
+
+/**
+ * Validates if a string contains potentially malicious patterns.
+ * Used for "negative case" detection.
+ */
+const isMalicious = (str: string): boolean => {
+  const dangerousPatterns = [
+    /<script/i,
+    /on\w+\s*=/i,
+    /javascript:/i,
+    /data:text\/html/i,
+    /document\./i,
+    /window\./i,
+    /eval\(/i
+  ];
+  return dangerousPatterns.some(pattern => pattern.test(str));
 };
 
 /**
@@ -125,9 +148,19 @@ const sanitizeTextBlockContent = (block: any): any => {
 /**
  * Zod refinement to detect script tags
  */
-const noScriptRefinement = (val: string | undefined) => {
+const noScriptRefinement = (val: string | undefined | any) => {
   if (!val) return true;
-  return !/<script\b[^>]*>([\s\S]*?)<\/script>/i.test(val) && !/on\w+\s*=/i.test(val);
+  const str = typeof val === 'string' ? val : JSON.stringify(val);
+  const dangerousPatterns = [
+    /<script/i,
+    /on\w+\s*=/i,
+    /javascript:/i,
+    /data:text\/html/i,
+    /document\./i,
+    /window\./i,
+    /eval\(/i
+  ];
+  return !dangerousPatterns.some(pattern => pattern.test(str));
 };
 
 const XSS_ERROR_MESSAGE = "Teks mengandung skrip atau atribut berbahaya yang tidak diperbolehkan.";
@@ -531,20 +564,24 @@ const getAuthContext = async (c: any) => {
 
     try {
       const { data: authData } = await supabase.auth.getUser();
+      console.log('[getAuthContext] getUser result:', authData?.user ? `user ${authData.user.id}` : 'no user', 'error?', authData?.error);
       let authenticatedUser = authData?.user;
 
       // Fallback: If getUser failed but we have cookies, try to extract the token manually
       if (!authenticatedUser) {
+        console.log('[getAuthContext] No user from getUser, checking cookies. parsedCookies length:', parsedCookies.length);
         const authTokenCookie = parsedCookies.find(cookie => cookie.name.includes('auth-token'));
         const token = authTokenCookie?.value
           || parsedCookies.find(c => c.name === 'sb_access_token')?.value
           || parsedCookies.find(c => c.name === 'sb-access-token')?.value;
 
         if (token) {
+          console.log('[getAuthContext] Found token, attempting getUser with token');
           try {
             const { data: retryData } = await supabase.auth.getUser(token);
             if (retryData?.user) {
               authenticatedUser = retryData.user;
+              console.log('[getAuthContext] User retrieved via token:', authenticatedUser.id);
             } else {
               // SUPER FALLBACK: Try to decode JWT manually for session existence check
               const parts = token.split('.');
@@ -553,10 +590,11 @@ const getAuthContext = async (c: any) => {
                 const payload = JSON.parse(atob(base64));
                 if (payload && payload.sub) {
                   authenticatedUser = { id: payload.sub, email: payload.email } as any;
+                  console.log('[getAuthContext] User decoded from JWT:', authenticatedUser.id);
                 }
               }
             }
-          } catch (jwtErr) { }
+          } catch (jwtErr) { console.log('[getAuthContext] JWT decode error:', jwtErr); }
         }
       }
 
@@ -1346,6 +1384,7 @@ app.get('/profile', async (c) => {
 
     return c.json({
       ...profile,
+      email: user.email,
       settings: currentSettings || null
     });
   } catch (err: any) {
@@ -1704,6 +1743,15 @@ app.put('/profile', async (c) => {
       if (field in body) {
         let value = body[field];
 
+        // Deep check for malicious patterns in ANY field (Negative Case Prevention)
+        const checkValue = typeof value === 'string' ? value : JSON.stringify(value);
+        if (isMalicious(checkValue)) {
+            return c.json({ 
+                error: 'Konten tidak diperbolehkan karena mengandung karakter atau pola berbahaya.',
+                code: 'XSS_DETECTED'
+            }, 400);
+        }
+
         // Sanitize string fields
         if (typeof value === 'string' && ['full_name', 'bio', 'username', 'address_text', 'city'].includes(field)) {
           value = sanitizeString(value);
@@ -2009,6 +2057,52 @@ app.get('/orders', async (c) => {
   return c.json(data);
 });
 
+// 2. Order Statistics
+app.get('/orders/stats', async (c) => {
+  const { supabase, user } = await getAuthContext(c);
+  if (!user) {
+    console.log('[orders/stats] No user found, returning 401');
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  console.log(`[orders/stats] User ID: ${user.id}, email: ${user.email}`);
+
+  // Fetch all orders to calculate stats manually (easier for small sets)
+  const { data: orders, error } = await supabase
+    .from('orders')
+    .select('amount, status, net_amount, merchant_id')
+    .eq('merchant_id', user.id);
+
+  if (error) {
+    console.error('[orders/stats] Supabase error:', error);
+    return c.json({ error: error.message }, 500);
+  }
+
+  console.log(`[orders/stats] Found ${orders?.length || 0} orders for merchant ${user.id}`);
+
+  const totalOrders = orders.length;
+  const successfulOrders = orders.filter(o => o.status === 'success' || o.status === 'paid').length;
+  const pendingOrders = orders.filter(o => o.status === 'pending').length;
+
+  // Calculate Revenue (Success only)
+  // Use net_amount if available, fallback to 5% calculation for old legacy data
+  const totalRevenue = orders
+    .filter(o => o.status === 'success' || o.status === 'paid')
+    .reduce((sum, o) => {
+      const val = o.net_amount !== null ? Number(o.net_amount) : Math.max(0, (Number(o.amount) * 0.95) - 2000);
+      return sum + val;
+    }, 0);
+
+  console.log(`[orders/stats] Stats: total=${totalOrders}, success=${successfulOrders}, pending=${pendingOrders}, revenue=${totalRevenue}`);
+
+  return c.json({
+    total_orders: totalOrders,
+    successful_orders: successfulOrders,
+    pending_orders: pendingOrders,
+    total_revenue: totalRevenue
+  });
+});
+
 // 1.1 Get Specific Order (Enhanced)
 app.get('/orders/:id', async (c) => {
   const { supabase, user } = await getAuthContext(c);
@@ -2028,40 +2122,6 @@ app.get('/orders/:id', async (c) => {
 
   if (error) return c.json({ error: error.message }, 404);
   return c.json(data);
-});
-
-// 2. Order Statistics
-app.get('/orders/stats', async (c) => {
-  const { supabase, user } = await getAuthContext(c);
-  if (!user) return c.json({ error: 'Unauthorized' }, 401);
-
-  // Fetch all orders to calculate stats manually (easier for small sets)
-  const { data: orders, error } = await supabase
-    .from('orders')
-    .select('amount, status')
-    .eq('merchant_id', user.id);
-
-  if (error) return c.json({ error: error.message }, 500);
-
-  const totalOrders = orders.length;
-  const successfulOrders = orders.filter(o => o.status === 'success' || o.status === 'paid').length;
-  const pendingOrders = orders.filter(o => o.status === 'pending').length;
-
-  // Calculate Revenue (Success only)
-  // Use net_amount if available, fallback to 5% calculation for old legacy data
-  const totalRevenue = orders
-    .filter(o => o.status === 'success' || o.status === 'paid')
-    .reduce((sum, o) => {
-      const val = o.net_amount !== null ? Number(o.net_amount) : Math.max(0, (Number(o.amount) * 0.95) - 2000);
-      return sum + val;
-    }, 0);
-
-  return c.json({
-    total_orders: totalOrders,
-    successful_orders: successfulOrders,
-    pending_orders: pendingOrders,
-    total_revenue: totalRevenue
-  });
 });
 
 /**
@@ -3188,20 +3248,25 @@ app.put(
           icon: z.string().optional(),
           title: z.string().optional(),
           subtitle: z.string().optional(),
-          data: z.any().optional()
+          data: z.any().optional().refine(noScriptRefinement, XSS_ERROR_MESSAGE)
         })
       ).optional().transform(blocks => blocks ? blocks.map(sanitizeTextBlockContent) : blocks),
       seo_image: z.string().optional(),
       seo_keywords: z.string().optional(),
       theme: z.string().optional(),
-    })
-
+    }),
+    (result, c) => {
+      if (!result.success) {
+        return c.json({ error: result.error.issues[0].message, success: false }, 400);
+      }
+    }
   ),
   async (c) => {
     const { supabase, user } = await getAuthContext(c);
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
     const body = c.req.valid('json');
+    console.log(`[API] Profile Update Request for ${user.id}:`, JSON.stringify(body).substring(0, 100) + "...");
 
     // Sanitize blocks if present
     let sanitizedBlocks = body.blocks;

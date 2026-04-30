@@ -5,16 +5,16 @@ import Button from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { FilterTabs } from '../ui/FilterTabs';
 // import { Pagination } from '../ui/Pagination'; // Temporarily disable if not fully implemented or needed
-import { 
-    ShoppingCartIcon, 
-    CheckCircleIcon, 
-    ClockIcon, 
-    BanknotesIcon, 
-    ArrowTrendingUpIcon, 
-    CalendarIcon, 
-    FunnelIcon, 
-    BuildingLibraryIcon, 
-    CreditCardIcon, 
+import {
+    ShoppingCartIcon,
+    CheckCircleIcon,
+    ClockIcon,
+    BanknotesIcon,
+    ArrowTrendingUpIcon,
+    CalendarIcon,
+    FunnelIcon,
+    BuildingLibraryIcon,
+    CreditCardIcon,
     WalletIcon,
 } from '@heroicons/react/24/outline';
 
@@ -47,7 +47,7 @@ export const OrdersDashboard = () => {
                 fetch('/api/orders'),
                 fetch('/api/orders/stats')
             ]);
-            
+
             if (ordersRes.ok) setOrders(await ordersRes.json());
             if (statsRes.ok) setStats(await statsRes.json());
         } catch (error) {
@@ -57,8 +57,8 @@ export const OrdersDashboard = () => {
         }
     };
 
-    const filteredOrders = activeTab === 'all' 
-        ? orders 
+    const filteredOrders = activeTab === 'all'
+        ? orders
         : orders.filter(o => o.status === activeTab || (activeTab === 'success' && o.status === 'paid'));
 
     if (isLoading) {
@@ -90,7 +90,7 @@ export const OrdersDashboard = () => {
                         <h4 className="text-3xl font-black text-slate-900 tracking-tighter">{stats.total_orders}</h4>
                     </div>
                 </Card>
-                
+
                 <Card className="p-8 border-none rounded-[2.5rem] shadow-sm flex flex-col justify-between group hover:scale-[1.02] transition-all">
                     <div className="flex justify-between items-start mb-6">
                         <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-600 group-hover:scale-110 transition-transform">
@@ -102,7 +102,7 @@ export const OrdersDashboard = () => {
                         <h4 className="text-3xl font-black text-slate-900 tracking-tighter">{stats.successful_orders}</h4>
                     </div>
                 </Card>
-                
+
                 <Card className="p-8 border-none rounded-[2.5rem] shadow-sm flex flex-col justify-between group hover:scale-[1.02] transition-all">
                     <div className="flex justify-between items-start mb-6">
                         <div className="p-3 bg-amber-50 rounded-2xl text-amber-600 group-hover:scale-110 transition-transform">
@@ -114,7 +114,7 @@ export const OrdersDashboard = () => {
                         <h4 className="text-3xl font-black text-slate-900 tracking-tighter">{stats.pending_orders}</h4>
                     </div>
                 </Card>
-                
+
                 <Card className="p-8 border-none rounded-[2.5rem] shadow-sm flex flex-col justify-between group hover:scale-[1.02] transition-all">
                     <div className="flex justify-between items-start mb-6">
                         <div className="p-3 bg-primary rounded-2xl text-white shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
@@ -132,7 +132,7 @@ export const OrdersDashboard = () => {
             <Card className="overflow-hidden border-none rounded-[3rem] shadow-sm bg-white">
                 <div className="px-10 py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white border-b border-slate-50 gap-6">
                     <div className="-ml-4">
-                         <FilterTabs tabs={filterTabsData} activeTab={activeTab} onTabChange={setActiveTab} />
+                        <FilterTabs tabs={filterTabsData} activeTab={activeTab} onTabChange={setActiveTab} />
                     </div>
                 </div>
 
@@ -158,8 +158,8 @@ export const OrdersDashboard = () => {
                                     </TableCell>
                                 </TableRow>
                             ) : filteredOrders.map((order) => (
-                                <TableRow 
-                                    key={order.id} 
+                                <TableRow
+                                    key={order.id}
                                     className="cursor-pointer group hover:bg-slate-50/50 border-slate-50 transition-all border-b"
                                     onClick={() => window.location.href = `/order-detail?id=${order.id}`}
                                 >
@@ -173,7 +173,7 @@ export const OrdersDashboard = () => {
                                                 {order.products?.cover_url ? (
                                                     <img alt="Product" className="w-full h-full object-cover" src={order.products.cover_url} />
                                                 ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-slate-300"><ShoppingCartIcon className="w-6 h-6"/></div>
+                                                    <div className="w-full h-full flex items-center justify-center text-slate-300"><ShoppingCartIcon className="w-6 h-6" /></div>
                                                 )}
                                             </div>
                                             <div>
@@ -199,8 +199,8 @@ export const OrdersDashboard = () => {
                                     </TableCell>
                                     <TableCell className="px-10">
                                         <div className="flex justify-center">
-                                            <Badge 
-                                                variant={(order.status === 'success' || order.status === 'paid') ? 'success' : order.status === 'pending' ? 'warning' : 'danger'} 
+                                            <Badge
+                                                variant={(order.status === 'success' || order.status === 'paid') ? 'success' : order.status === 'pending' ? 'warning' : 'danger'}
                                                 className="px-4 py-1.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em]"
                                             >
                                                 {order.status.toUpperCase()}

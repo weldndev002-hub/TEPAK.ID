@@ -54,16 +54,19 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({
       <div className="h-full overflow-y-auto no-scrollbar pt-14 px-8 pb-24 relative z-10">
         <div className="flex flex-col items-center text-center">
             <div className={cn(
-                "w-24 h-24 rounded-full mb-6 border-4 border-white shadow-2xl bg-slate-100 overflow-hidden group/avatar cursor-pointer",
+                "w-24 h-24 rounded-3xl mb-8 border-[6px] border-white shadow-2xl bg-white overflow-hidden group/avatar cursor-pointer transition-all duration-700",
                 theme === 'bold' && "border-slate-800 shadow-slate-900/50"
             )}>
                 <img 
-                    src={profileImage || "https://lh3.googleusercontent.com/aida-public/AB6AXuD1myVuGIgwq81XmvMT1KbIlWlKCLouKbWS5mVzO8vJvYbYWQiLc7lFoyWFrMLfnyhHlR_yBkJcxX1-A7TDTqS6jIIWe17hHFosbhLn-s5RV19qr6lSLm6lRTK0LBBYXq85kWoVzOEyIC1JH839PewJe9pD2mQG08x7bKTKppWKY4nXAf3W_pD_L8M3Q7vrloGre2PhijR7sCJt0jJ5_kV69u8-K0s_R-t1up3AwO3xxxAW3YsOgtRgYZoYX2lvgeb_6q_rKjGw1JlR"} 
-                    className="w-full h-full object-cover group-hover/avatar:scale-110 transition-transform duration-700" 
+                    src={profileImage || "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"} 
+                    className="w-full h-full object-cover group-hover/avatar:scale-105 transition-transform duration-700" 
                 />
             </div>
-            <h4 className="font-black text-2xl tracking-tighter line-clamp-1">{profileName || 'Your Name'}</h4>
-            <p className="text-[10px] font-black tracking-[0.1em] opacity-40 mt-2 leading-relaxed">
+            <h4 className="font-black text-3xl tracking-tighter line-clamp-2 leading-tight px-2">{profileName || 'Your Name'}</h4>
+            <p className={cn(
+                "text-sm font-medium opacity-80 mt-4 leading-relaxed px-4",
+                isDark ? "text-slate-400" : isSunrise ? "text-slate-600" : "text-slate-500"
+            )}>
                 {profileBio || 'Capture moments, share stories.'}
             </p>
 
