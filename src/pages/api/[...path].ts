@@ -674,10 +674,11 @@ const getAuthContext = async (c: any) => {
               } else {
                 sameSite = 'Lax';
               }
+              const isLocal = c.req.header('host')?.includes('localhost') || c.req.header('host')?.includes('127.0.0.1');
               setCookie(c, name, value, {
                 ...options,
                 path: options?.path || '/',
-                secure: options?.secure ?? true,
+                secure: isLocal ? false : (options?.secure ?? true),
                 sameSite,
                 httpOnly: options?.httpOnly ?? true,
                 maxAge: options?.maxAge,
