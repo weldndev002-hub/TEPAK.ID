@@ -175,16 +175,18 @@ const currentTheme = ThemeConfig[themeId] || ThemeConfig['atelier-dark'];
                                         const url = block.data?.url || block.url || (block.subtitle?.startsWith('http') ? block.subtitle : '#');
                                         const thumbnail = block.data?.thumbnailUrl;
                                         const description = block.subtitle || block.data?.description;
+                                        const displayDomain = url?.toLowerCase().includes('shopee') ? 'shopee.co.id' : 
+                                                            url?.toLowerCase().includes('tokopedia') ? 'tokopedia.com' : 'tepak.id';
                                         
                                         return (
                                             <a
                                                 href={url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                class={`group relative flex flex-row w-full ${currentTheme.cardClass} rounded-3xl border transition-all duration-500 overflow-hidden mb-4 shadow-lg hover:shadow-2xl hover:-translate-y-1`}
+                                                class={`group relative flex flex-col w-full max-w-sm mx-auto bg-[#16302B] rounded-[2rem] overflow-hidden shadow-2xl transition-all duration-500 mb-8 border border-white/5 hover:shadow-primary/10 hover:-translate-y-1`}
                                             >
-                                                {/* Left: Thumbnail */}
-                                                <div class="w-32 md:w-44 shrink-0 aspect-square overflow-hidden bg-black/20 relative">
+                                                {/* Top: Thumbnail */}
+                                                <div class="w-full aspect-square overflow-hidden bg-black/20 relative">
                                                     {thumbnail ? (
                                                         <img
                                                             src={thumbnail}
@@ -193,31 +195,34 @@ const currentTheme = ThemeConfig[themeId] || ThemeConfig['atelier-dark'];
                                                         />
                                                     ) : (
                                                         <div class="w-full h-full flex items-center justify-center opacity-20">
-                                                            <span class="material-symbols-outlined text-4xl">link</span>
+                                                            <span class="material-symbols-outlined text-4xl text-white">link</span>
                                                         </div>
                                                     )}
                                                 </div>
 
-                                                {/* Right: Content */}
-                                                <div class="p-5 md:p-6 flex flex-col flex-1 text-left min-w-0">
-                                                    <div class="flex items-center gap-2 mb-2 opacity-50">
+                                                {/* Bottom: Content */}
+                                                <div class="p-6 md:p-8 flex flex-col flex-1 text-left min-w-0">
+                                                    <div class="flex items-center gap-2 mb-4 opacity-50">
                                                         <span class="w-4 h-[1px] bg-primary"></span>
-                                                        <span class={`text-[8px] font-black uppercase tracking-[0.2em] ${currentTheme.cardSubtitleClass}`}>Product Detail</span>
+                                                        <span class={`text-[8px] font-black uppercase tracking-[0.2em] text-white/50`}>Link Details</span>
                                                     </div>
                                                     
-                                                    <h3 class={`text-lg md:text-xl font-black ${currentTheme.cardTitleClass} leading-tight tracking-tight mb-2 group-hover:text-primary transition-colors truncate`}>
+                                                    <h3 class={`text-xl md:text-2xl font-black text-white leading-tight tracking-tight mb-3 group-hover:text-primary transition-colors line-clamp-2`}>
                                                         {block.title || block.data?.title}
                                                     </h3>
                                                     
                                                     {description && (
-                                                        <p class={`text-[12px] ${currentTheme.cardSubtitleClass} leading-snug line-clamp-2 font-medium opacity-70 mb-4`}>
+                                                        <p class={`text-[12px] text-white/60 leading-relaxed line-clamp-3 font-medium mb-6`}>
                                                             {description}
                                                         </p>
                                                     )}
 
-                                                    <div class="mt-auto flex items-center justify-between gap-4">
-                                                        <span class="text-[10px] font-black text-primary uppercase tracking-[0.1em] group-hover:tracking-[0.2em] transition-all">Lihat Produk</span>
-                                                        <div class="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all duration-300">
+                                                    <div class="mt-auto flex items-center justify-between gap-4 pt-6 border-t border-white/5">
+                                                        <div class="flex flex-col">
+                                                            <span class="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] mb-1">{displayDomain}</span>
+                                                            <span class="text-[11px] font-black text-primary uppercase tracking-[0.1em] group-hover:tracking-[0.2em] transition-all">Lihat Produk</span>
+                                                        </div>
+                                                        <div class="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all duration-300">
                                                             <span class="material-symbols-outlined text-lg">arrow_forward</span>
                                                         </div>
                                                     </div>
@@ -231,24 +236,24 @@ const currentTheme = ThemeConfig[themeId] || ThemeConfig['atelier-dark'];
                 </section>
 
                 {/* PRODUCTS COLLECTION SECTION */}
-                {showProductsSection && (
-                <section class="animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-300">
-                     <div class="flex flex-col md:flex-row justify-between items-center md:items-end mb-16 gap-6">
+                {showProductsSection && formatted_products.length > 0 && (
+                <section class="mt-32 animate-in fade-in slide-in-from-bottom-16 duration-1000 delay-300">
+                     <div class="flex flex-col md:flex-row justify-between items-center md:items-end mb-16 md:mb-24 gap-8">
                         <div class="text-center md:text-left">
                             <div class="flex items-center gap-3 mb-4 justify-center md:justify-start">
                                 <span class={`w-12 h-[2px] ${themeId === 'sunrise-glow' ? 'bg-rose-400' : 'bg-amber-400'}`}></span>
-                                <span class={`text-[10px] font-black uppercase tracking-[0.4em] ${currentTheme.productSubClass}`}>Premium Catalog</span>
+                                <span class={`text-[10px] font-black uppercase tracking-[0.4em] ${currentTheme.productSubClass}`}>Premium Collections</span>
                             </div>
-                            <h2 class={`text-4xl md:text-6xl font-black tracking-tighter ${currentTheme.productTitleClass} leading-none uppercase italic`}>
-                                Digital Works
+                            <h2 class={`text-5xl md:text-8xl font-black tracking-tighter ${currentTheme.productTitleClass} leading-none uppercase italic`}>
+                                Featured Products
                             </h2>
                         </div>
-                        <div class="hidden md:block">
-                            <p class={`${currentTheme.cardSubtitleClass} text-sm font-bold uppercase tracking-widest`}>{products.length} Items Available</p>
+                        <div class="hidden md:block pb-4">
+                            <p class={`${currentTheme.cardSubtitleClass} text-[11px] font-black uppercase tracking-[0.3em] opacity-40`}>{products.length} Exclusive Items</p>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 justify-items-center">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 justify-items-center">
                         {formatted_products.map((product) => (
                             <ProductCardWithTracking 
                                 client:load

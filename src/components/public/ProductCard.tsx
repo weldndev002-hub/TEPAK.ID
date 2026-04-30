@@ -47,44 +47,56 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     }
   };
 
+  // Extract domain from description or use a default if it looks like a link
+  const displayDomain = description?.toLowerCase().includes('shopee') ? 'shopee.co.id' : 
+                        description?.toLowerCase().includes('tokopedia') ? 'tokopedia.com' : 'tepak.id';
+
   return (
-    <div className={cn("w-full max-w-xs bg-white rounded-3xl border border-slate-200 shadow-lg overflow-hidden group flex flex-col", className)}>
+    <div className={cn("w-full max-w-sm bg-[#16302B] rounded-[2rem] overflow-hidden shadow-2xl group flex flex-col border border-white/5", className)}>
       
       {/* Product Image Cover */}
-      <div className="relative h-48 overflow-hidden shrink-0 bg-slate-100">
+      <div className="relative aspect-square overflow-hidden shrink-0 bg-slate-100">
         <img 
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
             src={imageSrc} 
             alt={title} 
         />
         {badge && (
-            <div className="absolute top-3 left-3 bg-white/90 backdrop-blur px-2 py-1 rounded text-[10px] font-black uppercase text-primary shadow-sm">
+            <div className="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full text-[10px] font-black uppercase text-primary shadow-lg">
                 {badge}
             </div>
         )}
       </div>
 
       {/* Product Details */}
-      <div className="p-5 flex-1 flex flex-col">
-        <h3 className="font-bold text-lg text-slate-900 leading-tight">{title}</h3>
-        <p className="text-slate-500 text-sm mt-2 line-clamp-2 flex-1">{description}</p>
+      <div className="p-6 flex-1 flex flex-col">
+        <h3 className="font-bold text-xl text-white leading-tight tracking-tight group-hover:text-primary transition-colors duration-300">
+            {title}
+        </h3>
+        <p className="text-white/60 text-sm mt-3 line-clamp-3 leading-relaxed font-medium">
+            {description}
+        </p>
         
-        <div className="mt-4 flex items-center justify-between border-t border-slate-50 pt-4">
-          <div>
-            <div className="flex items-center gap-1.5 text-slate-400 mb-1">
-                <EyeIcon />
-                <span className="text-[10px] font-bold uppercase tracking-widest">{viewsCount} dilihat</span>
+        <div className="mt-6 flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                    <span className="text-[10px] text-white/40 font-bold uppercase tracking-[0.2em] mb-1">{displayDomain}</span>
+                    <span className="text-2xl font-black text-white">{price}</span>
+                </div>
+                
+                <Button 
+                    onClick={handleBuyClick}
+                    variant="primary" 
+                    className="px-8 py-3 h-auto rounded-2xl shadow-xl shadow-primary/20 font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all"
+                >
+                    {ctaText}
+                </Button>
             </div>
-            <span className="text-xl font-black text-slate-900">{price}</span>
-          </div>
-          
-          <Button 
-            onClick={handleBuyClick}
-            variant="primary" 
-            className="px-6 py-2.5 h-auto rounded-xl shadow-lg shadow-primary/20 font-bold"
-          >
-            {ctaText}
-          </Button>
+            
+            <div className="flex items-center gap-1.5 text-white/20 pt-4 border-t border-white/5">
+                <EyeIcon />
+                <span className="text-[9px] font-bold uppercase tracking-widest">{viewsCount} views</span>
+            </div>
         </div>
       </div>
 

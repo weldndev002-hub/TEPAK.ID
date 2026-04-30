@@ -527,42 +527,39 @@ const CreatorAtelierEditorContent: React.FC<CreatorAtelierEditorProps> = ({ init
                                                                  <p className={cn("text-[10px] font-black tracking-widest text-center italic", previewTheme.cardSubtitleClass)}>{block.title}</p>
                                                              )}
                                                          </div>
-                                                    ) : (
-                                                        <div className={cn("w-full p-2 rounded-[2rem] shadow-sm hover:scale-[1.01] transition-all group/preview overflow-hidden border", previewTheme.cardClass)}>
-                                                            <div className="flex items-stretch gap-0">
-                                                                {/* Left: Thumbnail */}
-                                                                <div className="w-[100px] aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl relative shrink-0 bg-slate-100">
-                                                                    {block.data?.thumbnailUrl ? (
-                                                                        <img src={block.data.thumbnailUrl} className="w-full h-full object-cover group-hover/preview:scale-110 transition-transform duration-700" alt="" />
-                                                                    ) : (
-                                                                        <div className="w-full h-full flex items-center justify-center opacity-20">
-                                                                            <span className="material-symbols-outlined text-3xl">{block.type === 'link' ? 'link' : 'article'}</span>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-
-                                                                {/* Right: Content */}
-                                                                <div className="p-4 flex flex-col flex-1 text-left min-w-0">
-                                                                    <div className="flex items-center gap-2 mb-2 opacity-50">
-                                                                        <span className="w-4 h-[1px] bg-primary"></span>
-                                                                        <span className={cn("text-[7px] font-black uppercase tracking-[0.2em]", previewTheme.cardSubtitleClass)}>Product Detail</span>
+                                                    ) : (                                                        <div className={cn("w-full max-w-[260px] mx-auto bg-[#16302B] rounded-[1.5rem] overflow-hidden shadow-sm border border-white/5 flex flex-col transition-all group/preview")}>
+                                                            {/* Top: Thumbnail */}
+                                                            <div className="w-full aspect-square overflow-hidden shrink-0 bg-slate-100 relative">
+                                                                {block.data?.thumbnailUrl ? (
+                                                                    <img src={block.data.thumbnailUrl} className="w-full h-full object-cover group-hover/preview:scale-110 transition-transform duration-700" alt="" />
+                                                                ) : (
+                                                                    <div className="w-full h-full flex items-center justify-center opacity-20">
+                                                                        <span className="material-symbols-outlined text-2xl text-white">{block.type === 'link' ? 'link' : 'article'}</span>
                                                                     </div>
-                                                                    
-                                                                    <h3 className={cn("text-sm font-black leading-tight tracking-tight mb-2 truncate", previewTheme.cardTitleClass)}>
-                                                                        {block.title}
-                                                                    </h3>
-                                                                    
-                                                                    {block.subtitle && (
-                                                                        <p className={cn("text-[9px] font-medium line-clamp-2 leading-relaxed opacity-60", previewTheme.cardSubtitleClass)}>
-                                                                            {block.subtitle}
-                                                                        </p>
-                                                                    )}
+                                                                )}
+                                                            </div>
 
-                                                                    <div className="mt-auto pt-4 flex items-center justify-between">
-                                                                        <span className={cn("text-[8px] font-black uppercase tracking-widest opacity-60", previewTheme.cardSubtitleClass)}>Lihat Produk</span>
-                                                                        <div className={cn("w-7 h-7 rounded-full flex items-center justify-center border transition-all", previewTheme.cardClass)}>
-                                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
-                                                                        </div>
+                                                            {/* Bottom: Content */}
+                                                            <div className="p-4 flex flex-col flex-1 text-left min-w-0">
+                                                                <div className="flex items-center gap-1.5 mb-2 opacity-50">
+                                                                    <span className="w-3 h-[1px] bg-primary"></span>
+                                                                    <span className={cn("text-[6px] font-black uppercase tracking-[0.2em] text-white/50")}>Link Preview</span>
+                                                                </div>
+                                                                
+                                                                <h3 className={cn("text-[11px] font-black leading-tight tracking-tight mb-2 truncate text-white")}>
+                                                                    {block.title}
+                                                                </h3>
+                                                                
+                                                                {block.subtitle && (
+                                                                    <p className={cn("text-[8px] font-medium line-clamp-2 leading-relaxed opacity-60 text-white/70")}>
+                                                                        {block.subtitle}
+                                                                    </p>
+                                                                )}
+
+                                                                <div className="mt-auto pt-3 flex items-center justify-between border-t border-white/5 mt-4">
+                                                                    <span className={cn("text-[7px] font-black uppercase tracking-widest text-primary")}>Lihat Produk</span>
+                                                                    <div className={cn("w-6 h-6 rounded-lg flex items-center justify-center bg-primary/10 text-primary")}>
+                                                                        <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
                                                                     </div>
                                                                 </div>
                                                             </div>
