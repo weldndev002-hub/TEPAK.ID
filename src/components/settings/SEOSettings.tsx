@@ -20,6 +20,9 @@ export const SEOSettingsDashboard = () => {
     const [keywords, setKeywords] = useState('');
     const [seoImage, setSeoImage] = useState('');
     const [username, setUsername] = useState('');
+    const [gaId, setGaId] = useState('');
+    const [fbPixelId, setFbPixelId] = useState('');
+    const [activeDomain, setActiveDomain] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
@@ -41,8 +44,15 @@ export const SEOSettingsDashboard = () => {
                 setTitle(settings.seo_title || '');
                 setDescription(settings.seo_description || '');
                 setSeoImage(settings.seo_image || '');
+                setGaId(settings.ga_id || '');
+                setFbPixelId(settings.fb_pixel_id || '');
                 setUsername(data.username || 'username');
                 setKeywords(settings.seo_keywords || ''); 
+                
+                // Check for active custom domain
+                if (settings.domain_name && settings.domain_verified) {
+                    setActiveDomain(settings.domain_name);
+                }
             }
         } catch (error) {
             console.error('Failed to fetch SEO data:', error);
@@ -101,7 +111,9 @@ export const SEOSettingsDashboard = () => {
                     seo_title: cleanTitle,
                     seo_description: cleanDesc,
                     seo_image: seoImage,
-                    seo_keywords: keywords
+                    seo_keywords: keywords,
+                    ga_id: gaId,
+                    fb_pixel_id: fbPixelId
                 })
             });
 
@@ -248,24 +260,36 @@ export const SEOSettingsDashboard = () => {
                     </Card>
 
                     {/* Advanced Analytics Card */}
-                    <Card className="p-8 border-slate-100 shadow-sm space-y-8 rounded-3xl bg-white opacity-60">
+                    <Card className="p-8 border-slate-100 shadow-sm space-y-8 rounded-3xl bg-white">
                         <div className="flex items-center gap-3 mb-2">
-                            <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
+                            <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary">
                                 <ChartBarIcon className="w-5 h-5" />
                             </div>
                             <div>
                                 <h3 className="font-black text-slate-900 uppercase tracking-tight text-sm leading-none mb-1">Tracking & Pixel</h3>
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Coming soon in next release</p>
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Connect external analytics tools</p>
                             </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pointer-events-none">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Google Analytics ID</label>
-                                <Input className="h-12 bg-slate-50 border-slate-100 rounded-xl font-black text-xs uppercase tracking-tight" placeholder="G-XXXXXXXXXX" disabled />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Google Analytics ID</label>
+                                <Input 
+                                    className="h-14 bg-slate-50/50 border-slate-100 rounded-xl font-black text-xs uppercase tracking-tight focus:bg-white transition-all px-6"
+                                    value={gaId}
+                                    onChange={(e) => setGaId(e.target.value)}
+                                    placeholder="G-XXXXXXXXXX" 
+                                />
+                                <p className="text-[8px] font-medium text-slate-400 px-1 uppercase tracking-tight">Example: G-1234567890</p>
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Meta Pixel ID</label>
-                                <Input className="h-12 bg-slate-50 border-slate-100 rounded-xl font-black text-xs uppercase tracking-tight" placeholder="123456789012345" disabled />
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Meta Pixel ID</label>
+                                <Input 
+                                    className="h-14 bg-slate-50/50 border-slate-100 rounded-xl font-black text-xs uppercase tracking-tight focus:bg-white transition-all px-6"
+                                    value={fbPixelId}
+                                    onChange={(e) => setFbPixelId(e.target.value)}
+                                    placeholder="123456789012345" 
+                                />
+                                <p className="text-[8px] font-medium text-slate-400 px-1 uppercase tracking-tight">Enter your 15-16 digit Pixel ID</p>
                             </div>
                         </div>
                     </Card>
@@ -285,7 +309,12 @@ export const SEOSettingsDashboard = () => {
                                 {title || 'Untitled Site'}
                             </div>
                             <div className="text-[#006621] text-sm flex items-center gap-1 font-['Roboto',sans-serif]">
-                                <span>https://tepak.id/u/{username}</span>
+                                <span>
+                                    {activeDomain 
+                                        ? `https://${activeDomain}` 
+                                        : `https://tepakiid.weldn-dev-002.workers.dev/u/${username}`
+                                    }
+                                </span>
                                 <ChevronDownIcon className="w-3 h-3" />
                             </div>
                             <div className="text-[#4d5156] text-[14px] line-clamp-2 leading-relaxed font-['Roboto',sans-serif]">

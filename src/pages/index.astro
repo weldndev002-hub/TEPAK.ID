@@ -133,9 +133,9 @@ const profile = merchantData ? {
 } : null;
 
 const seo = merchantData ? {
-    title: merchantData.profiles?.seo_title || `${profile?.name} | ${siteName}`,
-    description: merchantData.profiles?.seo_description || profile?.bio || "",
-    image: merchantData.profiles?.og_image || profile?.avatar
+    title: merchantData.seo_title || `${profile?.name} | ${siteName}`,
+    description: merchantData.seo_description || profile?.bio || "",
+    image: merchantData.seo_image || profile?.avatar
 } : {
     title: `${siteName} - ${siteTagline}`,
     description: branding?.site_tagline || "Satu Link. Semua Kebutuhan Digitalmu.",
@@ -217,7 +217,13 @@ const isMainSiteAlias = hostname.split(".")[0] === "tepak" || hostname.split("."
 const showLandingPage = isMainDomain && (isMainSiteAlias || !detectedUser);
 ---
 
-<BaseLayout title={seo.title} description={seo.description} image={seo.image}>
+<BaseLayout 
+    title={seo.title} 
+    description={seo.description} 
+    image={seo.image}
+    gaId={merchantData?.ga_id}
+    fbPixelId={merchantData?.fb_pixel_id}
+>
     <div
         class="min-h-screen bg-surface font-['Funnel_Display',sans-serif] selection:bg-primary-container selection:text-on-primary-container"
     >

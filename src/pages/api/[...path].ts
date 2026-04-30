@@ -2736,19 +2736,15 @@ app.post(
         return c.json({ error: 'Domain ini sudah digunakan oleh pengguna lain.' }, 400);
       }
 
-      // MANUAL MODE: Just save to DB and wait for Admin
+      // MANUAL MODE: Save to user_settings and wait for Admin verification
       const { error: dbError } = await supabase
-        .from('profiles')
-        .update({
-          custom_domain: domain,
-          custom_domain_status: 'pending',
-          custom_domain_config: {
-            mode: 'manual',
-            cname_target: 'weorbit.site',
-            created_at: new Date().toISOString()
-          }
-        })
-        .eq('id', user.id);
+        .from('user_settings')
+        .upsert({
+          user_id: user.id,
+          domain_name: domain,
+          domain_verified: false,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
 
       if (dbError) throw dbError;
 
@@ -2771,21 +2767,21 @@ app.post('/domain/verify', async (c) => {
   if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
   try {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('custom_domain, custom_domain_status, custom_domain_config')
-      .eq('id', user.id)
+    const { data: settings } = await supabase
+      .from('user_settings')
+      .select('domain_name, domain_verified')
+      .eq('user_id', user.id)
       .single();
+    
+    const isVerified = settings?.domain_verified === true;
 
-    if (!profile?.custom_domain) {
+    if (!settings?.domain_name) {
       return c.json({ error: 'Belum ada domain yang didaftarkan.' }, 400);
     }
 
-    // In manual mode, we just return the current status from DB
-    // Admin must manually update custom_domain_status to 'active' in Supabase
     return c.json({
-      status: profile.custom_domain_status,
-      message: profile.custom_domain_status === 'active' 
+      status: isVerified ? 'active' : 'pending',
+      message: isVerified 
         ? 'Selamat! Domain Anda sudah aktif.' 
         : 'Domain sedang dalam proses peninjauan admin. Pastikan CNAME sudah diarahkan ke weorbit.site'
     });
@@ -3559,6 +3555,8 @@ app.put(
       seo_description: body.seo_description,
       seo_image: body.seo_image,
       seo_keywords: body.seo_keywords,
+      ga_id: body.ga_id,
+      fb_pixel_id: body.fb_pixel_id,
       theme: body.theme,
       updated_at: new Date().toISOString()
     };

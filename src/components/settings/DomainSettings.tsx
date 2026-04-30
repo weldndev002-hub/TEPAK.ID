@@ -47,9 +47,10 @@ export const DomainSettingsDashboard = () => {
             const res = await fetch('/api/profile');
             if (res.ok) {
                 const data = await res.json();
-                setDomain(data.custom_domain || '');
-                setStatus(data.custom_domain_status || 'none');
-                setConfig(data.custom_domain_config || {});
+                const settings = data.settings || {};
+                setDomain(settings.domain_name || '');
+                setStatus(settings.domain_verified ? 'active' : (settings.domain_name ? 'pending' : 'none'));
+                setConfig(settings.custom_domain_config || {});
             }
 
             // Check if PRO

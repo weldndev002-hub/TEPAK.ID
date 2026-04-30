@@ -145,7 +145,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
                 if (profile) {
                     const { data: settings } = await supabase
                         .from('user_settings')
-                        .select('seo_title, seo_description, seo_image')
+                        .select('seo_title, seo_description, seo_image, ga_id, fb_pixel_id')
                         .eq('user_id', profile.id)
                         .single();
                     
@@ -153,7 +153,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
                         ...profile,
                         seo_title: settings?.seo_title,
                         seo_description: settings?.seo_description,
-                        og_image: settings?.seo_image
+                        og_image: settings?.seo_image,
+                        ga_id: settings?.ga_id,
+                        fb_pixel_id: settings?.fb_pixel_id
                     };
                     console.log(`[Middleware] Subdomain: ${part} -> ${profile.id}`);
                 }
@@ -163,8 +165,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
         else if (!primaryDomains.includes(hostname)) {
             const { data: settings } = await supabase
                 .from('user_settings')
-                .select('user_id, domain_name, seo_title, seo_description, seo_image')
+                .select('user_id, domain_name, seo_title, seo_description, seo_image, ga_id, fb_pixel_id')
                 .eq('domain_name', hostname)
+                .eq('domain_verified', true) // Only active domains
                 .single();
             
             if (settings) {
@@ -180,7 +183,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
                         ...profile,
                         seo_title: settings.seo_title,
                         seo_description: settings.seo_description,
-                        og_image: settings.seo_image
+                        og_image: settings.seo_image,
+                        ga_id: settings.ga_id,
+                        fb_pixel_id: settings.fb_pixel_id
                     };
                     locals.isCustomDomain = true;
                     console.log(`[Middleware] Custom Domain: ${hostname} -> ${profile.id}`);
