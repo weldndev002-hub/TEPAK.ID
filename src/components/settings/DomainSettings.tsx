@@ -91,8 +91,8 @@ const DomainSettingsDashboardContent = () => {
     };
 
     const domainSchema = z.string()
-        .regex(/^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/, "Format domain tidak valid, gunakan format: domainku.com")
-        .refine(val => !val.startsWith('http'), "Gunakan format domain yang benar, tanpa http/https");
+        .regex(/^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i, "Format domain tidak valid, gunakan format: domainku.com atau sub.domainku.com")
+        .refine(val => !val.includes('://'), "Gunakan format domain yang benar, tanpa http/https");
 
     const handleSaveDomain = async () => {
         const result = domainSchema.safeParse(domainInput);
@@ -110,8 +110,8 @@ const DomainSettingsDashboardContent = () => {
             });
 
             if (res.ok) {
-                setStatus('active'); // Immediate active as per user request
-                showToast('Domain successfully connected!');
+                setStatus('pending');
+                showToast('Domain saved! Please configure your DNS.');
             } else {
                 const err = await res.json();
                 setError(err.error || 'Failed to save domain');
@@ -135,6 +135,40 @@ const DomainSettingsDashboardContent = () => {
             }
         } catch (err) {
             showToast('Failed to remove domain');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleVerifyDNS = async () => {
+        setIsSaving(true);
+        setError('');
+        try {
+            // First do a client-side quick check (optional, but good for immediate feedback)
+            const dnsRes = await fetch(`https://dns.google/resolve?name=${domainInput}&type=CNAME`);
+            const dnsData = await dnsRes.json();
+            const isPointedClient = dnsData.Answer?.some((ans: any) => 
+                ans.data.toLowerCase().includes('custom.tepak.id')
+            );
+
+            // Now call the backend which does the official Cloudflare status check
+            const verifyRes = await fetch('/api/settings/domain/verify', { method: 'POST' });
+            const data = await verifyRes.json();
+
+            if (verifyRes.ok) {
+                setStatus('active');
+                showToast('Domain verified and active!');
+            } else {
+                // If it's a rate limit, show the specific wait time
+                if (verifyRes.status === 429) {
+                    setError(data.error);
+                } else {
+                    setError(data.error || 'DNS CNAME belum terdeteksi aktif. Harap tunggu proses propagasi.');
+                }
+            }
+        } catch (err) {
+            console.error('DNS Check failed:', err);
+            setError('Gagal melakukan pengecekan. Silakan coba lagi nanti.');
         } finally {
             setIsSaving(false);
         }
@@ -251,7 +285,7 @@ const DomainSettingsDashboardContent = () => {
                                                 onClick={handleSaveDomain}
                                                 isLoading={isSaving}
                                             >
-                                                Save
+                                                Register
                                             </Button>
                                         )}
                                         {status !== 'idle' && (
@@ -281,14 +315,28 @@ const DomainSettingsDashboardContent = () => {
                                                 <TableRow className="bg-slate-50/50">
                                                     <TableHead className="font-black text-[10px] text-slate-400 uppercase tracking-widest px-6">Type</TableHead>
                                                     <TableHead className="font-black text-[10px] text-slate-400 uppercase tracking-widest px-6">Name/Host</TableHead>
-                                                    <TableHead className="font-black text-[10px] text-slate-400 uppercase tracking-widest px-6">Value</TableHead>
+                                                    <TableHead className="font-black text-[10px] text-slate-400 uppercase tracking-widest px-6">Value (Points to)</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
                                                 <TableRow className="hover:bg-white bg-white">
-                                                    <TableCell className="font-black text-[11px] text-slate-900 px-6 uppercase tracking-tight">CNAME</TableCell>
-                                                    <TableCell className="font-black text-[11px] text-slate-900 px-6 uppercase tracking-tight">@ or www</TableCell>
-                                                    <TableCell className="font-black text-[11px] text-primary px-6 uppercase tracking-tight">custom.tepak.id</TableCell>
+                                                    <TableCell className="font-black text-[11px] text-slate-900 px-6 tracking-tight">CNAME</TableCell>
+                                                    <TableCell className="font-black text-[11px] text-slate-900 px-6 tracking-tight">@ atau www</TableCell>
+                                                    <TableCell className="font-black text-[11px] text-primary px-6 tracking-tight flex items-center gap-2">
+                                                        custom.tepak.id
+                                                        <button 
+                                                            onClick={() => {
+                                                                navigator.clipboard.writeText('custom.tepak.id');
+                                                                showToast('Copied to clipboard!');
+                                                            }}
+                                                            className="p-1 hover:bg-primary/10 rounded-md transition-colors"
+                                                            title="Copy to clipboard"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
+                                                            </svg>
+                                                        </button>
+                                                    </TableCell>
                                                 </TableRow>
                                             </TableBody>
                                         </Table>
@@ -296,9 +344,31 @@ const DomainSettingsDashboardContent = () => {
 
                                     <div className="p-4 bg-primary/5 border border-primary/10 rounded-xl">
                                         <p className="text-[10px] text-primary font-black uppercase tracking-tight leading-relaxed">
-                                            💡 Harap atur DNS CNAME Anda ke <span className="underline italic">custom.tepak.id</span> agar domain dapat terhubung dengan server kami.
+                                            💡 PENTING: Pengaturan ini dilakukan di panel domain provider Anda (Niagahoster, Rumahweb, dll), bukan di dalam Tepak.ID. Masukkan nilai di atas ke dalam pengaturan DNS domain Anda.
                                         </p>
                                     </div>
+
+                                    {status === 'pending' && (
+                                        <div className="mt-8 pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center shrink-0 text-amber-500">
+                                                    <ArrowPathIcon className={cn("w-5 h-5", isSaving && "animate-spin")} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Status: Pending Verification</p>
+                                                    <p className="text-[9px] text-slate-400 font-medium mt-0.5">Klik verifikasi jika Anda sudah mengatur DNS.</p>
+                                                </div>
+                                            </div>
+                                            <Button 
+                                                variant="primary" 
+                                                className="w-full sm:w-auto px-8 font-black text-[11px] uppercase tracking-widest shadow-xl shadow-primary/20 rounded-xl"
+                                                onClick={handleVerifyDNS}
+                                                isLoading={isSaving}
+                                            >
+                                                Verify Connection
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </Card>

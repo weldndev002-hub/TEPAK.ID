@@ -153,14 +153,18 @@ const noScriptRefinement = (val: string | undefined | any) => {
   const str = typeof val === 'string' ? val : JSON.stringify(val);
   const dangerousPatterns = [
     /<script/i,
-    /on\w+\s*=/i,
+    /(?:^|\s)on\w+\s*=/i, // Match event handlers like onclick= but not words like "only" or "onboarding"
     /javascript:/i,
     /data:text\/html/i,
     /document\./i,
     /window\./i,
     /eval\(/i
   ];
-  return !dangerousPatterns.some(pattern => pattern.test(str));
+  const matched = dangerousPatterns.find(pattern => pattern.test(str));
+  if (matched) {
+    console.warn(`[Security] Malicious pattern detected: ${matched} in value: ${str.substring(0, 100)}`);
+  }
+  return !matched;
 };
 
 const XSS_ERROR_MESSAGE = "Teks mengandung skrip atau atribut berbahaya yang tidak diperbolehkan.";
@@ -410,8 +414,14 @@ app.get('/onboarding/data', async (c) => {
   }
 });
 
-// Update/Save domain (Auto-verify per user request)
-app.put('/settings/domain', zValidator('json', z.object({ domain_name: z.string().min(1) })), async (c) => {
+// Update/Save domain (Cloudflare Custom Hostname Integration)
+app.put('/settings/domain', zValidator('json', z.object({ 
+  domain_name: z.string()
+    .min(1)
+    .regex(/^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i, "Format domain tidak valid, gunakan format: domainku.com atau sub.domainku.com")
+    .refine(val => !val.includes('://'), "Gunakan format domain yang benar, tanpa http/https")
+    .refine(val => !val.includes('/'), "Masukkan hanya nama domain, tanpa folder/path")
+})), async (c) => {
   try {
     const timestamp = new Date().toISOString();
     console.log(`[Domain API] [${timestamp}] Handler invoked`);
@@ -450,7 +460,7 @@ app.put('/settings/domain', zValidator('json', z.object({ domain_name: z.string(
       .upsert({
         user_id: user.id,
         domain_name,
-        domain_verified: true,
+        domain_verified: false,
         updated_at: new Date().toISOString()
       }, { onConflict: 'user_id' })
       .select()
@@ -461,15 +471,133 @@ app.put('/settings/domain', zValidator('json', z.object({ domain_name: z.string(
       return c.json({ error: 'Gagal menyimpan domain: ' + upsertError.message, code: upsertError.code }, 500);
     }
 
+    // 3. Register with Cloudflare Custom Hostname API
+    const cfToken = getEnv('CLOUDFLARE_API_TOKEN');
+    const cfZoneId = getEnv('CLOUDFLARE_ZONE_ID');
+
+    if (cfToken && cfZoneId) {
+      try {
+        console.log(`[Domain API] Registering ${domain_name} with Cloudflare...`);
+        const cfRes = await fetch(`https://api.cloudflare.com/client/v4/zones/${cfZoneId}/custom_hostnames`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${cfToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            hostname: domain_name,
+            ssl: {
+              method: 'http',
+              type: 'dv'
+            }
+          })
+        });
+
+        const cfData: any = await cfRes.json();
+        if (!cfRes.ok) {
+            // If already exists, we ignore the error as we just want to ensure it is registered
+            if (cfData.errors?.[0]?.code !== 1406) {
+                console.error('[Domain API] Cloudflare Registration Error:', cfData);
+            }
+        } else {
+            console.log(`[Domain API] Cloudflare Registration Success: ${cfData.result?.id}`);
+        }
+      } catch (cfErr) {
+        console.error('[Domain API] Cloudflare API Fetch Error:', cfErr);
+      }
+    }
+
     console.log(`[Domain API] Success for user: ${user.id}`);
     return c.json(upsertData);
   } catch (err: any) {
     console.error('[Domain API Global Catch]', err);
     return c.json({
       error: 'Critical server error in domain settings',
-      message: err.message,
-      stack: err.stack
+      message: err.message
     }, 500);
+  }
+});
+
+// Verify Domain Status (Server-side Cloudflare Check)
+app.post('/settings/domain/verify', async (c) => {
+  const { supabase, user } = await getAuthContext(c);
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  try {
+    // 1. Fetch current settings and check rate limit
+    const { data: settings, error: fetchError } = await supabase
+      .from('user_settings')
+      .select('domain_name, domain_verified, updated_at')
+      .eq('user_id', user.id)
+      .single();
+
+    if (fetchError || !settings?.domain_name) {
+      return c.json({ error: 'Domain belum dikonfigurasi' }, 400);
+    }
+
+    if (settings.domain_verified) {
+        return c.json({ success: true, message: 'Domain sudah aktif' });
+    }
+
+    // Rate Limiting: Minimum 60 seconds between verification attempts
+    const lastCheck = new Date(settings.updated_at).getTime();
+    const now = Date.now();
+    if (now - lastCheck < 60000) {
+        const waitTime = Math.ceil((60000 - (now - lastCheck)) / 1000);
+        return c.json({ 
+            error: `Harap tunggu ${waitTime} detik lagi sebelum mencoba verifikasi ulang.`,
+            code: 'RATE_LIMIT'
+        }, 429);
+    }
+
+    // 2. Perform Server-side Cloudflare Status Check
+    const cfToken = getEnv('CLOUDFLARE_API_TOKEN');
+    const cfZoneId = getEnv('CLOUDFLARE_ZONE_ID');
+    let isActuallyActive = false;
+
+    if (cfToken && cfZoneId) {
+        try {
+            const cfRes = await fetch(`https://api.cloudflare.com/client/v4/zones/${cfZoneId}/custom_hostnames?hostname=${settings.domain_name}`, {
+                headers: { 'Authorization': `Bearer ${cfToken}` }
+            });
+            const cfData: any = await cfRes.json();
+            
+            if (cfRes.ok && cfData.result?.[0]?.status === 'active') {
+                isActuallyActive = true;
+                console.log(`[Domain API] Server-side verification success for ${settings.domain_name}`);
+            } else {
+                console.log(`[Domain API] Server-side verification pending for ${settings.domain_name}. Status: ${cfData.result?.[0]?.status || 'unknown'}`);
+            }
+        } catch (e) {
+            console.error('[Domain API] CF Verification Error:', e);
+        }
+    } else {
+        // Fallback for local/dev if tokens are missing (for simulation)
+        isActuallyActive = false; 
+    }
+
+    if (isActuallyActive) {
+        const { error: updateError } = await getSupabaseAdmin(cfEnv)
+          .from('user_settings')
+          .update({ domain_verified: true, updated_at: new Date().toISOString() })
+          .eq('user_id', user.id);
+
+        if (updateError) throw updateError;
+        return c.json({ success: true, message: 'Domain verified' });
+    } else {
+        // Update timestamp even if failed to enforce rate limit
+        await getSupabaseAdmin(cfEnv)
+            .from('user_settings')
+            .update({ updated_at: new Date().toISOString() })
+            .eq('user_id', user.id);
+
+        return c.json({ 
+            error: 'DNS belum terdeteksi aktif di Cloudflare. Harap pastikan CNAME sudah benar dan tunggu proses propagasi (biasanya 5-10 menit).',
+            code: 'PENDING_PROPAGATION'
+        }, 400);
+    }
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
   }
 });
 
@@ -3230,7 +3358,7 @@ app.put(
       username: z.string().optional().refine(noScriptRefinement, XSS_ERROR_MESSAGE).transform(v => v ? sanitizeString(v) : v),
       bio: z.string().optional().refine(noScriptRefinement, XSS_ERROR_MESSAGE).transform(v => v ? sanitizeString(v) : v),
       avatar_url: z.string().optional(),
-      domain_name: z.string().regex(/^[a-z0-9-]+$/, 'Hanya boleh berisi huruf kecil, angka, dan tanda hubung').optional(),
+      domain_name: z.string().regex(/^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i, 'Format domain tidak valid').optional(),
       seo_title: z.string().optional().refine(noScriptRefinement, XSS_ERROR_MESSAGE).transform(v => v ? sanitizeString(v) : v),
       seo_description: z.string().optional().refine(noScriptRefinement, XSS_ERROR_MESSAGE).transform(v => v ? sanitizeString(v) : v),
       instagram_url: z.string().optional(),
