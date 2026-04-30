@@ -212,7 +212,7 @@ const is_banned =
 const showProductsSection = formatted_products.length > 0;
 
 // Logic to show Landing Page vs Profile
-const isMainDomain = hostname.includes("tepak.id") || hostname.includes("workers.dev") || hostname === "localhost" || hostname === "127.0.0.1";
+const isMainDomain = hostname.includes("tepakiid.weldn-dev-002.workers.dev") || hostname.includes("workers.dev") || hostname === "localhost" || hostname === "127.0.0.1";
 const isMainSiteAlias = hostname.split(".")[0] === "tepak" || hostname.split(".")[0] === "tepakid" || hostname.split(".")[0] === "www";
 const showLandingPage = isMainDomain && (isMainSiteAlias || !detectedUser);
 ---

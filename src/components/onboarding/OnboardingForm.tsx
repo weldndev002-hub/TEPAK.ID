@@ -314,7 +314,7 @@ export const OnboardingForm: React.FC<OnboardingFormProps> = ({ initialBranding 
                                             </div>
                                             <div className="relative group">
                                                 <div className="absolute left-8 top-1/2 -translate-y-1/2 flex items-center pointer-events-none z-10">
-                                                    <span className="text-slate-300 font-black text-xl tracking-tight">tepak.id/</span>
+                                                    <span className="text-slate-300 font-black text-xs tracking-tight">tepakiid.weldn-dev-002.workers.dev/u/</span>
                                                 </div>
                                                 <Input
                                                     className="h-24 pl-32 text-2xl font-black tracking-tight rounded-[2rem] border-2 border-slate-100 focus:border-primary shadow-none bg-slate-50/30 uppercase transition-all"

@@ -10,7 +10,7 @@ export interface SubdomainCheckProps {
 }
 
 export const SubdomainCheck: React.FC<SubdomainCheckProps> = ({ 
-    domainSuffix = ".tepak.id",
+    domainSuffix = ".tepakiid.weldn-dev-002.workers.dev",
     defaultValue = "",
     className
 }) => {
