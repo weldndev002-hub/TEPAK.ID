@@ -101,6 +101,8 @@ let orderId = "";
 let accessCount = 0;
 let delivery: any = null;
 let error: any = null;
+let isForever = false;
+let formattedExpiry = "Segera";
 
 if (token && email && supabase && !needsVerification) {
     try {
@@ -136,9 +138,8 @@ if (token && email && supabase && !needsVerification) {
             const expiresAt = new Date(delivery.expires_at);
             const now = new Date();
             const isValidDate = !isNaN(expiresAt.getTime());
-            const isForever = isValidDate && expiresAt.getFullYear() > (now.getFullYear() + 50);
+            isForever = isValidDate && expiresAt.getFullYear() > (now.getFullYear() + 50);
             
-            let formattedExpiry = "Segera";
             if (isValidDate) {
                 formattedExpiry = expiresAt.toLocaleString('id-ID', { 
                     day: 'numeric', 
@@ -150,7 +151,7 @@ if (token && email && supabase && !needsVerification) {
             }
             
             orderId = delivery.orders?.id || "MANUAL";
-            accessCount = delivery.access_count || 0;
+            accessCount = (delivery.access_count || 0) + 1;
 
             if (now > expiresAt) {
                 errorMessage = "Token telah kadaluarsa.";
@@ -158,23 +159,21 @@ if (token && email && supabase && !needsVerification) {
             } else if (
                 buyerEmail.toLowerCase() !== email.toLowerCase()
             ) {
-                // Email mismatch - redirect to error page
+                // Email mismatch
                 console.warn(`[Digital Delivery] Email mismatch. Expected: ${buyerEmail}, Got: ${email}`);
-                return Astro.redirect(
-                    "/digital-delivery/error?reason=email_mismatch",
-                );
+                errorMessage = "Email tidak sesuai dengan data pembelian.";
+                isValid = false;
             } else {
                 // Valid access - generate fresh signed URL if needed
                 isValid = true;
-                fileUrl = delivery.file_url;
-                fileName = fileUrl.split("/").pop() || "download.pdf";
+                fileUrl = delivery.file_url || "";
+                fileName = (typeof fileUrl === 'string' ? fileUrl.split("/").pop() : "file") || "download.pdf";
                 isPdf = fileName.toLowerCase().endsWith(".pdf");
                 isImage = /\.(jpg|jpeg|png|gif|webp|avif)$/i.test(fileName);
 
                 // Generate fresh signed URL if file is from Supabase Storage
-                if (fileUrl.includes('supabase.co/storage')) {
+                if (fileUrl && typeof fileUrl === 'string' && fileUrl.includes('supabase.co/storage')) {
                     try {
-                        // Extract bucket and path from file_url
                         const url = new URL(fileUrl);
                         const pathParts = url.pathname.split('/');
                         const bucketIndex = pathParts.findIndex((p: string) => p === 'public' || p === 'object');
@@ -182,7 +181,6 @@ if (token && email && supabase && !needsVerification) {
                             const bucket = pathParts[bucketIndex + 1];
                             const filePath = pathParts.slice(bucketIndex + 2).join('/');
 
-                            // Generate signed URL (valid for 1 hour)
                             const { data: signedData, error: signError } = await supabase
                                 .storage
                                 .from(bucket)
@@ -190,11 +188,8 @@ if (token && email && supabase && !needsVerification) {
 
                             if (!signError && signedData) {
                                 signedUrl = signedData.signedUrl;
-                                console.log("[Digital Delivery] Generated fresh signed URL for:", filePath);
                             } else {
-                                // Fallback to stored signed_url or original fileUrl
                                 signedUrl = delivery.signed_url || fileUrl;
-                                console.warn("[Digital Delivery] Failed to generate signed URL, using fallback");
                             }
                         } else {
                             signedUrl = delivery.signed_url || fileUrl;
@@ -204,63 +199,39 @@ if (token && email && supabase && !needsVerification) {
                         signedUrl = delivery.signed_url || fileUrl;
                     }
                 } else {
-                    // External URL or direct download
                     signedUrl = fileUrl;
                 }
 
-                // Update access count
-                await supabase
+                // Update access count (non-blocking update to prevent hanging)
+                supabase
                     .from("digital_deliveries")
                     .update({
-                        access_count: delivery.access_count + 1,
+                        access_count: accessCount,
                         last_accessed_at: now.toISOString(),
                     })
-                    .eq("id", delivery.id);
+                    .eq("id", delivery.id)
+                    .then(({ error: upError }: any) => {
+                        if (upError) console.error("[Digital Delivery] Failed to update access count:", upError.message);
+                    });
 
-                // Create a separate download URL with the forced download parameter
                 downloadUrl = signedUrl || fileUrl;
-                if (downloadUrl.includes('supabase.co/storage')) {
+                if (downloadUrl && typeof downloadUrl === 'string' && downloadUrl.includes('supabase.co/storage')) {
                     const downloadParam = `download=${encodeURIComponent(fileName)}`;
                     downloadUrl = downloadUrl.includes('?') ? `${downloadUrl}&${downloadParam}` : `${downloadUrl}?${downloadParam}`;
                 }
-
-                console.log("[Digital Delivery] Valid access granted:", {
-                    token,
-                    orderId,
-                    buyerEmail: buyerEmail.substring(0, 3) + "...",
-                    accessCount: accessCount + 1,
-                    isPdf,
-                    hasDownloadParam: downloadUrl.includes('download=')
-                });
             }
         }
-    } catch (err) {
-        errorMessage = "Terjadi kesalahan saat memverifikasi token.";
+    } catch (err: any) {
+        errorMessage = `Terjadi kesalahan internal: ${err.message || 'Unknown'}`;
         console.error("[Digital Delivery] Unexpected error:", err);
     }
-} else {
+} else if (!needsVerification) {
     errorMessage = "Token dan email diperlukan untuk mengakses file.";
-    console.warn("[Digital Delivery] Missing token or email");
 }
 
-// If invalid AND not in verification step, redirect to error page
-if (!isValid && !needsVerification) {
-    let reason = "invalid";
-    if (errorMessage && errorMessage.includes("email")) reason = "email_mismatch";
-    if (errorMessage && errorMessage.includes("kadaluarsa")) reason = "expired";
-    
-    // Pass simple flags instead of complex objects
-    const hasDelivery = delivery ? "yes" : "no";
-    const hasOrder = delivery?.orders ? "yes" : "no";
-    const hasCust = delivery?.orders?.customers ? "yes" : "no";
-    const accEmail = delivery?.accessed_email || "EMPTY";
-    const dbError = fetchError ? fetchError.message : "none";
-
-    const debugParam = `&debug_provided=${encodeURIComponent(email)}&debug_expected=${encodeURIComponent(buyerEmail)}&debug_has_del=${hasDelivery}&debug_has_ord=${hasOrder}&debug_has_cust=${hasCust}&debug_acc=${encodeURIComponent(accEmail)}&debug_kt=${keyType}&debug_err=${encodeURIComponent(dbError)}`;
-    
-    console.log(`[Digital Delivery] Redirecting. Reason: ${reason}, DB Error: ${dbError}`);
-    return Astro.redirect(`/digital-delivery/error?reason=${reason}${debugParam}`);
-}
+// If we have an error and we are NOT in the verification phase, we need to show it.
+// Instead of redirecting which might cause blank pages, we'll let the template handle it.
+const hasCriticalError = !isValid && !needsVerification && !!errorMessage;
 ---
 
 <BaseLayout title="Unduhan Produk Digital - Tepak.ID">
@@ -367,7 +338,7 @@ if (!isValid && !needsVerification) {
                                                 📄 Pratinjau dokumen tersedia di bawah.
                                             </p>
                                         </div>
-                                        <PDFViewer client:load pdfUrl={signedUrl || fileUrl} fileName={fileName} />
+                                        <PDFViewer client:only="react" pdfUrl={signedUrl || fileUrl} fileName={fileName} />
                                     </div>
                                 ) : isImage ? (
                                     <div class="mb-10 text-left">
@@ -414,7 +385,7 @@ if (!isValid && !needsVerification) {
                                             📥 Unduh Sekarang
                                         </a>
                                     </div>
-                                </div>}
+                                </div>
 
                                 <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
                                     <h3 class="text-lg font-semibold text-blue-900 mb-3">
@@ -524,10 +495,10 @@ if (!isValid && !needsVerification) {
                         </div>
                     </div>
                 ) : (
-                    <div class="text-center">
-                        <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-6">
+                    <div class="text-center bg-white rounded-2xl shadow-xl p-12 max-w-lg mx-auto">
+                        <div class="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-red-100 mb-8">
                             <svg
-                                class="h-8 w-8 text-red-600"
+                                class="h-10 w-10 text-red-600"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -542,18 +513,22 @@ if (!isValid && !needsVerification) {
                             </svg>
                         </div>
                         <h1 class="text-3xl font-bold text-gray-900 mb-4">
-                            Akses Ditolak
+                            Akses Bermasalah
                         </h1>
-                        <p class="text-gray-600 mb-8 max-w-md mx-auto">
-                            {errorMessage ||
-                                "Token tidak valid atau telah kadaluarsa."}
+                        <p class="text-gray-600 mb-10 leading-relaxed">
+                            {errorMessage || "Token tidak valid atau telah kadaluarsa."}
                         </p>
-                        <a
-                            href="/digital-delivery/error"
-                            class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                        >
-                            Kembali ke Halaman Error
-                        </a>
+                        <div class="space-y-4">
+                            <a
+                                href="/"
+                                class="w-full inline-flex items-center justify-center px-6 py-4 border border-transparent text-base font-bold rounded-xl shadow-lg text-white bg-gray-900 hover:bg-gray-800 transition-all"
+                            >
+                                Kembali ke Beranda
+                            </a>
+                            <p class="text-xs text-gray-400">
+                                Butuh bantuan? Hubungi <a href="mailto:support@tepak.id" class="underline">support@tepak.id</a>
+                            </p>
+                        </div>
                     </div>
                 )
             }
