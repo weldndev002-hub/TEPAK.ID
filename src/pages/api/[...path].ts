@@ -2724,12 +2724,13 @@ app.post(
       }
 
       // Check if domain is already taken
-      const { data: existing } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('custom_domain', domain)
-        .neq('id', user.id)
-        .single();
+      const adminSupabase = getSupabaseAdmin(cfEnv);
+      const { data: existing } = await adminSupabase
+        .from('user_settings')
+        .select('user_id')
+        .eq('domain_name', domain)
+        .neq('user_id', user.id)
+        .maybeSingle();
       
       if (existing) {
         console.warn(`[Domain Setup] Domain ${domain} already taken by another user`);
@@ -2737,7 +2738,7 @@ app.post(
       }
 
       // MANUAL MODE: Save to user_settings and wait for Admin verification
-      const { error: dbError } = await supabase
+      const { error: dbError } = await adminSupabase
         .from('user_settings')
         .upsert({
           user_id: user.id,
