@@ -240,7 +240,7 @@ app.get('/settings/domain', async (c) => {
 
 // --- ONBOARDING ATOMIC ROUTE ---
 app.post('/onboarding/complete', zValidator('json', z.object({
-  domain_name: z.string().min(1).regex(/^[a-z0-9-]+$/, 'Hanya boleh berisi huruf kecil, angka, dan tanda hubung'),
+  domain_name: z.string().min(1).regex(/^[a-z0-9.-]+$/, 'Hanya boleh berisi huruf kecil, angka, titik, dan tanda hubung').transform(v => v.trim()),
   full_name: z.string().optional().refine(noScriptRefinement, XSS_ERROR_MESSAGE).transform(v => v ? sanitizeString(v) : v),
   bio: z.string().optional().refine(noScriptRefinement, XSS_ERROR_MESSAGE).transform(v => v ? sanitizeString(v) : v),
   avatar_url: z.string().optional().nullable(),
@@ -2707,7 +2707,8 @@ app.post(
     const { supabase, user } = await getAuthContext(c);
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
-    const { domain } = c.req.valid('json');
+    const { domain: rawDomain } = c.req.valid('json');
+    const domain = rawDomain.trim().toLowerCase();
     console.log(`[Domain Setup] Attempting to register: ${domain} for user ${user.id}`);
 
     try {
