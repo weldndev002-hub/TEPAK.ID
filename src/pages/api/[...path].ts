@@ -2737,7 +2737,7 @@ app.post(
         return c.json({ error: 'Domain ini sudah digunakan oleh pengguna lain.' }, 400);
       }
 
-      // MANUAL MODE: Save to user_settings and wait for Admin verification
+      // 2. Perform the update directly using admin client to ensure success
       const { error: dbError } = await adminSupabase
         .from('user_settings')
         .upsert({
@@ -2749,9 +2749,47 @@ app.post(
 
       if (dbError) throw dbError;
 
+      // NEW: Also sync the username in profiles table to match the domain
+      // This ensures tepak.id/domainname also works
+      await adminSupabase
+        .from('profiles')
+        .update({ username: domain })
+        .eq('id', user.id);
+
+      // 3. Register with Cloudflare Custom Hostname API
+      const cfToken = getEnv('CLOUDFLARE_API_TOKEN');
+      const cfZoneId = getEnv('CLOUDFLARE_ZONE_ID');
+
+      if (cfToken && cfZoneId) {
+        try {
+          console.log(`[Domain Setup] Registering ${domain} with Cloudflare...`);
+          const cfRes = await fetch(`https://api.cloudflare.com/client/v4/zones/${cfZoneId}/custom_hostnames`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${cfToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              hostname: domain,
+              ssl: {
+                method: 'http',
+                type: 'dv'
+              }
+            })
+          });
+
+          const cfData: any = await cfRes.json();
+          if (!cfRes.ok && cfData.errors?.[0]?.code !== 1406) {
+              console.error('[Domain Setup] Cloudflare Error:', cfData);
+          }
+        } catch (cfErr) {
+          console.error('[Domain Setup] Cloudflare API Fetch Error:', cfErr);
+        }
+      }
+
       return c.json({
         success: true,
-        message: 'Permintaan domain kustom telah dikirim. Silakan atur CNAME Anda ke weorbit.site dan tunggu aktivasi admin.',
+        message: 'Domain berhasil didaftarkan. Silakan atur CNAME Anda ke weorbit.site dan klik verifikasi.',
         cname_target: 'weorbit.site'
       });
 
@@ -2774,17 +2812,51 @@ app.post('/domain/verify', async (c) => {
       .eq('user_id', user.id)
       .single();
     
-    const isVerified = settings?.domain_verified === true;
-
     if (!settings?.domain_name) {
       return c.json({ error: 'Belum ada domain yang didaftarkan.' }, 400);
     }
 
+    if (settings.domain_verified) {
+      return c.json({ status: 'active', message: 'Domain Anda sudah aktif!' });
+    }
+
+    // 2. Perform Server-side Cloudflare Status Check
+    const cfToken = getEnv('CLOUDFLARE_API_TOKEN');
+    const cfZoneId = getEnv('CLOUDFLARE_ZONE_ID');
+    let isActuallyActive = false;
+
+    if (cfToken && cfZoneId) {
+      try {
+        const cfRes = await fetch(`https://api.cloudflare.com/client/v4/zones/${cfZoneId}/custom_hostnames?hostname=${settings.domain_name}`, {
+          headers: { 'Authorization': `Bearer ${cfToken}` }
+        });
+        const cfData: any = await cfRes.json();
+        
+        if (cfRes.ok && cfData.result?.[0]?.status === 'active') {
+          isActuallyActive = true;
+          console.log(`[Domain Verify] Cloudflare verified for ${settings.domain_name}`);
+        }
+      } catch (e) {
+        console.error('[Domain Verify] CF Error:', e);
+      }
+    }
+
+    if (isActuallyActive) {
+      // Update DB to Active
+      await getSupabaseAdmin(cfEnv)
+        .from('user_settings')
+        .update({ domain_verified: true, updated_at: new Date().toISOString() })
+        .eq('user_id', user.id);
+      
+      return c.json({
+        status: 'active',
+        message: 'Selamat! Domain Anda sudah aktif dan terverifikasi.'
+      });
+    }
+
     return c.json({
-      status: isVerified ? 'active' : 'pending',
-      message: isVerified 
-        ? 'Selamat! Domain Anda sudah aktif.' 
-        : 'Domain sedang dalam proses peninjauan admin. Pastikan CNAME sudah diarahkan ke weorbit.site'
+      status: 'pending',
+      message: 'DNS belum terdeteksi. Pastikan CNAME sudah diarahkan ke weorbit.site dan tunggu proses propagasi.'
     });
 
   } catch (err: any) {

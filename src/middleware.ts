@@ -169,35 +169,47 @@ export const onRequest = defineMiddleware(async (context, next) => {
           }
         }
       }
-      // B. Custom Domain Logic (e.g., mybrand.com)
       else if (!primaryDomains.includes(hostname)) {
-        const { data: settings } = await supabase
+        console.log(`[Middleware] Custom Domain Detection for: ${hostname}`);
+        const { data: settings, error: settingsError } = await supabase
           .from('user_settings')
-          .select('user_id, domain_name, seo_title, seo_description, seo_image, ga_id, fb_pixel_id')
+          .select('user_id, domain_name, domain_verified, seo_title, seo_description, seo_image, ga_id, fb_pixel_id')
           .eq('domain_name', hostname)
-          .eq('domain_verified', true) // Only active domains
           .single();
 
-        if (settings) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('id, username, full_name, bio, avatar_url')
-            .eq('id', settings.user_id)
-            .single();
+        if (settingsError) {
+            console.error(`[Middleware] Domain Lookup Error for ${hostname}:`, settingsError.message);
+        }
 
-          if (profile) {
-            // Merge SEO from settings into profile for the layout to use
-            locals.detectedUser = {
-              ...profile,
-              seo_title: settings.seo_title,
-              seo_description: settings.seo_description,
-              og_image: settings.seo_image,
-              ga_id: settings.ga_id,
-              fb_pixel_id: settings.fb_pixel_id
-            };
-            locals.isCustomDomain = true;
-            console.log(`[Middleware] Custom Domain: ${hostname} -> ${profile.id}`);
+        if (settings) {
+          console.log(`[Middleware] Domain Found! Verified: ${settings.domain_verified}, User: ${settings.user_id}`);
+          
+          if (settings.domain_verified) {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('id, username, full_name, bio, avatar_url')
+                .eq('id', settings.user_id)
+                .single();
+
+              if (profile) {
+                locals.detectedUser = {
+                  ...profile,
+                  seo_title: settings.seo_title,
+                  seo_description: settings.seo_description,
+                  og_image: settings.seo_image,
+                  ga_id: settings.ga_id,
+                  fb_pixel_id: settings.fb_pixel_id
+                };
+                locals.isCustomDomain = true;
+                console.log(`[Middleware] Custom Domain Resolved: ${hostname} -> ${profile.username}`);
+              } else {
+                console.warn(`[Middleware] Settings found for ${hostname} but Profile missing or blocked by RLS!`);
+              }
+          } else {
+            console.warn(`[Middleware] Domain ${hostname} found but NOT VERIFIED.`);
           }
+        } else {
+          console.warn(`[Middleware] No settings found for domain: ${hostname}`);
         }
       }
     }
