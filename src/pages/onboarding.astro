@@ -2,7 +2,25 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { OnboardingForm } from '../components/onboarding/OnboardingForm';
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
+const user = await Astro.locals.getUser();
+if (!user) {
+    return Astro.redirect('/login');
+}
+
 const supabase = Astro.locals.supabase;
+
+// Check if user already has a domain/username (onboarded)
+if (supabase) {
+    const [{ data: profile }, { data: settings }] = await Promise.all([
+        supabase.from('profiles').select('username').eq('id', user.id).single(),
+        supabase.from('user_settings').select('domain_name, onboarding_completed').eq('user_id', user.id).single()
+    ]);
+
+    if (profile?.username || settings?.domain_name || settings?.onboarding_completed) {
+        console.log(`[Onboarding] User ${user.id} already onboarded, redirecting to dashboard`);
+        return Astro.redirect('/dashboard');
+    }
+}
 
 let branding: any = null;
 if (supabase) {

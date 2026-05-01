@@ -33,13 +33,23 @@ if (user) {
   const isAdmin = profile?.role === 'admin';
 
   if (!isAdmin) {
-    const { data: settings } = await Astro.locals.supabase
-      .from('user_settings')
-      .select('domain_name')
-      .eq('user_id', user.id)
-      .single();
+    const [{ data: profile }, { data: settings }] = await Promise.all([
+      Astro.locals.supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', user.id)
+        .single(),
+      Astro.locals.supabase
+        .from('user_settings')
+        .select('domain_name, onboarding_completed')
+        .eq('user_id', user.id)
+        .single()
+    ]);
       
-    if (!settings?.domain_name) {
+    const isOnboarded = !!settings?.domain_name || !!profile?.username || settings?.onboarding_completed === true;
+
+    if (!isOnboarded) {
+      console.log(`[Dashboard] User ${user.id} not onboarded, redirecting to /onboarding`);
       return Astro.redirect('/onboarding');
     }
   }

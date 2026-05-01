@@ -82,7 +82,7 @@ if (code) {
       // Check if user has completed onboarding
       const [{ data: profile }, { data: settings }] = await Promise.all([
         supabase.from("profiles").select("username").eq("id", data.session.user.id).maybeSingle(),
-        supabase.from("user_settings").select("onboarding_completed").eq("user_id", data.session.user.id).maybeSingle()
+        supabase.from("user_settings").select("onboarding_completed, domain_name").eq("user_id", data.session.user.id).maybeSingle()
       ]);
 
       // ===== DIAGNOSTIC: Log query results =====
@@ -90,11 +90,12 @@ if (code) {
         hasProfile: !!profile,
         hasSettings: !!settings,
         onboardingCompleted: settings?.onboarding_completed,
+        domainName: settings?.domain_name,
         username: profile?.username,
       });
 
       const hasCompletedOnboarding =
-        settings?.onboarding_completed === true && !!profile?.username;
+        (settings?.onboarding_completed === true || !!settings?.domain_name) && !!profile?.username;
 
       if (hasCompletedOnboarding) {
         console.log(
