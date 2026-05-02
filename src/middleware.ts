@@ -114,12 +114,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
     const hostname = request.headers.get('X-Forwarded-Host') || url.hostname;
     
     // Default system domain logic - Switched to Worker domain as requested
-    let PRIMARY_DOMAIN = 'tepakiid.weldn-dev-002.workers.dev';
+    let PRIMARY_DOMAIN = 'tepak-id.tepak-web.workers.dev';
     if (runtimeEnv.PUBLIC_SITE_URL) {
       try {
         PRIMARY_DOMAIN = new URL(runtimeEnv.PUBLIC_SITE_URL).hostname;
       } catch (e) {
-        PRIMARY_DOMAIN = 'tepakiid.weldn-dev-002.workers.dev';
+        PRIMARY_DOMAIN = 'tepak-id.tepak-web.workers.dev';
       }
     }
 
@@ -127,6 +127,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     const primaryDomains = [
       'localhost',
       '127.0.0.1',
+      'tepak-id.tepak-web.workers.dev',
       'tepakiid.weldn-dev-002.workers.dev',
       'staging.weorbit.site',
       'weorbit.site',
