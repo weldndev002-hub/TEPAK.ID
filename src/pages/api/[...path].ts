@@ -50,13 +50,15 @@ const getEnv = (key: string) => {
 
 const app = new Hono().basePath('/api');
 
-// Middleware to capture Cloudflare Environment directly from Hono
+// Middleware to capture Cloudflare Environment and Log Paths
 app.use('*', cors());
 app.use('*', async (c, next) => {
-  // Capture environment from Hono's context (most reliable in Workers)
+  // Capture environment from Hono's context
   if (c.env) {
     cfEnv = { ...cfEnv, ...c.env };
   }
+  
+  console.log(`[Hono Debug] Method: ${c.req.method}, Path: ${c.req.path}, URL: ${c.req.url}`);
   await next();
 });
 
