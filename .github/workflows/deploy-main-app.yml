@@ -27,6 +27,27 @@ jobs:
         run: npm install
 
       - name: Build project
+        env:
+          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+          PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          PUBLIC_SITE_URL: "https://tepakiid.weldn-dev-002.workers.dev"
+          PUBLIC_DUITKU_MERCHANT_CODE: ${{ secrets.PUBLIC_DUITKU_MERCHANT_CODE }}
+          PUBLIC_DUITKU_MERCHANT_KEY: ${{ secrets.PUBLIC_DUITKU_MERCHANT_KEY }}
+          DUITKU_ENVIRONMENT: ${{ secrets.DUITKU_ENVIRONMENT }}
+          DUITKU_CALLBACK_URL: ${{ secrets.DUITKU_CALLBACK_URL }}
+          DUITKU_DISBURSEMENT_USER_ID: ${{ secrets.DUITKU_DISBURSEMENT_USER_ID }}
+          DUITKU_DISBURSEMENT_KEY: ${{ secrets.DUITKU_DISBURSEMENT_KEY }}
+          DUITKU_DISBURSEMENT_EMAIL: ${{ secrets.DUITKU_DISBURSEMENT_EMAIL }}
+          DUITKU_DISBURSEMENT_CALLBACK_URL: ${{ secrets.DUITKU_DISBURSEMENT_CALLBACK_URL }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_SENDER_EMAIL: ${{ secrets.RESEND_SENDER_EMAIL }}
+          RESEND_SENDER_NAME: ${{ secrets.RESEND_SENDER_NAME }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          CLOUDFLARE_FALLBACK_DOMAIN: ${{ secrets.CLOUDFLARE_FALLBACK_DOMAIN }}
+          ADMIN_PASSCODE: ${{ secrets.ADMIN_PASSCODE }}
         run: npm run build
 
       - name: Build and Deploy
@@ -38,3 +59,21 @@ jobs:
           wranglerVersion: 'latest'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+          PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          PUBLIC_DUITKU_MERCHANT_CODE: ${{ secrets.PUBLIC_DUITKU_MERCHANT_CODE }}
+          PUBLIC_DUITKU_MERCHANT_KEY: ${{ secrets.PUBLIC_DUITKU_MERCHANT_KEY }}
+          DUITKU_ENVIRONMENT: ${{ secrets.DUITKU_ENVIRONMENT }}
+          DUITKU_CALLBACK_URL: ${{ secrets.DUITKU_CALLBACK_URL }}
+          DUITKU_DISBURSEMENT_USER_ID: ${{ secrets.DUITKU_DISBURSEMENT_USER_ID }}
+          DUITKU_DISBURSEMENT_KEY: ${{ secrets.DUITKU_DISBURSEMENT_KEY }}
+          DUITKU_DISBURSEMENT_EMAIL: ${{ secrets.DUITKU_DISBURSEMENT_EMAIL }}
+          DUITKU_DISBURSEMENT_CALLBACK_URL: ${{ secrets.DUITKU_DISBURSEMENT_CALLBACK_URL }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_SENDER_EMAIL: ${{ secrets.RESEND_SENDER_EMAIL }}
+          RESEND_SENDER_NAME: ${{ secrets.RESEND_SENDER_NAME }}
+          PUBLIC_SITE_URL: "https://tepakiid.weldn-dev-002.workers.dev"
+          ADMIN_PASSCODE: ${{ secrets.ADMIN_PASSCODE }}
