@@ -1,0 +1,9 @@
+name = "tepak-custom-domain-proxy"
+main = "index.js"
+compatibility_date = "2024-05-02"
+
+[vars]
+TARGET_HOSTNAME = "tepak-id.tepak-web.workers.dev"
+
+[observability]
+enabled = true
