@@ -23,10 +23,13 @@ export const SocialButton: React.FC<SocialButtonProps> = ({
     const handleLogin = async () => {
         setIsLoading(true);
         try {
+            const redirectUrl = `${window.location.origin}/auth/callback`;
+            console.log(`[SocialButton] Initiating OAuth login for ${provider}. Redirecting to: ${redirectUrl}`);
+            
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: provider,
                 options: {
-                    redirectTo: `${window.location.protocol}//${window.location.host}/auth/callback`,
+                    redirectTo: redirectUrl,
                     queryParams: {
                         access_type: 'offline',
                     },
