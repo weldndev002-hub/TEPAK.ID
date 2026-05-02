@@ -65,7 +65,7 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ supabase
             // Directly send reset email - Supabase handles user existence check internally
             // Don't query profiles table as email may not be synced there
             const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${window.location.origin}/reset-password`,
+                redirectTo: `${window.location.protocol}//${window.location.host}/reset-password`,
             });
 
             if (resetError) {

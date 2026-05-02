@@ -113,7 +113,7 @@ export const VerifyEmailComponent: React.FC<VerifyEmailProps> = ({ supabaseUrl, 
                 type: 'signup',
                 email: email,
                 options: {
-                    emailRedirectTo: `${window.location.origin}/auth/callback`,
+                    emailRedirectTo: `${window.location.protocol}//${window.location.host}/auth/callback`,
                 }
             });
 
