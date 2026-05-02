@@ -34,4 +34,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           command: deploy
-          wranglerVersion: '3.x'
+          wranglerVersion: 'latest'

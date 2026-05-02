@@ -27,4 +27,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           workingDirectory: 'workers/custom-domain-proxy'
-          wranglerVersion: '3.x'
+          wranglerVersion: 'latest'
