@@ -1,10 +1,11 @@
 {
+	"name": "tepak-id",
+	"account_id": "feb6f46e23ef2ed7638ced7445e16610",
 	"compatibility_date": "2026-04-07",
 	"compatibility_flags": [
 		"global_fetch_strictly_public",
 		"nodejs_compat"
 	],
-	"name": "tepak-web",
 	"main": "@astrojs/cloudflare/entrypoints/server",
 	"assets": {
 		"directory": "./dist",
