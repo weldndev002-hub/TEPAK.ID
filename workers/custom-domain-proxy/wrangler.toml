@@ -1,6 +1,7 @@
 name = "tepak-custom-domain-proxy"
 main = "index.js"
 compatibility_date = "2024-05-02"
+account_id = "feb6f46e23ef2ed7638ced7445e16610"
 
 [vars]
 TARGET_HOSTNAME = "tepak-id.tepak-web.workers.dev"

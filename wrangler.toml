@@ -2,6 +2,7 @@
 name = "tepak-id"
 main = "./dist/_worker.js/index.js"
 compatibility_date = "2025-04-22"
+account_id = "feb6f46e23ef2ed7638ced7445e16610"
 compatibility_flags = ["nodejs_compat"]
 
 [env.production]
