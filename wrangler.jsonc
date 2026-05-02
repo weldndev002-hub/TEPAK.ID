@@ -11,6 +11,11 @@
 		"directory": "./dist",
 		"binding": "ASSETS"
 	},
+	"vars": {
+		"PUBLIC_SUPABASE_URL": "https://aaqguhxonwpsnpwjjdrv.supabase.co",
+		"PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhcWd1aHhvbndwc25wd2pqZHJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwNTkyMzYsImV4cCI6MjA5MTYzNTIzNn0.Z1zCmzyZHvQH6ZXERKQm3pf_Ds1JngQ3N050xv6SAWE",
+		"PUBLIC_SITE_URL": "https://tepak-id.tepak-web.workers.dev"
+	},
 	"observability": {
 		"enabled": true
 	}
