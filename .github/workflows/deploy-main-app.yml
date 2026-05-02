@@ -1,0 +1,27 @@
+name: Deploy Main App
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'workers/**'
+      - '.github/workflows/deploy-proxy.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy Main Application
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build and Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          command: deploy
+          wranglerVersion: '3.x'
