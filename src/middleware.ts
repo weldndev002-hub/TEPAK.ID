@@ -174,10 +174,13 @@ export const onRequest = defineMiddleware(async (context, next) => {
       }
       else if (!primaryDomains.includes(hostname)) {
         console.log(`[Middleware] Custom Domain Detection for: ${hostname}`);
+        
+        // Handle www vs non-www
+        const cleanHostname = hostname.replace(/^www\./, '');
         const { data: settings, error: settingsError } = await supabase
           .from('user_settings')
           .select('user_id, domain_name, domain_verified, seo_title, seo_description, seo_image, ga_id, fb_pixel_id')
-          .eq('domain_name', hostname)
+          .or(`domain_name.eq.${hostname},domain_name.eq.${cleanHostname}`)
           .single();
 
         if (settingsError) {
