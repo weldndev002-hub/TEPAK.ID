@@ -342,8 +342,9 @@ export const DomainSettingsDashboard = () => {
                                                     <tr>
                                                         <td colSpan={3} className="px-8 py-10 text-center">
                                                             <div className="flex flex-col items-center gap-2">
-                                                                <ArrowPathIcon className="w-6 h-6 text-slate-200 animate-spin" />
-                                                                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Mengambil token verifikasi...</p>
+                                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                                    {domain ? 'Menunggu data dari Cloudflare...' : 'Masukkan domain untuk melihat token'}
+                                                                </p>
                                                             </div>
                                                         </td>
                                                     </tr>
