@@ -25,8 +25,8 @@ export const DomainSettingsDashboard = () => {
     const [toast, setToast] = useState<{msg: string, type: 'success' | 'error'} | null>(null);
     const [countdown, setCountdown] = useState(0);
 
-    // Target domain for CNAME - using the actual worker domain
-    const TARGET_CNAME = 'tepak-id.tepak-web.workers.dev';
+    // Target domain for CNAME - using the proxy origin for SaaS automation
+    const TARGET_CNAME = 'origin.weorbit.site';
 
     const showToast = (msg: string, type: 'success' | 'error' = 'success') => { 
         setToast({msg, type}); 
