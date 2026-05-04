@@ -107,4 +107,63 @@ export class CloudflareService {
     const data: CustomHostnameResponse = await response.json();
     return data;
   }
+
+  /**
+   * Add a Worker Route for a specific hostname
+   * This ensures the worker triggers directly for the custom domain
+   */
+  async addWorkerRoute(hostname: string, workerName: string) {
+    const url = `${CF_API_BASE}/zones/${this.zoneId}/workers/routes`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.apiToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        pattern: `${hostname}/*`,
+        script: workerName
+      })
+    });
+
+    const data = await response.json();
+    return data;
+  }
+
+  /**
+   * Delete a Worker Route
+   */
+  async deleteWorkerRoute(routeId: string) {
+    const url = `${CF_API_BASE}/zones/${this.zoneId}/workers/routes/${routeId}`;
+    
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${this.apiToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const data = await response.json();
+    return data;
+  }
+
+  /**
+   * List all Worker Routes in this zone
+   */
+  async listWorkerRoutes() {
+    const url = `${CF_API_BASE}/zones/${this.zoneId}/workers/routes`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${this.apiToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const data = await response.json();
+    return data;
+  }
 }

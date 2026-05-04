@@ -533,6 +533,30 @@ app.put('/settings/domain', zValidator('json', z.object({
             }
         } else {
             console.log(`[Domain API] Cloudflare Registration Success: ${cfData.result?.id}`);
+            
+            // NEW: Add Worker Route explicitly to bypass 522 errors
+            try {
+              console.log(`[Domain API] Adding direct Worker Route for ${domain_name}...`);
+              const routeRes = await fetch(`https://api.cloudflare.com/client/v4/zones/${cfZoneId}/workers/routes`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${cfToken}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  pattern: `${domain_name}/*`,
+                  script: 'tepak-id'
+                })
+              });
+              const routeData: any = await routeRes.json();
+              if (routeRes.ok) {
+                console.log(`[Domain API] Worker Route added successfully for ${domain_name}`);
+              } else {
+                console.warn(`[Domain API] Worker Route Addition Warning:`, JSON.stringify(routeData.errors));
+              }
+            } catch (routeErr) {
+              console.error('[Domain API] Worker Route Error:', routeErr);
+            }
         }
       } catch (cfErr) {
         console.error('[Domain API] Cloudflare API Fetch Error:', cfErr);
