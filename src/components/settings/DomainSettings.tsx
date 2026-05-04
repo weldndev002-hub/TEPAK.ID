@@ -262,136 +262,24 @@ export const DomainSettingsDashboard = () => {
                             <div className="lg:col-span-2 space-y-6">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-black text-xs">2</div>
-                                    <h3 className="font-black text-slate-900 uppercase tracking-tight">Atur DNS Records</h3>
-                                </div>
-
-                                <Card className="overflow-hidden border-slate-100 shadow-2xl rounded-[2rem]">
-                                    <div className="bg-slate-900 p-6 text-white flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <ShieldCheckIcon className="w-5 h-5 text-primary" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest">Metode 1: Verifikasi Kepemilikan (Paling Aman)</span>
-                                        </div>
-                                    </div>
-                                    <div className="p-0">
-                                        <table className="w-full text-left">
-                                            <thead className="bg-slate-50/50 border-b border-slate-100">
-                                                <tr>
-                                                    <th className="px-8 py-5 font-black uppercase text-[10px] text-slate-400 tracking-widest">Type</th>
-                                                    <th className="px-8 py-5 font-black uppercase text-[10px] text-slate-400 tracking-widest">Host / Name</th>
-                                                    <th className="px-8 py-5 font-black uppercase text-[10px] text-slate-400 tracking-widest">Value / Content</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-100">
-                                                {/* Ownership Verification */}
-                                                {verificationData?.ownership && (
-                                                    <tr className="group hover:bg-slate-50/50 transition-all">
-                                                        <td className="px-8 py-6">
-                                                            <span className="px-3 py-1.5 bg-amber-50 text-amber-600 rounded-lg text-[10px] font-black uppercase">TXT</span>
-                                                        </td>
-                                                        <td className="px-8 py-6">
-                                                            <div className="flex items-center gap-3">
-                                                                <code className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-1 rounded truncate max-w-[150px] inline-block">
-                                                                    {verificationData.ownership.name || '_cloudflare-auth'}
-                                                                </code>
-                                                                <button 
-                                                                    onClick={() => copyToClipboard(verificationData.ownership.name || '_cloudflare-auth')} 
-                                                                    className="p-1.5 hover:bg-slate-200 rounded-lg transition-all"
-                                                                    title="Copy Name"
-                                                                >
-                                                                    <ClipboardIcon className="w-3.5 h-3.5 text-slate-400" />
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-8 py-6">
-                                                            <div className="flex items-center gap-3">
-                                                                <code className="font-mono font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 truncate max-w-[200px]">
-                                                                    {verificationData.ownership.value}
-                                                                </code>
-                                                                <button 
-                                                                    onClick={() => copyToClipboard(verificationData.ownership.value)} 
-                                                                    className="p-2 hover:bg-slate-200 rounded-xl transition-all"
-                                                                >
-                                                                    <ClipboardIcon className="w-4 h-4 text-slate-400" />
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                                
-                                                {/* SSL Validation */}
-                                                {verificationData?.ssl && (
-                                                    <tr className="group hover:bg-slate-50/50 transition-all">
-                                                        <td className="px-8 py-6">
-                                                            <span className="px-3 py-1.5 bg-purple-50 text-purple-600 rounded-lg text-[10px] font-black uppercase">
-                                                                {verificationData.ssl.http_url ? 'HTTP' : 'TXT/CNAME'}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-8 py-6">
-                                                            <div className="flex items-center gap-3">
-                                                                <code className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-1 rounded">
-                                                                    {verificationData.ssl.txt_name || verificationData.ssl.cname}
-                                                                </code>
-                                                                <button 
-                                                                    onClick={() => copyToClipboard(verificationData.ssl.txt_name || verificationData.ssl.cname)} 
-                                                                    className="p-1.5 hover:bg-slate-200 rounded-lg transition-all"
-                                                                    title="Copy Name"
-                                                                >
-                                                                    <ClipboardIcon className="w-3.5 h-3.5 text-slate-400" />
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-8 py-6">
-                                                            <div className="flex items-center gap-3">
-                                                                <code className="font-mono font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 truncate max-w-[200px]">
-                                                                    {verificationData.ssl.txt_value || verificationData.ssl.cname_target}
-                                                                </code>
-                                                                <button 
-                                                                    onClick={() => copyToClipboard(verificationData.ssl.txt_value || verificationData.ssl.cname_target)} 
-                                                                    className="p-2 hover:bg-slate-200 rounded-xl transition-all"
-                                                                >
-                                                                    <ClipboardIcon className="w-4 h-4 text-slate-400" />
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
-
-                                                {!(verificationData) && (
-                                                    <tr>
-                                                        <td colSpan={3} className="px-8 py-10 text-center">
-                                                            <div className="flex flex-col items-center gap-2">
-                                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                                                    {domain ? 'Menunggu data dari Cloudflare...' : 'Masukkan domain untuk melihat token'}
-                                                                </p>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </Card>
-
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-black text-xs">2</div>
-                                    <h3 className="font-black text-slate-900 uppercase tracking-tight">Metode 2: Hubungkan CNAME</h3>
+                                    <h3 className="font-black text-slate-900 uppercase tracking-tight">Hubungkan CNAME</h3>
                                 </div>
 
                                 <Card className="overflow-hidden border-slate-100 shadow-2xl rounded-[2rem]">
                                     <div className="bg-slate-900 p-6 text-white flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <ServerIcon className="w-5 h-5 text-primary" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest">Konfigurasi CNAME</span>
+                                            <span className="text-[10px] font-black uppercase tracking-widest">Konfigurasi DNS (Wajib)</span>
                                         </div>
-                                        <Badge variant="outline" className="border-white/20 text-white opacity-60">DNS Settings</Badge>
+                                        <Badge variant="outline" className="border-white/20 text-white opacity-60">Paling Mudah</Badge>
                                     </div>
                                     <div className="p-0">
                                         <table className="w-full text-left">
                                             <thead className="bg-slate-50/50 border-b border-slate-100">
                                                 <tr>
                                                     <th className="px-8 py-5 font-black uppercase text-[10px] text-slate-400 tracking-widest">Type</th>
-                                                    <th className="px-8 py-5 font-black uppercase text-[10px] text-slate-400 tracking-widest">Name</th>
-                                                    <th className="px-8 py-5 font-black uppercase text-[10px] text-slate-400 tracking-widest">Content / Target</th>
+                                                    <th className="px-8 py-5 font-black uppercase text-[10px] text-slate-400 tracking-widest">Name / Host</th>
+                                                    <th className="px-8 py-5 font-black uppercase text-[10px] text-slate-400 tracking-widest">Target / Content</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-100">
@@ -406,7 +294,7 @@ export const DomainSettingsDashboard = () => {
                                                                 if (parts.length > 2) {
                                                                     return parts[0];
                                                                 }
-                                                                return '@';
+                                                                return 'www';
                                                             })()}
                                                         </code>
                                                     </td>
@@ -432,12 +320,12 @@ export const DomainSettingsDashboard = () => {
 
                                 <div className="p-6 bg-emerald-50 border border-emerald-100 rounded-[2rem] flex items-start gap-4">
                                     <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-emerald-500 shadow-sm shrink-0">
-                                        <ShieldCheckIcon className="w-6 h-6" />
+                                        <CheckCircleIcon className="w-6 h-6" />
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-[11px] font-black text-emerald-900 uppercase">Verifikasi Instan</p>
+                                        <p className="text-[11px] font-black text-emerald-900 uppercase">Instruksi Singkat</p>
                                         <p className="text-[10px] text-emerald-700/80 leading-relaxed font-bold">
-                                            Gunakan Metode 1 jika Anda tidak ingin mengalihkan trafik sekarang. Gunakan Metode 2 untuk langsung mengaktifkan domain.
+                                            Cukup tambahkan 1 record CNAME di atas pada panel DNS domain Anda. Setelah tersimpan, klik tombol "Verifikasi" untuk mengaktifkan.
                                         </p>
                                     </div>
                                 </div>
