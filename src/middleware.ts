@@ -5,6 +5,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const { locals, cookies, request, redirect } = context;
   try {
     const url = new URL(request.url);
+    let hostname = url.hostname;
+
+    // Check if Cloudflare SaaS is overriding the host header
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    if (forwardedHost && forwardedHost !== hostname && !forwardedHost.includes('workers.dev')) {
+      console.log(`[Middleware] Using Forwarded Host: ${forwardedHost} instead of ${hostname}`);
+      hostname = forwardedHost;
+    }
 
     // Capture Environment - Aggressive detection for Astro/Cloudflare
     let runtimeEnv: Record<string, any> = { ...(import.meta.env || {}) };
