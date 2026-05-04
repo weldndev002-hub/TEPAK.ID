@@ -433,7 +433,8 @@ app.put('/settings/domain', zValidator('json', z.object({
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    const { domain_name } = c.req.valid('json');
+    const { domain_name: raw_domain } = c.req.valid('json');
+    const domain_name = raw_domain?.toLowerCase().trim();
     console.log(`[Domain API] Process started: domain=${domain_name}, user=${user.id}`);
 
     // 1. Check if the domain is already taken by ANOTHER user
@@ -564,11 +565,23 @@ app.post('/settings/domain/verify', async (c) => {
             });
             const cfData: any = await cfRes.json();
             
-            if (cfRes.ok && cfData.result?.[0]?.status === 'active') {
-                isActuallyActive = true;
-                console.log(`[Domain API] Server-side verification success for ${settings.domain_name}`);
-            } else {
-                console.log(`[Domain API] Server-side verification pending for ${settings.domain_name}. Status: ${cfData.result?.[0]?.status || 'unknown'}`);
+            if (cfRes.ok && cfData.result && cfData.result.length > 0) {
+                const hostnameData = cfData.result[0];
+                const hostnameActive = hostnameData.status === 'active';
+                const sslActive = hostnameData.ssl?.status === 'active';
+
+                if (hostnameActive && sslActive) {
+                    isActuallyActive = true;
+                    console.log(`[Domain API] Verification SUCCESS: ${settings.domain_name}`);
+                } else if (hostnameActive) {
+                    console.log(`[Domain API] Hostname active but SSL pending: ${settings.domain_name}`);
+                    return c.json({ 
+                        error: 'DNS sudah terhubung, tapi sertifikat SSL sedang disiapkan oleh Cloudflare. Harap tunggu 1-2 menit lagi.',
+                        code: 'SSL_PENDING'
+                    }, 400);
+                } else {
+                    console.log(`[Domain API] Hostname status: ${hostnameData.status}`);
+                }
             }
         } catch (e) {
             console.error('[Domain API] CF Verification Error:', e);

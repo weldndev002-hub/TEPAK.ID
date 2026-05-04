@@ -286,7 +286,15 @@ export const DomainSettingsDashboard = () => {
                                                     </td>
                                                     <td className="px-8 py-6">
                                                         <code className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-1 rounded">
-                                                            {domain.includes('www.') ? 'www' : '@'}
+                                                            {(() => {
+                                                                const parts = domain.split('.');
+                                                                if (parts.length > 2) {
+                                                                    // If it's something like orbit.weorbit.site, return 'orbit'
+                                                                    // But if it's www.something.com, return 'www'
+                                                                    return parts[0];
+                                                                }
+                                                                return '@';
+                                                            })()}
                                                         </code>
                                                     </td>
                                                     <td className="px-8 py-6">
