@@ -289,9 +289,18 @@ export const DomainSettingsDashboard = () => {
                                                             <span className="px-3 py-1.5 bg-amber-50 text-amber-600 rounded-lg text-[10px] font-black uppercase">TXT</span>
                                                         </td>
                                                         <td className="px-8 py-6">
-                                                            <code className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-1 rounded truncate max-w-[150px] inline-block">
-                                                                {verificationData.ownership.name || '_cloudflare-auth'}
-                                                            </code>
+                                                            <div className="flex items-center gap-3">
+                                                                <code className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-1 rounded truncate max-w-[150px] inline-block">
+                                                                    {verificationData.ownership.name || '_cloudflare-auth'}
+                                                                </code>
+                                                                <button 
+                                                                    onClick={() => copyToClipboard(verificationData.ownership.name || '_cloudflare-auth')} 
+                                                                    className="p-1.5 hover:bg-slate-200 rounded-lg transition-all"
+                                                                    title="Copy Name"
+                                                                >
+                                                                    <ClipboardIcon className="w-3.5 h-3.5 text-slate-400" />
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                         <td className="px-8 py-6">
                                                             <div className="flex items-center gap-3">
@@ -318,9 +327,18 @@ export const DomainSettingsDashboard = () => {
                                                             </span>
                                                         </td>
                                                         <td className="px-8 py-6">
-                                                            <code className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-1 rounded">
-                                                                {verificationData.ssl.txt_name || verificationData.ssl.cname}
-                                                            </code>
+                                                            <div className="flex items-center gap-3">
+                                                                <code className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-1 rounded">
+                                                                    {verificationData.ssl.txt_name || verificationData.ssl.cname}
+                                                                </code>
+                                                                <button 
+                                                                    onClick={() => copyToClipboard(verificationData.ssl.txt_name || verificationData.ssl.cname)} 
+                                                                    className="p-1.5 hover:bg-slate-200 rounded-lg transition-all"
+                                                                    title="Copy Name"
+                                                                >
+                                                                    <ClipboardIcon className="w-3.5 h-3.5 text-slate-400" />
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                         <td className="px-8 py-6">
                                                             <div className="flex items-center gap-3">
