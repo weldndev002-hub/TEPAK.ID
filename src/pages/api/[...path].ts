@@ -234,7 +234,30 @@ app.get('/settings/domain', async (c) => {
       .single();
 
     if (error && error.code !== 'PGRST116') throw error;
-    return c.json(data || { domain_name: null, domain_verified: false });
+    
+    let verification_records = null;
+    const cfToken = getEnv('CLOUDFLARE_API_TOKEN');
+    const cfZoneId = getEnv('CLOUDFLARE_ZONE_ID');
+
+    if (data?.domain_name && !data.domain_verified && cfToken && cfZoneId) {
+        try {
+            const cfRes = await fetch(`https://api.cloudflare.com/client/v4/zones/${cfZoneId}/custom_hostnames?hostname=${data.domain_name}`, {
+                headers: { 'Authorization': `Bearer ${cfToken}` }
+            });
+            const cfData: any = await cfRes.json();
+            if (cfRes.ok && cfData.result?.[0]) {
+                const hostname = cfData.result[0];
+                verification_records = {
+                    ownership: hostname.ownership_verification || null,
+                    ssl: hostname.ssl?.validation_records?.[0] || null
+                };
+            }
+        } catch (e) {
+            console.error('[Domain API] Failed to fetch verification records:', e);
+        }
+    }
+
+    return c.json({ ...(data || { domain_name: null, domain_verified: false }), verification_records });
   } catch (err: any) {
     return c.json({ error: err.message }, 500);
   }

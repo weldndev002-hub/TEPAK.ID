@@ -24,6 +24,7 @@ export const DomainSettingsDashboard = () => {
     const [isPro, setIsPro] = useState(false);
     const [toast, setToast] = useState<{msg: string, type: 'success' | 'error'} | null>(null);
     const [countdown, setCountdown] = useState(0);
+    const [verificationData, setVerificationData] = useState<any>(null);
 
     // Target domain for CNAME - using the proxy origin for SaaS automation
     const TARGET_CNAME = 'origin.weorbit.site';
@@ -52,6 +53,7 @@ export const DomainSettingsDashboard = () => {
                 const data = await res.json();
                 setDomain(data.domain_name || '');
                 setStatus(data.domain_verified ? 'active' : (data.domain_name ? 'pending' : 'none'));
+                setVerificationData(data.verification_records);
             }
 
             // Check if PRO
@@ -86,6 +88,7 @@ export const DomainSettingsDashboard = () => {
                 showToast('Domain terdaftar! Silakan atur DNS Anda.', 'success');
                 setStatus('pending');
                 setDomain(cleanDomain);
+                fetchDomainData();
             } else {
                 showToast(data.error || 'Gagal mendaftarkan domain', 'error');
             }
@@ -265,6 +268,99 @@ export const DomainSettingsDashboard = () => {
                                 <Card className="overflow-hidden border-slate-100 shadow-2xl rounded-[2rem]">
                                     <div className="bg-slate-900 p-6 text-white flex items-center justify-between">
                                         <div className="flex items-center gap-3">
+                                            <ShieldCheckIcon className="w-5 h-5 text-primary" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest">Metode 1: Verifikasi Kepemilikan (Paling Aman)</span>
+                                        </div>
+                                    </div>
+                                    <div className="p-0">
+                                        <table className="w-full text-left">
+                                            <thead className="bg-slate-50/50 border-b border-slate-100">
+                                                <tr>
+                                                    <th className="px-8 py-5 font-black uppercase text-[10px] text-slate-400 tracking-widest">Type</th>
+                                                    <th className="px-8 py-5 font-black uppercase text-[10px] text-slate-400 tracking-widest">Host / Name</th>
+                                                    <th className="px-8 py-5 font-black uppercase text-[10px] text-slate-400 tracking-widest">Value / Content</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {/* Ownership Verification */}
+                                                {verificationData?.ownership && (
+                                                    <tr className="group hover:bg-slate-50/50 transition-all">
+                                                        <td className="px-8 py-6">
+                                                            <span className="px-3 py-1.5 bg-amber-50 text-amber-600 rounded-lg text-[10px] font-black uppercase">TXT</span>
+                                                        </td>
+                                                        <td className="px-8 py-6">
+                                                            <code className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-1 rounded truncate max-w-[150px] inline-block">
+                                                                {verificationData.ownership.name || '_cloudflare-auth'}
+                                                            </code>
+                                                        </td>
+                                                        <td className="px-8 py-6">
+                                                            <div className="flex items-center gap-3">
+                                                                <code className="font-mono font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 truncate max-w-[200px]">
+                                                                    {verificationData.ownership.value}
+                                                                </code>
+                                                                <button 
+                                                                    onClick={() => copyToClipboard(verificationData.ownership.value)} 
+                                                                    className="p-2 hover:bg-slate-200 rounded-xl transition-all"
+                                                                >
+                                                                    <ClipboardIcon className="w-4 h-4 text-slate-400" />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                                
+                                                {/* SSL Validation */}
+                                                {verificationData?.ssl && (
+                                                    <tr className="group hover:bg-slate-50/50 transition-all">
+                                                        <td className="px-8 py-6">
+                                                            <span className="px-3 py-1.5 bg-purple-50 text-purple-600 rounded-lg text-[10px] font-black uppercase">
+                                                                {verificationData.ssl.http_url ? 'HTTP' : 'TXT/CNAME'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-8 py-6">
+                                                            <code className="font-mono font-bold text-slate-900 bg-slate-100 px-2 py-1 rounded">
+                                                                {verificationData.ssl.txt_name || verificationData.ssl.cname}
+                                                            </code>
+                                                        </td>
+                                                        <td className="px-8 py-6">
+                                                            <div className="flex items-center gap-3">
+                                                                <code className="font-mono font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 truncate max-w-[200px]">
+                                                                    {verificationData.ssl.txt_value || verificationData.ssl.cname_target}
+                                                                </code>
+                                                                <button 
+                                                                    onClick={() => copyToClipboard(verificationData.ssl.txt_value || verificationData.ssl.cname_target)} 
+                                                                    className="p-2 hover:bg-slate-200 rounded-xl transition-all"
+                                                                >
+                                                                    <ClipboardIcon className="w-4 h-4 text-slate-400" />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+
+                                                {!(verificationData) && (
+                                                    <tr>
+                                                        <td colSpan={3} className="px-8 py-10 text-center">
+                                                            <div className="flex flex-col items-center gap-2">
+                                                                <ArrowPathIcon className="w-6 h-6 text-slate-200 animate-spin" />
+                                                                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Mengambil token verifikasi...</p>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </Card>
+
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-black text-xs">2</div>
+                                    <h3 className="font-black text-slate-900 uppercase tracking-tight">Metode 2: Hubungkan CNAME</h3>
+                                </div>
+
+                                <Card className="overflow-hidden border-slate-100 shadow-2xl rounded-[2rem]">
+                                    <div className="bg-slate-900 p-6 text-white flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
                                             <ServerIcon className="w-5 h-5 text-primary" />
                                             <span className="text-[10px] font-black uppercase tracking-widest">Konfigurasi CNAME</span>
                                         </div>
@@ -289,8 +385,6 @@ export const DomainSettingsDashboard = () => {
                                                             {(() => {
                                                                 const parts = domain.split('.');
                                                                 if (parts.length > 2) {
-                                                                    // If it's something like orbit.weorbit.site, return 'orbit'
-                                                                    // But if it's www.something.com, return 'www'
                                                                     return parts[0];
                                                                 }
                                                                 return '@';
@@ -322,9 +416,9 @@ export const DomainSettingsDashboard = () => {
                                         <ShieldCheckIcon className="w-6 h-6" />
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-[11px] font-black text-emerald-900 uppercase">Sertifikat SSL Otomatis</p>
+                                        <p className="text-[11px] font-black text-emerald-900 uppercase">Verifikasi Instan</p>
                                         <p className="text-[10px] text-emerald-700/80 leading-relaxed font-bold">
-                                            Setelah DNS terhubung, sistem akan otomatis menerbitkan sertifikat SSL (HTTPS) dalam beberapa menit. Tidak perlu pengaturan tambahan.
+                                            Gunakan Metode 1 jika Anda tidak ingin mengalihkan trafik sekarang. Gunakan Metode 2 untuk langsung mengaktifkan domain.
                                         </p>
                                     </div>
                                 </div>
