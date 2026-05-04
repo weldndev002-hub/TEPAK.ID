@@ -521,9 +521,15 @@ app.put('/settings/domain', zValidator('json', z.object({
 
         const cfData: any = await cfRes.json();
         if (!cfRes.ok) {
-            // If already exists, we ignore the error as we just want to ensure it is registered
-            if (cfData.errors?.[0]?.code !== 1406) {
-                console.error('[Domain API] Cloudflare Registration Error:', cfData);
+            console.error('[Domain API] Cloudflare Registration FAILED:', JSON.stringify(cfData));
+            // If already exists, we ignore the error but still log it for debugging
+            if (cfData.errors?.[0]?.code === 1406) {
+                console.log('[Domain API] Domain already exists on Cloudflare, proceeding...');
+            } else {
+                return c.json({ 
+                    error: `Cloudflare API Error: ${cfData.errors?.[0]?.message || 'Unknown error'}`,
+                    details: cfData.errors 
+                }, 400);
             }
         } else {
             console.log(`[Domain API] Cloudflare Registration Success: ${cfData.result?.id}`);
@@ -583,15 +589,22 @@ app.post('/settings/domain/verify', async (c) => {
 
     if (cfToken && cfZoneId) {
         try {
-            const cfRes = await fetch(`https://api.cloudflare.com/client/v4/zones/${cfZoneId}/custom_hostnames?hostname=${settings.domain_name}`, {
+            const cfUrl = `https://api.cloudflare.com/client/v4/zones/${cfZoneId}/custom_hostnames?hostname=${settings.domain_name}`;
+            console.log(`[Domain API] Checking CF status: ${cfUrl}`);
+            
+            const cfRes = await fetch(cfUrl, {
                 headers: { 'Authorization': `Bearer ${cfToken}` }
             });
             const cfData: any = await cfRes.json();
+            
+            console.log(`[Domain API] CF Response Status: ${cfRes.status}`);
             
             if (cfRes.ok && cfData.result && cfData.result.length > 0) {
                 const hostnameData = cfData.result[0];
                 const hostnameActive = hostnameData.status === 'active';
                 const sslActive = hostnameData.ssl?.status === 'active';
+                
+                console.log(`[Domain API] Hostname Status: ${hostnameData.status}, SSL Status: ${hostnameData.ssl?.status}`);
 
                 if (hostnameActive && sslActive) {
                     isActuallyActive = true;
@@ -602,9 +615,9 @@ app.post('/settings/domain/verify', async (c) => {
                         error: 'DNS sudah terhubung, tapi sertifikat SSL sedang disiapkan oleh Cloudflare. Harap tunggu 1-2 menit lagi.',
                         code: 'SSL_PENDING'
                     }, 400);
-                } else {
-                    console.log(`[Domain API] Hostname status: ${hostnameData.status}`);
                 }
+            } else {
+                console.warn(`[Domain API] Domain not found or not active on CF: ${JSON.stringify(cfData)}`);
             }
         } catch (e) {
             console.error('[Domain API] CF Verification Error:', e);
